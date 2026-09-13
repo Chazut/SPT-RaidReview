@@ -545,6 +545,9 @@ public class DatabaseService : IDisposable
             ("add_mod_sain_name", @"
                 ALTER TABLE player ADD COLUMN ""mod_SAIN_name"" TEXT NOT NULL DEFAULT '';
             "),
+            ("add_location_variant_to_raid", @"
+                ALTER TABLE raid ADD COLUMN ""locationVariant"" TEXT NOT NULL DEFAULT '';
+            "),
         };
 
         foreach (var (name, sql) in migrations)

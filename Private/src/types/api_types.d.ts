@@ -4,6 +4,7 @@ export interface TrackingCoreDataRaids {
   raidId: string;
   playerId: string;
   location: string;
+  locationVariant?: string;
   time: Date;
   timeInRaid: number;
   exitName: string;
@@ -49,6 +50,7 @@ export interface TrackingRaidData {
   raidId: string;
   profileId: string
   location: string
+  locationVariant?: string
   time: string
   timeInRaid: string
   exitName: string

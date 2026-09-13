@@ -8,7 +8,7 @@ import { intl, msToHMS } from "../../helpers";
 
 import { useEffect, useState } from "react";
 import _ from "lodash";
-import { LOCATIONS } from "../../helpers/locations";
+import { getLocationLabel } from '../../helpers/locations';
 import { getFactionRole, resolveBotType } from "../../helpers/players";
 import cyr_to_en from '../../assets/cyr_to_en.json';
 
@@ -238,7 +238,7 @@ export default function RaidOverview() {
       newRaidSummary.push({
         title: 'Map',
         // @ts-ignore
-        value: LOCATIONS[raid.location]
+        value: getLocationLabel(raid.location, raid.locationVariant)
       });
 
       newRaidSummary.push({

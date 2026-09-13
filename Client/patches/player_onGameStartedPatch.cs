@@ -57,6 +57,7 @@ namespace RAID_REVIEW
                     time = DateTime.Now,
                     detectedMods = RAID_REVIEW.RAID_REVIEW__DETECTED_MODS.Count > 0 ? string.Join(",", RAID_REVIEW.RAID_REVIEW__DETECTED_MODS) : "",
                     location = RAID_REVIEW.gameWorld.LocationId,
+                    locationVariant = MapVariant.Detect(RAID_REVIEW.gameWorld.LocationId),
                     type = raidType,
                     timeInRaid = RAID_REVIEW.stopwatch.IsRunning ? RAID_REVIEW.stopwatch.ElapsedMilliseconds : 0
                 };

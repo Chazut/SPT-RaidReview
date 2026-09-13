@@ -1547,6 +1547,27 @@
         ]
     },
     {
+        "normalizedName": "interchange-rework",
+        "primaryPath": "/map/interchange-rework-2d",
+        "maps": [
+            {
+                "key": "interchange-rework",
+                "projection": "interactive",
+                "tileSize": 256,
+                "minZoom": 1,
+                "maxZoom": 6,
+                "transform": [0.265, 150.6, 0.265, 134.6],
+                "coordinateRotation": 180,
+                "bounds": [[598, -442], [-433, 426]],
+                "author": "Shebuka",
+                "authorLink": "https://github.com/the-hideout/tarkov-dev-svg-maps/",
+                "svgPath": "https://assets.tarkov.dev/maps/svg/Interchange.svg",
+                "svgHideLayers": ["First_Floor", "Second_Floor"],
+                "_heightRange": [-1000, 25]
+            }
+        ]
+    },
+    {
         "normalizedName": "the-lab",
         "primaryPath": "/map/labs-2d",
         "maps": [

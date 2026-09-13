@@ -123,10 +123,11 @@ public class WsPacketHandler
                     _logger.Log("Disabled Post Processing: Raid Started");
 
                     await _db.ExecuteAsync(
-                        "INSERT INTO raid (raidId, profileId, location, time, timeInRaid, type, exitName, exitStatus, detectedMods) VALUES ($raidId, $profileId, $location, $time, $timeInRaid, $type, $exitName, $exitStatus, $detectedMods)",
+                        "INSERT INTO raid (raidId, profileId, location, locationVariant, time, timeInRaid, type, exitName, exitStatus, detectedMods) VALUES ($raidId, $profileId, $location, $locationVariant, $time, $timeInRaid, $type, $exitName, $exitStatus, $detectedMods)",
                         ("$raidId", raidId),
                         ("$profileId", GetString(payload, "profileId")),
                         ("$location", GetString(payload, "location")),
+                        ("$locationVariant", GetString(payload, "locationVariant")),
                         ("$time", GetString(payload, "time")),
                         ("$timeInRaid", GetString(payload, "timeInRaid")),
                         ("$type", GetString(payload, "type")),

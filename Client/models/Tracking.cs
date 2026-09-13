@@ -14,6 +14,8 @@ namespace RAID_REVIEW
         public string sessionId { get; set; }
         public string profileId { get; set; }
         public string location { get; set; }
+        // "" on the vanilla layout, "rework" on a map rework that keeps BSG's location id (see MapVariant).
+        public string locationVariant { get; set; }
         public string detectedMods { get; set; }
         public DateTime time { get; set; }
         public long timeInRaid { get; set; }

@@ -3,7 +3,7 @@ import { Link, useLoaderData, useNavigate } from 'react-router-dom';
 
 import { TrackingRaidData, ISptProfile } from '../../types/api_types';
 import api from '../../api/api';
-import { LOCATIONS } from '../../helpers/locations';
+import { getLocationLabel } from '../../helpers/locations';
 
 import './Raids.css'
 import { msToHMS } from '../../helpers';
@@ -18,10 +18,6 @@ export async function loader() {
 export default function Raids() {
     const { raids, profiles } = useLoaderData() as { raids: TrackingRaidData[], profiles: { [key: string] : ISptProfile } };
     const navigate = useNavigate()
-
-    function getLocation(locationString: string) {
-        return LOCATIONS[locationString] || locationString
-    }
 
     function refreshData() {
         navigate('.', { replace: true })
@@ -58,7 +54,7 @@ export default function Raids() {
                         <tr key={r.raidId}>
                             <td className="text-left p-2 capitalize">{ profiles[r.profileId]?.info?.username || r.profileId?.substring(0, 8) + '...' }</td>
                             <td className="text-left p-2">{ r.type }</td>
-                            <td className="text-left p-2">{ getLocation(r.location) }</td>
+                            <td className="text-left p-2">{ getLocationLabel(r.location, r.locationVariant) }</td>
                             <td className="text-left p-2">{ r.exitStatus }</td>
                             <td className="text-left p-2">{ msToHMS(Number(r.timeInRaid)) }</td>
                             <td className="text-left p-2">{ new Intl.DateTimeFormat('en-US', { weekday: 'long', hour: '2-digit', minute : '2-digit' }).format(new Date(r.time)) }</td>

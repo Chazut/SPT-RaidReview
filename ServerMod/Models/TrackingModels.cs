@@ -8,6 +8,7 @@ public record TrackingRaid
     public string? ProfileId { get; set; }
     public DateTime Time { get; set; }
     public string? Location { get; set; }
+    public string? LocationVariant { get; set; }
     public string? Type { get; set; }
     public long TimeInRaid { get; set; }
     public string? ExitName { get; set; }

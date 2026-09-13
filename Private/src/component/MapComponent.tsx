@@ -534,6 +534,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     )
 
     let allMaps = useMapImages()
+    // tarkov.dev renders that stack several floors in one SVG ("svgHideLayers" in maps.json) are
+    // fetched and re-served as a blob with those groups hidden, so the ground level stays readable.
+    const [svgOverrideUrl, setSvgOverrideUrl] = useState<string | null>(null)
 
     const mapData = useMemo(() => {
         const map = allMaps[currentMap]
@@ -554,6 +557,30 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
         return map
     }, [allMaps, currentMap])
+
+    useEffect(() => {
+        const hideLayers: string[] | undefined = mapData?.svgHideLayers
+        if (!mapData?.svgPath || !hideLayers || hideLayers.length === 0) {
+            setSvgOverrideUrl(null)
+            return
+        }
+        let cancelled = false
+        let objectUrl: string | null = null
+        fetch(mapData.svgPath)
+            .then((r) => r.text())
+            .then((text) => {
+                if (cancelled) return
+                const style = `<style>${hideLayers.map((id) => `#${id}`).join(',')}{display:none}</style>`
+                const patched = text.replace(/<svg\b[^>]*>/i, (root) => root + style)
+                objectUrl = URL.createObjectURL(new Blob([patched], { type: 'image/svg+xml' }))
+                setSvgOverrideUrl(objectUrl)
+            })
+            .catch(() => { if (!cancelled) setSvgOverrideUrl(null) })
+        return () => {
+            cancelled = true
+            if (objectUrl) URL.revokeObjectURL(objectUrl)
+        }
+    }, [mapData])
 
     /**
      * Removes the scroll bar when in the map view mode
@@ -596,7 +623,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             base: 'base',
         }
 
-        setCurrentMap(locations[raidData.location])
+        // A map rework that keeps BSG's location id gets its own render when maps.json has one
+        // ("interchange-rework"), the base map otherwise.
+        const baseMapKey = locations[raidData.location]
+        const variantMapKey = raidData.locationVariant ? `${baseMapKey}-${raidData.locationVariant}` : null
+        setCurrentMap(variantMapKey && allMaps[variantMapKey] ? variantMapKey : baseMapKey)
 
         const newEvents = []
         if (raidData && raidData.players) {
@@ -726,7 +757,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
         if (mapData.svgPath && selectedStyle === 'svg') {
             const svgBounds = mapData.svgBounds ? getBounds(mapData.svgBounds) : bounds
-            const svgLayer = L.imageOverlay(mapData.svgPath, svgBounds, baseLayerOptions)
+            const svgLayer = L.imageOverlay(svgOverrideUrl || mapData.svgPath, svgBounds, baseLayerOptions)
             baseLayerGroup.addLayer(svgLayer)
         }
 
@@ -803,7 +834,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             L.heatLayer(heatmapData, { radius: 10, max: 1, blur: 10 }).addTo(map)
         }
         
-    }, [mapData, mapRef, mapViewRef, selectedLayer, selectedStyle, heatmapEnabled, heatmapData])
+    }, [mapData, mapRef, mapViewRef, selectedLayer, selectedStyle, heatmapEnabled, heatmapData, svgOverrideUrl])
 
     // Heatmap Fetcher
     useEffect(() => {
