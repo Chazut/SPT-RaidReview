@@ -534,9 +534,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     )
 
     let allMaps = useMapImages()
-    // tarkov.dev renders that stack several floors in one SVG ("svgHideLayers" in maps.json) are
-    // fetched and re-served as a blob with those groups hidden, so the ground level stays readable.
-    const [svgOverrideUrl, setSvgOverrideUrl] = useState<string | null>(null)
+    // tarkov.dev renders that stack several floors in one SVG ("svgHideLayers" in maps.json, on the base
+    // map or on a floor layer) are fetched once and re-served as blobs with the listed groups hidden: the
+    // base keeps the ground level readable, a floor layer keeps only its own floor. Keyed by layer name,
+    // '' being the base map.
+    const [svgOverrideUrls, setSvgOverrideUrls] = useState<Record<string, string>>({})
 
     const mapData = useMemo(() => {
         const map = allMaps[currentMap]
@@ -559,26 +561,46 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     }, [allMaps, currentMap])
 
     useEffect(() => {
-        const hideLayers: string[] | undefined = mapData?.svgHideLayers
-        if (!mapData?.svgPath || !hideLayers || hideLayers.length === 0) {
-            setSvgOverrideUrl(null)
+        const wanted: { name: string, svgPath: string, hide: string[] }[] = []
+        if (mapData?.svgPath && mapData.svgHideLayers?.length) {
+            wanted.push({ name: '', svgPath: mapData.svgPath, hide: mapData.svgHideLayers })
+        }
+        for (const layer of mapData?.layers || []) {
+            if (layer.svgPath && layer.svgHideLayers?.length) {
+                wanted.push({ name: layer.name, svgPath: layer.svgPath, hide: layer.svgHideLayers })
+            }
+        }
+        if (wanted.length === 0) {
+            setSvgOverrideUrls({})
             return
         }
         let cancelled = false
-        let objectUrl: string | null = null
-        fetch(mapData.svgPath)
-            .then((r) => r.text())
-            .then((text) => {
+        const objectUrls: string[] = []
+        // The base map and its floors usually point at the same file: fetch each URL once.
+        const texts: Record<string, Promise<string>> = {}
+        const fetchSvg = (url: string) => texts[url] || (texts[url] = fetch(url).then((r) => r.text()))
+        Promise.all(wanted.map(async (w) => {
+            const text = await fetchSvg(w.svgPath)
+            const style = `<style>${w.hide.map((id) => `#${id}`).join(',')}{display:none}</style>`
+            const patched = text.replace(/<svg\b[^>]*>/i, (root) => root + style)
+            const objectUrl = URL.createObjectURL(new Blob([patched], { type: 'image/svg+xml' }))
+            if (cancelled) {
+                URL.revokeObjectURL(objectUrl)
+            } else {
+                objectUrls.push(objectUrl)
+            }
+            return { name: w.name, objectUrl }
+        }))
+            .then((entries) => {
                 if (cancelled) return
-                const style = `<style>${hideLayers.map((id) => `#${id}`).join(',')}{display:none}</style>`
-                const patched = text.replace(/<svg\b[^>]*>/i, (root) => root + style)
-                objectUrl = URL.createObjectURL(new Blob([patched], { type: 'image/svg+xml' }))
-                setSvgOverrideUrl(objectUrl)
+                const urls: Record<string, string> = {}
+                entries.forEach((e) => { urls[e.name] = e.objectUrl })
+                setSvgOverrideUrls(urls)
             })
-            .catch(() => { if (!cancelled) setSvgOverrideUrl(null) })
+            .catch(() => { if (!cancelled) setSvgOverrideUrls({}) })
         return () => {
             cancelled = true
-            if (objectUrl) URL.revokeObjectURL(objectUrl)
+            objectUrls.forEach((u) => URL.revokeObjectURL(u))
         }
     }, [mapData])
 
@@ -757,7 +779,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
         if (mapData.svgPath && selectedStyle === 'svg') {
             const svgBounds = mapData.svgBounds ? getBounds(mapData.svgBounds) : bounds
-            const svgLayer = L.imageOverlay(svgOverrideUrl || mapData.svgPath, svgBounds, baseLayerOptions)
+            const svgLayer = L.imageOverlay(svgOverrideUrls[''] || mapData.svgPath, svgBounds, baseLayerOptions)
             baseLayerGroup.addLayer(svgLayer)
         }
 
@@ -784,7 +806,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
                 if (layer.svgPath && selectedStyle === 'svg') {
                     const svgBounds = layer.svgBounds ? getBounds(layer.svgBounds) : bounds
-                    const svgLayer = L.imageOverlay(layer.svgPath, svgBounds, layerOptions)
+                    const svgLayer = L.imageOverlay(svgOverrideUrls[layer.name] || layer.svgPath, svgBounds, layerOptions)
                     overlayLayerGroup.addLayer(svgLayer)
                 }
             }
@@ -834,7 +856,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             L.heatLayer(heatmapData, { radius: 10, max: 1, blur: 10 }).addTo(map)
         }
         
-    }, [mapData, mapRef, mapViewRef, selectedLayer, selectedStyle, heatmapEnabled, heatmapData, svgOverrideUrl])
+    }, [mapData, mapRef, mapViewRef, selectedLayer, selectedStyle, heatmapEnabled, heatmapData, svgOverrideUrls])
 
     // Heatmap Fetcher
     useEffect(() => {

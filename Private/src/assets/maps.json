@@ -1563,7 +1563,33 @@
                 "authorLink": "https://github.com/the-hideout/tarkov-dev-svg-maps/",
                 "svgPath": "https://assets.tarkov.dev/maps/svg/Interchange.svg",
                 "svgHideLayers": ["First_Floor", "Second_Floor"],
-                "_heightRange": [-1000, 25]
+                "_heightRange": [-1000, 25],
+                "layers": [
+                    {
+                        "name": "2nd Floor",
+                        "svgPath": "https://assets.tarkov.dev/maps/svg/Interchange.svg",
+                        "svgHideLayers": ["Ground_Level", "Second_Floor"],
+                        "show": true,
+                        "extents": [
+                            {
+                                "height": [25, 34],
+                                "bounds": [[[120, 218], [-222, -327], "mall"]]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "3rd Floor",
+                        "svgPath": "https://assets.tarkov.dev/maps/svg/Interchange.svg",
+                        "svgHideLayers": ["Ground_Level", "First_Floor"],
+                        "show": false,
+                        "extents": [
+                            {
+                                "height": [34, 1000],
+                                "bounds": [[[120, 218], [-222, -327], "mall"]]
+                            }
+                        ]
+                    }
+                ]
             }
         ]
     },
