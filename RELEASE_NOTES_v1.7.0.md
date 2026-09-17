@@ -1,8 +1,8 @@
 # Raid Review 1.7.0
 
-## Reworked Interchange, on its own map
+## Reworked Interchange support
 
-Playing the EFT 1.0 Interchange on SPT (LennoxP90's Interchange Rework, Manimal's backport)? Raid Review now notices it and replays those raids on the 1.0 layout, with the right floors, instead of drawing your bots walking through the old mall. Each raid remembers which version of the map it was played on, so vanilla and reworked raids sit side by side in your history. Older raids and every other map are untouched.
+Raids played on the EFT 1.0 Interchange (LennoxP90's Interchange Rework, Manimal's backport) now replay on the 1.0 layout, floors included. Vanilla raids keep the old map.
 
 ## Install
 
