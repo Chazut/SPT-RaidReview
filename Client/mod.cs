@@ -535,6 +535,22 @@ namespace RAID_REVIEW
             }
         }
 
+        private void CaptureOrbitGhostHearing()
+        {
+            if (!ORBIT__DETECTED) return;
+            try
+            {
+                var decisions = Orbit_Integration.GetGhostHearing(sessionId, stopwatch.ElapsedMilliseconds);
+                if (decisions == null) return;
+                foreach (var decision in decisions)
+                    _ = Telemetry.Send("ORBIT_GHOST_HEARING", JsonConvert.SerializeObject(decision));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"RAID_REVIEW :::: WARN :::: ORBIT ghost-hearing capture failed: {ex.Message}");
+            }
+        }
+
         private void CaptureOrbitMainObjectives()
         {
             if (!ORBIT__DETECTED) return;
@@ -838,6 +854,7 @@ namespace RAID_REVIEW
                         CaptureOrbitField();
                         CaptureOrbitMainObjectives();
                         CaptureOrbitGhostFights();
+                        CaptureOrbitGhostHearing();
                     }
                     foreach (Player player in allPlayers)
                     {

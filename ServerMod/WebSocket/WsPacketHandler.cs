@@ -433,6 +433,35 @@ public class WsPacketHandler
                     break;
                 }
 
+                case "ORBIT_GHOST_HEARING":
+                {
+                    if (raidId == null) break;
+                    await _db.ExecuteAsync(
+                        @"INSERT INTO orbit_ghost_hearing (raidId, time, noiseId, squadId, profileId, memberProfileIds, sourceX, sourceY, sourceZ, listenerX, listenerY, listenerZ, range, minimumDistance, distance, chance, simulated, shots, investigate, personality)
+                          VALUES ($raidId, $time, $noiseId, $squadId, $profileId, $memberProfileIds, $sourceX, $sourceY, $sourceZ, $listenerX, $listenerY, $listenerZ, $range, $minimumDistance, $distance, $chance, $simulated, $shots, $investigate, $personality)",
+                        ("$raidId", raidId!),
+                        ("$time", GetString(payload, "time")),
+                        ("$noiseId", GetString(payload, "noiseId")),
+                        ("$squadId", GetString(payload, "squadId")),
+                        ("$profileId", GetString(payload, "profileId")),
+                        ("$memberProfileIds", GetRawArray(payload, "memberProfileIds")),
+                        ("$sourceX", GetString(payload, "sourceX")),
+                        ("$sourceY", GetString(payload, "sourceY")),
+                        ("$sourceZ", GetString(payload, "sourceZ")),
+                        ("$listenerX", GetString(payload, "listenerX")),
+                        ("$listenerY", GetString(payload, "listenerY")),
+                        ("$listenerZ", GetString(payload, "listenerZ")),
+                        ("$range", GetString(payload, "range")),
+                        ("$minimumDistance", GetString(payload, "minimumDistance")),
+                        ("$distance", GetString(payload, "distance")),
+                        ("$chance", GetString(payload, "chance")),
+                        ("$simulated", GetString(payload, "simulated")),
+                        ("$shots", GetString(payload, "shots")),
+                        ("$investigate", GetString(payload, "investigate")),
+                        ("$personality", GetString(payload, "personality")));
+                    break;
+                }
+
                 case "ORBIT_MAIN_OBJECTIVES":
                 {
                     if (raidId == null) break;

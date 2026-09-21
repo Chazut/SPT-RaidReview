@@ -22,6 +22,10 @@ export interface TrackingPositionalData {
   dir: Number
   decision?: string
   ghost?: boolean
+  hearingRange?: number | null
+  hearingSuppressedRange?: number | null
+  hearingMinimumDistance?: number | null
+  hearingState?: string | null
   dormant?: boolean // legacy key from pre-rename compiled raids
   created_at: Date
 }
@@ -42,6 +46,29 @@ export interface TrackingOrbitGhostFight {
   created_at: Date
 }
 
+
+export interface TrackingOrbitGhostHearing {
+  id: number
+  time: number
+  noiseId: number
+  squadId: number
+  profileId: string
+  memberProfileIds: string[]
+  sourceX: number
+  sourceY: number
+  sourceZ: number
+  listenerX: number
+  listenerY: number
+  listenerZ: number
+  range: number
+  minimumDistance: number
+  distance: number
+  chance: number
+  simulated: number
+  shots: number
+  investigate: number
+  personality: string
+}
 
 export interface TrackingRaidData {
   detectedMods: any;

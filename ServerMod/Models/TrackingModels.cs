@@ -101,4 +101,8 @@ public record PositionalDataEntry
     public float? MaxHealth { get; set; }
     public string? Decision { get; set; }
     public bool Ghost { get; set; }
+    public float? HearingRange { get; set; }
+    public float? HearingSuppressedRange { get; set; }
+    public float? HearingMinimumDistance { get; set; }
+    public string? HearingState { get; set; }
 }

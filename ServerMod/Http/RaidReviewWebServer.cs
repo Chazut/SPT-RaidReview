@@ -520,6 +520,20 @@ public class RaidReviewWebServer
             }
         });
 
+        app.MapGet("/api/raids/{raidId}/orbit_ghost_hearing", async (HttpContext context, string raidId) =>
+        {
+            try
+            {
+                var data = await _db.QueryAsync("SELECT * FROM orbit_ghost_hearing WHERE raidId = $id ORDER BY time ASC, id ASC", ("$id", raidId));
+                await context.Response.WriteAsJsonAsync(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("[API:ORBIT_GHOST_HEARING]", ex);
+                context.Response.StatusCode = 500;
+            }
+        });
+
         app.MapGet("/api/raids/{raidId}/orbit_ghost_fights", async (HttpContext context, string raidId) =>
         {
             try
@@ -590,7 +604,7 @@ public class RaidReviewWebServer
             foreach (var raidId in raidIds)
             {
                 // Delete child tables first, then raid (parent) last — FK constraints require this order
-                foreach (var table in new[] { "kills", "looting", "player", "player_status", "ballistic", "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field", "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight", "raid" })
+                foreach (var table in new[] { "kills", "looting", "player", "player_status", "ballistic", "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field", "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight", "orbit_ghost_hearing", "raid" })
                     await _db.ExecuteAsync($"DELETE FROM {table} WHERE raidId = $id", ("$id", raidId));
 
                 _fileService.DeleteFile("positions", "", "", $"{raidId}_positions");

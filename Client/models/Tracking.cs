@@ -86,6 +86,10 @@ namespace RAID_REVIEW
         public float maxHealth { get; set; }
         public string decision { get; set; }
         public bool ghost { get; set; }
+        public float? hearingRange { get; set; }
+        public float? hearingSuppressedRange { get; set; }
+        public float? hearingMinimumDistance { get; set; }
+        public string hearingState { get; set; }
 
         public TrackingPlayerData(
             string sessionId,
@@ -129,6 +133,30 @@ namespace RAID_REVIEW
         public float bZ { get; set; }
         public long durationMs { get; set; }
         public int casualties { get; set; }
+    }
+
+    public class TrackingOrbitGhostHearing
+    {
+        public string sessionId { get; set; }
+        public long time { get; set; }
+        public int noiseId { get; set; }
+        public int squadId { get; set; }
+        public string profileId { get; set; }
+        public string[] memberProfileIds { get; set; }
+        public float sourceX { get; set; }
+        public float sourceY { get; set; }
+        public float sourceZ { get; set; }
+        public float listenerX { get; set; }
+        public float listenerY { get; set; }
+        public float listenerZ { get; set; }
+        public float range { get; set; }
+        public float minimumDistance { get; set; }
+        public float distance { get; set; }
+        public float chance { get; set; }
+        public int simulated { get; set; }
+        public int shots { get; set; }
+        public int investigate { get; set; }
+        public string personality { get; set; }
     }
 
     public class TrackingPlayerDeadOrUnspawned 

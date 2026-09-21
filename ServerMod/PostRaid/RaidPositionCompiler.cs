@@ -70,6 +70,10 @@ public class RaidPositionCompiler
                     case "health": if (float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var h)) entry.Health = h; break;
                     case "maxHealth": if (float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var mh)) entry.MaxHealth = mh; break;
                     case "decision": entry.Decision = val; break;
+                    case "hearingRange": if (float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var hr)) entry.HearingRange = hr; break;
+                    case "hearingSuppressedRange": if (float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var hs)) entry.HearingSuppressedRange = hs; break;
+                    case "hearingMinimumDistance": if (float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var hm)) entry.HearingMinimumDistance = hm; break;
+                    case "hearingState": entry.HearingState = val; break;
                     // JsonElement.ToString() capitalizes booleans ("True"); accept every spelling.
                     case "ghost":
                     case "dormant": entry.Ghost = val == "True" || val == "true" || val == "1"; break; // "dormant": pre-rename recordings

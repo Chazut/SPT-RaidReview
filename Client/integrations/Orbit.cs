@@ -117,6 +117,61 @@ namespace RAID_REVIEW
             return list;
         }
 
+        // Kept separate from the fight API guard: older ORBIT versions still record their fights.
+        private static bool _hearingApiMissing;
+
+        public static System.Collections.Generic.List<TrackingOrbitGhostHearing> GetGhostHearing(string sessionId, long time)
+        {
+            if (_hearingApiMissing) return null;
+            try
+            {
+                return GetGhostHearingInner(sessionId, time);
+            }
+            catch (System.MissingMethodException)
+            {
+                _hearingApiMissing = true;
+                return null;
+            }
+            catch (System.TypeLoadException)
+            {
+                _hearingApiMissing = true;
+                return null;
+            }
+            catch (System.MissingFieldException)
+            {
+                _hearingApiMissing = true;
+                return null;
+            }
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static System.Collections.Generic.List<TrackingOrbitGhostHearing> GetGhostHearingInner(string sessionId, long time)
+        {
+            var drained = OrbitTelemetry.DrainGhostHearing();
+            if (drained == null) return null;
+            var now = UnityEngine.Time.realtimeSinceStartup;
+            var list = new System.Collections.Generic.List<TrackingOrbitGhostHearing>(drained.Count);
+            foreach (var h in drained)
+            {
+                list.Add(new TrackingOrbitGhostHearing
+                {
+                    sessionId = sessionId,
+                    time = System.Math.Max(0, time - (long)(System.Math.Max(0f, now - h.RecordedAt) * 1000f)),
+                    noiseId = h.NoiseId, squadId = h.SquadId,
+                    profileId = h.ProfileId ?? "",
+                    memberProfileIds = h.MemberProfileIds ?? new string[0],
+                    sourceX = h.SourceX, sourceY = h.SourceY, sourceZ = h.SourceZ,
+                    listenerX = h.ListenerX, listenerY = h.ListenerY, listenerZ = h.ListenerZ,
+                    range = h.Range, minimumDistance = h.MinimumDistance,
+                    distance = h.Distance, chance = h.Chance,
+                    simulated = h.Simulated ? 1 : 0, shots = h.Shots,
+                    investigate = h.Investigate ? 1 : 0,
+                    personality = h.Personality ?? "",
+                });
+            }
+            return list;
+        }
+
         public static TrackingOrbitBotObjective GetBotObjectiveData(Player player, string sessionId, long time)
         {
             if (player == null || !player.IsAI) return null;

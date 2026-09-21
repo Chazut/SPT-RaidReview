@@ -14,6 +14,7 @@ import { calculateNewPosition, findInsertIndex } from '../modules/utils.js'
 import { useMapImages } from '../modules/maps-index.js';
 import { TrackingPositionalData, TrackingLooseLootItem, TrackingPlayerInventoryItem } from '../types/api_types.js';
 import { PlayerSlider } from './MapPlayerSlider.js';
+import { GhostHearingOverlay } from './GhostHearingOverlay';
 
 import { getMarkerLabel, getPlayerColor, getLegendIcon, PMC_COLORS, buildPmcIndexMap, getFactionRole, resolveBotType } from '../helpers/players'
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from '../helpers/botBehavior'
@@ -2767,7 +2768,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const layer = m._layers[key];
         
             // Skip layers managed by other overlays (quests, loose loot, grenades, etc.)
-            if (layer._rr_quest || layer._rr_looseLoot || layer._rr_grenade || layer._rr_objective || layer._rr_phobos) continue;
+            if (layer._rr_quest || layer._rr_looseLoot || layer._rr_grenade || layer._rr_objective || layer._rr_phobos || layer._rr_ghostHearing) continue;
 
             // Persistent player-dot markers (issue #24) are mutated in place across
             // frames, not torn down here; their lifecycle is reconciled in the main
@@ -3405,6 +3406,18 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         )}
 
                         {/* ── Bot Objectives Section (Phobos) ── */}
+                        {/ORBIT/i.test(raidData?.detectedMods || '') && <GhostHearingOverlay
+                            key={raidId}
+                            raidId={raidId}
+                            map={MAP}
+                            ready={mapIsReady}
+                            time={timeEndLimit}
+                            players={raidData?.players || []}
+                            positions={positions}
+                            kills={raidData?.kills}
+                            playerStatuses={raidData?.player_status}
+                        />}
+
                         {botObjectiveData.length > 0 && (
                             <div className="mt-4" style={{ borderTop: '1px solid rgba(154, 136, 102, 0.3)', paddingTop: '8px' }}>
                                 <div

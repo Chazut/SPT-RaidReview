@@ -545,6 +545,33 @@ public class DatabaseService : IDisposable
             ("add_mod_sain_name", @"
                 ALTER TABLE player ADD COLUMN ""mod_SAIN_name"" TEXT NOT NULL DEFAULT '';
             "),
+            ("add_orbit_ghost_hearing_table", @"
+                CREATE TABLE IF NOT EXISTS orbit_ghost_hearing (
+                    ""id"" INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ""raidId"" TEXT NOT NULL,
+                    ""time"" INTEGER NOT NULL,
+                    ""noiseId"" INTEGER NOT NULL,
+                    ""squadId"" INTEGER NOT NULL,
+                    ""profileId"" TEXT NOT NULL,
+                    ""memberProfileIds"" TEXT NOT NULL DEFAULT '[]',
+                    ""sourceX"" REAL NOT NULL,
+                    ""sourceY"" REAL NOT NULL,
+                    ""sourceZ"" REAL NOT NULL,
+                    ""listenerX"" REAL NOT NULL,
+                    ""listenerY"" REAL NOT NULL,
+                    ""listenerZ"" REAL NOT NULL,
+                    ""range"" REAL NOT NULL,
+                    ""minimumDistance"" REAL NOT NULL,
+                    ""distance"" REAL NOT NULL,
+                    ""chance"" REAL NOT NULL,
+                    ""simulated"" INTEGER NOT NULL,
+                    ""shots"" INTEGER NOT NULL,
+                    ""investigate"" INTEGER NOT NULL,
+                    ""personality"" TEXT NOT NULL DEFAULT '',
+                    FOREIGN KEY (""raidId"") REFERENCES raid(""raidId"")
+                );
+                CREATE INDEX IF NOT EXISTS idx_orbit_ghost_hearing_raid_time ON orbit_ghost_hearing(""raidId"", ""time"");
+            "),
             ("add_location_variant_to_raid", @"
                 ALTER TABLE raid ADD COLUMN ""locationVariant"" TEXT NOT NULL DEFAULT '';
             "),

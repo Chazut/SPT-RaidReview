@@ -1,5 +1,7 @@
 import { ISptProfile } from '../types/api_types';
 import { TrackingRaidData, TrackingCoreDataRaids } from '../types/api_types';
+import { parseGhostHearing } from '../helpers/ghostHearing';
+import type { TrackingOrbitGhostHearing } from '../types/api_types';
 
 let isDev = window.location.host.includes("5173");
 let hostname = isDev ? 'http://127.0.0.1:7829' : '';
@@ -206,6 +208,13 @@ const api = {
         } catch (error) {
             return [];
         }
+    },
+
+    getRaidOrbitGhostHearing : async function(raidId: string, signal?: AbortSignal) : Promise<TrackingOrbitGhostHearing[] | null> {
+        const response = await fetch(hostname + `/api/raids/${raidId}/orbit_ghost_hearing`, { signal });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Could not load Ghost hearing');
+        return parseGhostHearing(await response.json());
     },
 
     getRaidOrbitGhostFights : async function(raidId: string) : Promise<any[]> {
