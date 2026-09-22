@@ -796,11 +796,16 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     overlay: Boolean(layer.extents),
                 }
 
-                if (layer.tilePath && selectedStyle === 'tile') {
+                // Some upper floors are published only as tiles. Keep them visible in Map
+                // style too, and load tiles only for the selected floor.
+                if (layer.tilePath && layer.name === selectedLayer
+                    && (selectedStyle === 'tile' || (selectedStyle === 'svg' && !layer.svgPath))) {
                     const tileLayer = L.tileLayer(layer.tilePath, {
                         tileSize,
                         bounds,
                         ...layerOptions,
+                        // Put a tile-only floor above the dimmed SVG base plan.
+                        pane: selectedStyle === 'svg' ? 'overlayPane' : 'tilePane',
                     })
                     overlayLayerGroup.addLayer(tileLayer)
                 }
