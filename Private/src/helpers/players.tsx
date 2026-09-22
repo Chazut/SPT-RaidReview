@@ -1,4 +1,5 @@
 import BotMapping from '../assets/botMapping.json'
+import { resolveIsbCategory } from './isb'
 
 export const PMC_COLORS = [
     "#3357FF", "#FFD433", "#33FFF3", "#9370DB", "#BC8F8F",
@@ -15,6 +16,8 @@ export const PMC_COLORS = [
 
 export function getMarkerLabel(player: any): string | null {
     const type = (player?.type || '').toUpperCase()
+    const isb = resolveIsbCategory(player)
+    if (isb) return isb === 'ISB_WT' ? 'WT' : 'IS'
 
     if (type.includes('KILLA')) return 'Ki'
     if (type.includes('RASHALA')) return 'Ra'
@@ -62,10 +65,12 @@ export function getMarkerLabel(player: any): string | null {
     return null
 }
 
-// Single source of truth for a bot's type key: botMapping.json first, then the "NAME|CATEGORY" WildSpawnType
-// string for faction-mod bots. All colour/label/role/grouping helpers build on this.
+// Resolve ISB's display-only subgroup, then botMapping.json and the "NAME|CATEGORY" fallback.
+// All colour/label/role/grouping helpers build on this.
 export function resolveBotType(player: any): string {
     if (!player) return 'UNKNOWN'
+    const isb = resolveIsbCategory(player)
+    if (isb) return isb
     let botMapping = (BotMapping as any)[player.type]
     if (player.name === 'Knight') botMapping = { type: 'GOON' }
     if (!botMapping && typeof player.type === 'string' && player.type.includes('|')) {
@@ -100,6 +105,7 @@ export function getPlayerColor(player: any, index: number): string {
         case 'UNTAR': return '#00BFFF'
         case 'BLACKDIV': return '#555555'
         case 'ISB': return '#1ABC9C'
+        case 'ISB_WT': return '#D5E8E4'
         case 'COMBINE': return '#4B6584'
         case 'INFECTED': return '#7FFF00'
         default:
@@ -145,12 +151,15 @@ export function getFactionRole(player: any): string {
 
 export function getPlayerFaction(player: any): string {
     if (player === undefined) return 'Unknown'
+    const type = resolveBotType(player)
+    if (type === 'ISB_WT') return 'ISB WT'
+    if (type === 'ISB') return 'ISB'
 
     if (player.team === 'Usec' || player.team === 'Bear') return 'PMC'
     if (player.type === 'PLAYER' && player.team === 'Savage') return 'Player Scav'
     if (player.type === 'HUMAN') return 'PMC'
 
-    switch (resolveBotType(player)) {
+    switch (type) {
         case 'SCAV': return 'Scav'
         case 'BOSS': return 'Boss'
         case 'ROGUE': return 'Rogue'
@@ -166,7 +175,6 @@ export function getPlayerFaction(player: any): string {
         case 'RUAF': return 'RUAF'
         case 'UNTAR': return 'UNTAR'
         case 'BLACKDIV': return 'Black Div'
-        case 'ISB': return 'ISB'
         case 'COMBINE': return 'Combine'
         case 'INFECTED': return 'Infected'
         default: return 'Unknown'
@@ -177,6 +185,7 @@ export function buildPmcIndexMap(players: any[]): Record<string, number> {
     const map: Record<string, number> = {}
     const groupCounters: Record<number, number> = {}
     for (const p of players) {
+        if (resolveIsbCategory(p)) continue
         const isPMC = p.team === 'Usec' || p.team === 'Bear'
         const isHuman = p.type === 'HUMAN'
         if (isPMC || isHuman) {

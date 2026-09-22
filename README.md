@@ -37,6 +37,10 @@ Download a compatible version from the **[releases](https://github.com/Chazut/SP
 - Mod integrations: SAIN, ORBIT (ghosts included), QuestingBots, LootingBots
 - Ghost hearing replay: enable **Ghost hearing** to see a small ear icon beside Ghost squad members for eight seconds after a recorded decision to investigate a sound. Hover or focus an icon to reveal the sound location and a dotted connection. Ignored sounds stay hidden. Requires hearing decisions recorded by compatible ORBIT and RaidReview clients; older raids without those events remain unchanged.
 - Faction badges for modded bots: UNTAR, RUAF, Black Division, ISB, Combine Soldiers
+- ISB White Tusks have a separate **ISB WT** display group and **WT** map markers,
+  including the March squad and original commanders. Recorded faction and bot
+  behaviour are unchanged. Older replays are recognized when their saved role or
+  ISB display name identifies a White Tusk.
 - Fika support, see [REMOTE_HOST_AND_FIKA.md](REMOTE_HOST_AND_FIKA.md)
 
 ---

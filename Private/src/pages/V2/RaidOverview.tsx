@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import _ from "lodash";
 import { getLocationLabel } from '../../helpers/locations';
 import { getFactionRole, resolveBotType } from "../../helpers/players";
+import { getIsbDisplayName } from '../../helpers/isb';
 import cyr_to_en from '../../assets/cyr_to_en.json';
 
 const BOSS_NAME_OVERRIDES: Record<string, string> = {
@@ -29,6 +30,7 @@ const FACTION_COLORS: Record<string, { color: string, label: string }> = {
     'UNTAR':       { color: '#00BFFF', label: 'UNTAR' },
     'BLACK DIV':   { color: '#555555', label: 'Black Div' },
     'ISB':         { color: '#1ABC9C', label: 'ISB' },
+    'ISB WT':      { color: '#D5E8E4', label: 'ISB WT' },
     'COMBINE':     { color: '#4B6584', label: 'Combine' },
     'SNIPER':      { color: '#00911a', label: 'Sniper' },
     'PLAYER SCAV': { color: '#33FF8D', label: 'P. Scav' },
@@ -210,9 +212,11 @@ export default function RaidOverview() {
         }
 
         if (groupedByType === 'TEAM') {
-          const SIDE_ORDER = ['Player', 'USEC', 'BEAR', 'P. Scav', 'Boss', 'Goon', 'Follower', 'Raider', 'Rogue', 'Cultist', 'Bloodhound', 'Special', 'Infected', 'Mercenary', 'RUAF', 'UNTAR', 'Black Div', 'ISB', 'Combine', 'Sniper', 'Scav'];
+          const SIDE_ORDER = ['Player', 'USEC', 'BEAR', 'P. Scav', 'Boss', 'Goon', 'Follower', 'Raider', 'Rogue', 'Cultist', 'Bloodhound', 'Special', 'Infected', 'Mercenary', 'RUAF', 'UNTAR', 'Black Div', 'ISB', 'ISB WT', 'Combine', 'Sniper', 'Scav'];
           const grouped = _.groupBy(raid.players, p => {
             if (p.profileId === raid.profileId) return 'Player';
+            const isb = resolveBotType(p);
+            if (isb === 'ISB' || isb === 'ISB_WT') return isb === 'ISB_WT' ? 'ISB WT' : 'ISB';
             const isPMC = p.team === 'Usec' || p.team === 'Bear';
             if (isPMC) {
               const sideLabel = SIDE_COLORS[p.team]?.label || p.team;
@@ -323,6 +327,8 @@ export default function RaidOverview() {
                   return "BLACK DIV"
               case 'ISB':
                   return "ISB"
+              case 'ISB_WT':
+                  return "ISB WT"
               case 'COMBINE':
                   return "COMBINE"
               case 'INFECTED':
@@ -357,9 +363,9 @@ export default function RaidOverview() {
           // ISB only: its WildSpawnType names are misleading (variants reuse the
           // boss-roster slot names). Prefer SAIN's author-controlled bot-type name
           // (e.g. "ISB Operator"), appending the SAIN personality when known; if no
-          // SAIN name was captured, fall back to the "difficulty - personality" string.
-          if (category === "ISB") {
-            const sainName = (player.mod_SAIN_name || "").trim();
+          // SAIN name was captured, use the known role's display name.
+          if (["ISB", "ISB_WT"].includes(resolveBotType(player))) {
+            const sainName = getIsbDisplayName(player);
             const personality = (player.mod_SAIN_brain || "").trim();
             const hasPersonality = personality !== "" && !["UNKNOWN", "PMC", "SCAV", "PLAYER"].includes(personality);
             if (sainName !== "") {

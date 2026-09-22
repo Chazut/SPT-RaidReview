@@ -57,6 +57,7 @@ const FACTION_COLORS: Record<string, string> = {
     'UNTAR': '#00BFFF',
     'Black Div': '#555555',
     'ISB': '#1ABC9C',
+    'ISB WT': '#D5E8E4',
     'Infected': '#7FFF00',
     'Other': '#00eeff',
     'Unknown': '#999',
@@ -79,7 +80,8 @@ function getFactionGroup(faction: string): string {
         case 'RUAF':
         case 'UNTAR':
         case 'Black Div':
-        case 'ISB': return 'Factions';
+        case 'ISB':
+        case 'ISB WT': return 'Factions';
         case 'Infected': return 'Infected';
         default: return 'Other';
     }
@@ -293,7 +295,7 @@ export default function RaidCharts() {
                 factionMap[faction].push(entry);
 
                 // Personality — PMC only
-                const isPMC = player.team === 'Usec' || player.team === 'Bear';
+                const isPMC = faction === 'PMC';
                 if (isPMC && player.mod_SAIN_brain) {
                     const brainKey = player.mod_SAIN_brain.toLowerCase();
                     if (brainKey !== 'player') {

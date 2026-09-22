@@ -17,6 +17,7 @@ import { PlayerSlider } from './MapPlayerSlider.js';
 import { GhostHearingOverlay } from './GhostHearingOverlay';
 
 import { getMarkerLabel, getPlayerColor, getLegendIcon, PMC_COLORS, buildPmcIndexMap, getFactionRole, resolveBotType } from '../helpers/players'
+import { getIsbDisplayName } from '../helpers/isb'
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from '../helpers/botBehavior'
 
 import 'leaflet/dist/leaflet.css';
@@ -31,11 +32,13 @@ function getDisplayName(player: any): string {
 
 function classifyPlayer(player: any): string {
     if (!player) return 'SCAV'
+    const type = resolveBotType(player)
+    if (type === 'ISB' || type === 'ISB_WT') return 'FACTION'
     const isPMC = player.team === 'Bear' || player.team === 'Usec'
     const isHuman = player.type === 'HUMAN'
     if (isPMC || isHuman) return 'PMC'
 
-    switch (resolveBotType(player)) {
+    switch (type) {
         case 'PLAYER_SCAV': return 'PLAYER_SCAV'
         case 'BOSS': return 'BOSS'
         case 'GOON': return 'GOON'
@@ -51,8 +54,7 @@ function classifyPlayer(player: any): string {
         case 'RUAF':
         case 'UNTAR':
         case 'BLACKDIV':
-        case 'COMBINE':
-        case 'ISB': return 'FACTION'
+        case 'COMBINE': return 'FACTION'
         case 'SCAV':
         default:
             if (player.type === 'PLAYER' && player.team === 'Savage') return 'SCAV'
@@ -2878,13 +2880,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             let difficulty = player.mod_SAIN_difficulty
             let brain = getPlayerBrain(player)
             // Faction-mod bots: show their specific role (Rifleman, Grenadier, etc.).
-            // ISB is the exception: its WildSpawnType names are misleading (variants
-            // reuse the boss-roster slot names), so for ISB show the SAIN
-            // "difficulty - personality" like regular bots instead of the role.
+            // Prefer ISB's author-controlled SAIN name, with a role-name fallback.
             if (classifyPlayer(player) === 'FACTION') {
-                const category = typeof player.type === 'string' && player.type.includes('|') ? player.type.split('|')[1] : ''
-                if (category === 'ISB') {
-                    const sainName = (player.mod_SAIN_name || '').trim()
+                const category = resolveBotType(player)
+                if (category === 'ISB' || category === 'ISB_WT') {
+                    const sainName = getIsbDisplayName(player)
                     const personality = (player.mod_SAIN_brain || '').trim()
                     const hasPersonality = personality !== '' && !['UNKNOWN', 'PMC', 'SCAV', 'PLAYER'].includes(personality)
                     if (sainName !== '') {
@@ -3030,7 +3030,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
                                 // Faction sub-grouping by faction type
                                 if (group.key === 'FACTION') {
-                                    const FACTION_LABELS: Record<string, string> = { MERCENARY: 'Mercenary', RUAF: 'RUAF', UNTAR: 'UNTAR', BLACKDIV: 'Black Div', ISB: 'ISB', COMBINE: 'Combine' }
+                                    const FACTION_LABELS: Record<string, string> = { MERCENARY: 'Mercenary', RUAF: 'RUAF', UNTAR: 'UNTAR', BLACKDIV: 'Black Div', ISB: 'ISB', ISB_WT: 'ISB WT', COMBINE: 'Combine' }
                                     const factions: Record<string, { player: any, originalIndex: number }[]> = {}
                                     items.forEach(item => {
                                         const fType = resolveBotType(item.player)

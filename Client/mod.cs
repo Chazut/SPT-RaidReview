@@ -98,6 +98,8 @@ namespace RAID_REVIEW
         /// </summary>
         public static string MapWildSpawnType(WildSpawnType role)
         {
+            var isbType = IsbBotTypes.Map((int)role);
+            if (isbType != null) return isbType;
             switch (role.ToString())
             {
                 case "assault": return "SCAV|SCAV";

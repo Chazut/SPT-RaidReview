@@ -197,7 +197,10 @@ namespace RAID_REVIEW
                 // Handle the wild spawn type
                 if (wildSpawnType != null)
                 {
-                    switch (wildSpawnType.ToString())
+                    var isbType = wildSpawnType is WildSpawnType role ? IsbBotTypes.Map((int)role) : null;
+                    if (isbType != null)
+                        RR_WildSpawnType = isbType;
+                    else switch (wildSpawnType.ToString())
                     {
                         case "assault":
                             RR_WildSpawnType = "SCAV|SCAV";
