@@ -15,6 +15,7 @@ import { useMapImages } from '../modules/maps-index.js';
 import { TrackingPositionalData, TrackingLooseLootItem, TrackingPlayerInventoryItem } from '../types/api_types.js';
 import { PlayerSlider } from './MapPlayerSlider.js';
 import { GhostHearingOverlay } from './GhostHearingOverlay';
+import { playerEndTimes } from '../helpers/playerPresence';
 
 import { getMarkerLabel, getPlayerColor, getLegendIcon, PMC_COLORS, buildPmcIndexMap, getFactionRole, resolveBotType } from '../helpers/players'
 import { getIsbDisplayName } from '../helpers/isb'
@@ -282,6 +283,8 @@ function calculateProportionalRadius(mapBounds, zoomLevel) {
   
 
 export default function MapComponent({ raidData, raidId, positions, intl_dir }) {
+    const presenceEnds = useMemo(() => playerEndTimes(positions, raidData?.player_status, raidData?.kills),
+        [positions, raidData?.player_status, raidData?.kills])
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const [currentMap, setCurrentMap] = useState('')
@@ -913,6 +916,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             let currentDirection = 0
 
             const isPlayerDead = events.find((e) => e.killedId === playerId && e.time < timeEndLimit)
+            const isPlayerGone = (presenceEnds[playerId] ?? Infinity) < timeEndLimit
 
             if (playerPositions === undefined) continue
             for (let j = 0; j < playerPositions.length; j++) {
@@ -982,7 +986,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 pl._rr_isDead = !!isPlayerDead
                 pl._rr_normalOpacity = preserveHistory ? 0.8 : isPlayerDead ? 0 : 0.8
 
-                if (!isPlayerDead) {
+                if (!isPlayerDead && !isPlayerGone) {
                     // Get latest behavior decision + health from position data (skip BTR)
                     const isBTR = player?.type?.includes('BTR')
                     let currentDecision: string | undefined
@@ -1137,7 +1141,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             setTimeEndLimit(times[times.length - 1])
             setTimeCurrentIndex(times.length - 1)
         }
-    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, showBehavior])
+    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, showBehavior, presenceEnds])
 
     // Focus overlay: adjusts layer opacity + kill visualization without full re-render
     useEffect(() => {
