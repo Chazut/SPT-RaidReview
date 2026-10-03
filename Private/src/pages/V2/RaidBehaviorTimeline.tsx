@@ -1,3 +1,4 @@
+import GhostWakeDiagnostics from '../../component/GhostWakeDiagnostics';
 import { LoaderFunctionArgs, useLoaderData, useOutletContext } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/api";
@@ -266,9 +267,12 @@ export default function RaidBehaviorTimeline() {
 
     if (playerRows.length === 0) {
         return (
+            <>
+            <GhostWakeDiagnostics raidId={raid.raidId} />
             <div className="p-4 text-eft text-center opacity-50" style={{ fontSize: '14px' }}>
                 No behavior data available. Play a raid with the updated mod to capture bot decisions.
             </div>
+            </>
         )
     }
 
@@ -276,6 +280,7 @@ export default function RaidBehaviorTimeline() {
 
     return (
         <div ref={containerRef} className="p-4" style={{ overflowX: 'auto' }}>
+            <GhostWakeDiagnostics raidId={raid.raidId} />
             {/* SAIN recommendation banner */}
             {!hasSain && (
                 <div className="mb-3 px-3 py-2" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 4, fontSize: '13px', color: '#F59E0B' }}>

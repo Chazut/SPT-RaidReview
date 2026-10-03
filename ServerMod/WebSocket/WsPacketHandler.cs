@@ -433,6 +433,24 @@ public class WsPacketHandler
                     break;
                 }
 
+                case "ORBIT_GHOST_WAKE":
+                {
+                    if (raidId == null) break;
+                    await _db.ExecuteAsync(
+                        @"INSERT INTO orbit_ghost_wake (raidId, time, profileId, name, cause, detail, triggerProfileId, triggerName, memberProfileId, distance) VALUES ($raidId, $time, $profileId, $name, $cause, $detail, $triggerProfileId, $triggerName, $memberProfileId, $distance)",
+                        ("$raidId", raidId!),
+                        ("$time", GetString(payload, "time")),
+                        ("$profileId", GetString(payload, "profileId")),
+                        ("$name", GetString(payload, "name")),
+                        ("$cause", GetString(payload, "cause")),
+                        ("$detail", GetString(payload, "detail")),
+                        ("$triggerProfileId", GetString(payload, "triggerProfileId")),
+                        ("$triggerName", GetString(payload, "triggerName")),
+                        ("$memberProfileId", GetString(payload, "memberProfileId")),
+                        ("$distance", GetString(payload, "distance")));
+                    break;
+                }
+
                 case "ORBIT_GHOST_HEARING":
                 {
                     if (raidId == null) break;

@@ -537,6 +537,22 @@ namespace RAID_REVIEW
             }
         }
 
+        private void CaptureOrbitGhostWakes()
+        {
+            if (!ORBIT__DETECTED) return;
+            try
+            {
+                var wakes = Orbit_Integration.GetGhostWakes(sessionId, stopwatch.ElapsedMilliseconds);
+                if (wakes == null) return;
+                foreach (var wake in wakes)
+                    _ = Telemetry.Send("ORBIT_GHOST_WAKE", JsonConvert.SerializeObject(wake));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning($"RAID_REVIEW :::: WARN :::: ORBIT wake capture failed: {ex.Message}");
+            }
+        }
+
         private void CaptureOrbitGhostHearing()
         {
             if (!ORBIT__DETECTED) return;
@@ -857,6 +873,7 @@ namespace RAID_REVIEW
                         CaptureOrbitMainObjectives();
                         CaptureOrbitGhostFights();
                         CaptureOrbitGhostHearing();
+            CaptureOrbitGhostWakes();
                     }
                     foreach (Player player in allPlayers)
                     {

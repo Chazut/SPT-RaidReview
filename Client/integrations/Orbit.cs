@@ -117,6 +117,36 @@ namespace RAID_REVIEW
             return list;
         }
 
+        private static bool _wakeApiMissing;
+
+        public static System.Collections.Generic.List<TrackingOrbitGhostWake> GetGhostWakes(string sessionId, long time)
+        {
+            if (_wakeApiMissing) return null;
+            try { return GetGhostWakesInner(sessionId, time); }
+            catch (System.MissingMemberException) { _wakeApiMissing = true; return null; }
+            catch (System.TypeLoadException) { _wakeApiMissing = true; return null; }
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static System.Collections.Generic.List<TrackingOrbitGhostWake> GetGhostWakesInner(string sessionId, long time)
+        {
+            var drained = OrbitTelemetry.DrainGhostWakes();
+            if (drained == null) return null;
+            var now = UnityEngine.Time.realtimeSinceStartup;
+            var result = new System.Collections.Generic.List<TrackingOrbitGhostWake>(drained.Count);
+            foreach (var wake in drained)
+                result.Add(new TrackingOrbitGhostWake
+                {
+                    sessionId = sessionId,
+                    time = System.Math.Max(0, time - (long)(System.Math.Max(0f, now - wake.RecordedAt) * 1000f)),
+                    profileId = wake.ProfileId ?? "", name = wake.Name ?? "",
+                    cause = wake.Cause ?? "", detail = wake.Detail ?? "",
+                    triggerProfileId = wake.TriggerProfileId ?? "", triggerName = wake.TriggerName ?? "",
+                    memberProfileId = wake.MemberProfileId ?? "", distance = wake.Distance,
+                });
+            return result;
+        }
+
         // Kept separate from the fight API guard: older ORBIT versions still record their fights.
         private static bool _hearingApiMissing;
 

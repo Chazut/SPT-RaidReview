@@ -572,6 +572,23 @@ public class DatabaseService : IDisposable
                 );
                 CREATE INDEX IF NOT EXISTS idx_orbit_ghost_hearing_raid_time ON orbit_ghost_hearing(""raidId"", ""time"");
             "),
+            ("add_orbit_ghost_wake_table", @"
+                CREATE TABLE IF NOT EXISTS orbit_ghost_wake (
+                    ""id"" INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ""raidId"" TEXT NOT NULL,
+                    ""time"" INTEGER NOT NULL,
+                    ""profileId"" TEXT NOT NULL,
+                    ""name"" TEXT NOT NULL,
+                    ""cause"" TEXT NOT NULL,
+                    ""detail"" TEXT NOT NULL,
+                    ""triggerProfileId"" TEXT NOT NULL,
+                    ""triggerName"" TEXT NOT NULL,
+                    ""memberProfileId"" TEXT NOT NULL,
+                    ""distance"" REAL NOT NULL,
+                    FOREIGN KEY (""raidId"") REFERENCES raid(""raidId"")
+                );
+                CREATE INDEX IF NOT EXISTS idx_orbit_ghost_wake_raid_time ON orbit_ghost_wake(""raidId"", ""time"");
+            "),
             ("add_location_variant_to_raid", @"
                 ALTER TABLE raid ADD COLUMN ""locationVariant"" TEXT NOT NULL DEFAULT '';
             "),

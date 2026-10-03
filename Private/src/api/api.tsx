@@ -1,3 +1,4 @@
+import { parseGhostWakes } from '../helpers/ghostWakes';
 import { ISptProfile } from '../types/api_types';
 import { TrackingRaidData, TrackingCoreDataRaids } from '../types/api_types';
 import { parseGhostHearing } from '../helpers/ghostHearing';
@@ -208,6 +209,13 @@ const api = {
         } catch (error) {
             return [];
         }
+    },
+
+    getRaidOrbitGhostWakes: async function(raidId: string, signal?: AbortSignal): Promise<import('../helpers/ghostWakes').GhostWake[] | null> {
+        const response = await fetch(hostname + `/api/raids/${raidId}/orbit_ghost_wake`, { signal });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Could not load Ghost wake diagnostics');
+        return parseGhostWakes(await response.json());
     },
 
     getRaidOrbitGhostHearing : async function(raidId: string, signal?: AbortSignal) : Promise<TrackingOrbitGhostHearing[] | null> {

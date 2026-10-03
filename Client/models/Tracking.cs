@@ -135,6 +135,20 @@ namespace RAID_REVIEW
         public int casualties { get; set; }
     }
 
+    public class TrackingOrbitGhostWake
+    {
+        public string sessionId { get; set; }
+        public long time { get; set; }
+        public string profileId { get; set; }
+        public string name { get; set; }
+        public string cause { get; set; }
+        public string detail { get; set; }
+        public string triggerProfileId { get; set; }
+        public string triggerName { get; set; }
+        public string memberProfileId { get; set; }
+        public float distance { get; set; }
+    }
+
     public class TrackingOrbitGhostHearing
     {
         public string sessionId { get; set; }
