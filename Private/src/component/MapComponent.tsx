@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { mainLabel, mainStarted, mainInterrupted, mainHoldDetail } from '../helpers/mainObjectives'
+import { mainLabel, mainStarted, mainInterrupted, mainHoldDetail, operationDetail, escapeMainText, mainAbandoned } from '../helpers/mainObjectives'
 
 import { useEffect, useRef, useMemo, useCallback, useLayoutEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, useLoaderData, Link } from 'react-router-dom';
@@ -2386,6 +2386,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             LootValue: '#F59E0B', // gold
             Quest: '#A855F7',     // purple
             ExtractCamp: '#22D3EE',
+            MultiStep: '#34D399',
         }
         // Single-glyph identifier inside each marker — no number,
         // because the squad picks mains opportunistically (closest
@@ -2396,6 +2397,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             LootValue: '$',
             Quest: '?',
             ExtractCamp: 'E',
+            MultiStep: 'M',
         }
 
         squadEntry.mainObjectives.forEach((m: any) => {
@@ -2414,7 +2416,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 : isStarted ? '#FFFFFF'             // white — in progress
                 : baseColor                          // pending
             const ringWeight = isStarted ? 4 : 2.5
-            const glyph = m.completed ? '✓' : (glyphByType[m.type] || '●')
+            const glyph = mainAbandoned(m) ? '×' : m.completed ? '✓' : (glyphByType[m.type] || '●')
             const marker = L.circleMarker([m.z, m.x], {
                 radius: isStarted ? 13 : 11,
                 color: ringColor,
@@ -2430,10 +2432,13 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 iconAnchor: [11, 11],
             })
             const label = L.marker([m.z, m.x], { icon: labelIcon, interactive: false })
-            let tipHtml = `<strong>${mainLabel(m)}</strong>`
+            let tipHtml = `<strong>${escapeMainText(mainLabel(m))}</strong>`
             if (m.type === 'Quest') {
                 const friendly = resolveQuestName(m.questTriggerId || m.questTitle, questNameMap)
                 tipHtml += `<br/><span style="opacity:0.85">${friendly || m.questTitle || m.questTriggerId || ''}</span>`
+            }
+            if (m.type === 'MultiStep') {
+                tipHtml += `<br/>${escapeMainText(operationDetail(m))}`
             }
             if (m.type === 'ExtractCamp' || m.killAmbush) {
                 tipHtml += `<br/><span style="opacity:0.7;font-size:10px">${mainHoldDetail(m)}</span>`
@@ -2443,7 +2448,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             if (m.type === 'LootValue' && m.lootValueTotal > 0) {
                 tipHtml += `<br/><span style="opacity:0.7;font-size:10px">₽ ${Math.round(m.lootValueTotal).toLocaleString()}</span>`
             }
-            const stateLabel = m.completed
+            const stateLabel = mainAbandoned(m) ? '× abandoned' : m.completed
                 ? '✓ completed'
                 : isInterrupted ? '⏸ interrupted'
                 : isStarted ? '◉ in progress (started)'
@@ -3624,14 +3629,14 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                 {selectedSquadForMains != null && (() => {
                                     const sq = findLatestSquadEntry(selectedSquadForMains, timeEndLimit)
                                     if (!sq || !sq.mainObjectives) return null
-                                    const colorByType: Record<string, string> = { Kills: '#EF4444', LootValue: '#F59E0B', Quest: '#A855F7', ExtractCamp: '#22D3EE' }
+                                    const colorByType: Record<string, string> = { Kills: '#EF4444', LootValue: '#F59E0B', Quest: '#A855F7', ExtractCamp: '#22D3EE', MultiStep: '#34D399' }
                                     return (
                                         <div style={{ marginTop: '6px', borderTop: '1px dashed rgba(154,136,102,0.3)', paddingTop: '6px' }}>
                                             {sq.mainObjectives.map((m: any, idx: number) => {
                                                 const baseColor = colorByType[m.type] || '#888'
                                                 const isStarted = mainStarted(m)
                                                 const isInterrupted = mainInterrupted(m)
-                                                const stateGlyph = m.completed ? '✓' : (isInterrupted ? '⏸' : (isStarted ? '◉' : '○'))
+                                                const stateGlyph = mainAbandoned(m) ? '×' : m.completed ? '✓' : (isInterrupted ? '⏸' : (isStarted ? '◉' : '○'))
                                                 const stateColor = m.completed ? '#6B7280' : (isInterrupted ? '#F59E0B' : (isStarted ? '#fff' : baseColor))
                                                 let detail = ''
                                                 if (m.type === 'Quest') {
@@ -3641,6 +3646,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                     detail = m.lootValueTotal > 0
                                                         ? `₽ ${Math.round(m.lootValueTotal).toLocaleString()}`
                                                         : '(no value)'
+                                                } else if (m.type === 'MultiStep') {
+                                                    detail = operationDetail(m)
                                                 } else if (m.type === 'ExtractCamp' || m.killAmbush) {
                                                     detail = mainHoldDetail(m)
                                                 } else if (m.type === 'Kills') {

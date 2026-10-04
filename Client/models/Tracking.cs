@@ -390,6 +390,12 @@ namespace RAID_REVIEW
         public float campElapsed { get; set; }
         public float campTargetDuration { get; set; }
         public bool campHolding { get; set; }
+        public string operationId { get; set; }
+        public string operationName { get; set; }
+        public string operationStep { get; set; }
+        public int operationStepIndex { get; set; }
+        public int operationStepCount { get; set; }
+        public string operationState { get; set; }
         // LootValue-type extras (0 for non-LootValue). lootValueEnteredAt > 0
         // means a member has entered the anchor cell. lootValueTotal is the
         // precomputed sum of handbook prices for every item in every

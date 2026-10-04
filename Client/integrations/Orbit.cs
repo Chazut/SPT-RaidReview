@@ -286,6 +286,16 @@ namespace RAID_REVIEW
             internal static readonly System.Reflection.FieldInfo Holding = typeof(OrbitMainObjective).GetField("CampHolding");
         }
 
+        private static class OperationFields
+        {
+            internal static readonly System.Reflection.FieldInfo OperationId = typeof(OrbitMainObjective).GetField("OperationId");
+            internal static readonly System.Reflection.FieldInfo OperationName = typeof(OrbitMainObjective).GetField("OperationName");
+            internal static readonly System.Reflection.FieldInfo OperationStep = typeof(OrbitMainObjective).GetField("OperationStep");
+            internal static readonly System.Reflection.FieldInfo OperationStepIndex = typeof(OrbitMainObjective).GetField("OperationStepIndex");
+            internal static readonly System.Reflection.FieldInfo OperationStepCount = typeof(OrbitMainObjective).GetField("OperationStepCount");
+            internal static readonly System.Reflection.FieldInfo OperationState = typeof(OrbitMainObjective).GetField("OperationState");
+        }
+
         public static TrackingOrbitMainObjectives GetMainObjectivesSnapshot(string sessionId, long time)
         {
             var snap = OrbitTelemetry.GetMainObjectivesSnapshot();
@@ -313,6 +323,12 @@ namespace RAID_REVIEW
                         campElapsed = CampMainFields.Elapsed?.GetValue(m) as float? ?? 0f,
                         campTargetDuration = CampMainFields.Duration?.GetValue(m) as float? ?? 0f,
                         campHolding = CampMainFields.Holding?.GetValue(m) is true,
+                        operationId = OperationFields.OperationId?.GetValue(m) as string,
+                        operationName = OperationFields.OperationName?.GetValue(m) as string,
+                        operationStep = OperationFields.OperationStep?.GetValue(m) as string,
+                        operationStepIndex = OperationFields.OperationStepIndex?.GetValue(m) as int? ?? 0,
+                        operationStepCount = OperationFields.OperationStepCount?.GetValue(m) as int? ?? 0,
+                        operationState = OperationFields.OperationState?.GetValue(m) as string,
                         lootValueEnteredAt = m.LootValueEnteredAt,
                         lootValueTotal = m.LootValueTotal,
                         lootValueInterrupted = m.LootValueInterrupted,
