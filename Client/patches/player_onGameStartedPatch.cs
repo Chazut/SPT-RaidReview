@@ -2,7 +2,6 @@ using SPT.Reflection.Patching;
 using Comfort.Common;
 using EFT;
 using EFT.Communications;
-using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -25,7 +24,14 @@ namespace RAID_REVIEW
         {
             try
             {
-                if (__instance.LocationId == "hideout") return;
+                if (__instance.LocationId == "hideout" || RAID_REVIEW.inRaid || !RAID_REVIEW.EnableRecording.Value) return;
+                if (!Telemetry.BeginRaid())
+                {
+                    Logger.LogWarning("Raid Review recording could not start: sender unavailable. Check the connection and restart before the next raid.");
+                    return;
+                }
+                RAID_REVIEW.gameWorld = __instance;
+                RAID_REVIEW.myPlayer = __instance.MainPlayer;
 
                 Logger.LogInfo("RAID_REVIEW :::: INFO :::: RAID Settings Loaded");
 
@@ -63,7 +69,7 @@ namespace RAID_REVIEW
                     type = raidType,
                     timeInRaid = RAID_REVIEW.stopwatch.IsRunning ? RAID_REVIEW.stopwatch.ElapsedMilliseconds : 0
                 };
-                Telemetry.Send("START", JsonConvert.SerializeObject(RAID_REVIEW.trackingRaid));
+                Telemetry.SendSnapshot("START", RAID_REVIEW.trackingRaid.Snapshot());
 
                 // Only register main player if present (headless has no main player)
                 if (RAID_REVIEW.myPlayer != null)
@@ -82,7 +88,7 @@ namespace RAID_REVIEW
                         mod_SAIN_difficulty = ""
                     };
                     RAID_REVIEW.trackingPlayers[newTrackingPlayer.profileId] = newTrackingPlayer;
-                    Telemetry.Send("PLAYER", JsonConvert.SerializeObject(newTrackingPlayer));
+                    Telemetry.SendSnapshot("PLAYER", newTrackingPlayer.Snapshot());
                 }
 
                 RAID_REVIEW.inRaid = true;
@@ -103,7 +109,9 @@ namespace RAID_REVIEW
                     _ = SAIN_Integration.CheckForSainComponents(false);
                 }
 
-                BotChecker.BotCheckLoop(false);
+                RecordingRoster.Seed(__instance);
+                RecordingPerformance.Reset();
+                SwitchRecorder.Start(__instance);
 
                 return;
             }

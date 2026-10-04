@@ -6,6 +6,7 @@ import './RaidCharts.css'
 import { useOutletContext } from 'react-router-dom';
 import { TrackingPlayerStatus, TrackingRaidData } from '../../types/api_types';
 import _ from 'lodash';
+import { displayPlayerName } from '../../helpers/playerNames';
 import { intl, msToHMS } from '../../helpers';
 import { getLegendIcon, getPlayerColor, getPlayerFaction, buildPmcIndexMap } from '../../helpers/players';
 
@@ -262,7 +263,7 @@ export default function RaidCharts() {
             const pmcIndexMap = buildPmcIndexMap(raid.players);
             for (let idx = 0; idx < raid.players.length; idx++) {
                 const p = raid.players[idx];
-                playerNameMap[p.profileId] = intl(p.name, intl_dir);
+                playerNameMap[p.profileId] = displayPlayerName(p.name);
                 playerFactionMap[p.profileId] = getPlayerFaction(p);
                 playerObjMap[p.profileId] = p;
                 playerColorMap[p.profileId] = getPlayerColor(p, idx);

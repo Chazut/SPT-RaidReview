@@ -1,4 +1,5 @@
 import { parseAirdropFlights } from '../helpers/airdropFlights';
+import { parseSwitches } from '../helpers/switches';
 import { parseAirdrops } from '../helpers/airdrops';
 import { parseGhostWakes } from '../helpers/ghostWakes';
 import { ISptProfile } from '../types/api_types';
@@ -211,6 +212,13 @@ const api = {
         } catch (error) {
             return [];
         }
+    },
+
+    getRaidSwitches: async function(raidId: string, signal?: AbortSignal) {
+        const response = await fetch(hostname + `/api/raids/${raidId}/switches`, { signal });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Could not load switches');
+        return parseSwitches(await response.json());
     },
 
     getRaidAirdropFlights: async function(raidId: string, signal?: AbortSignal) {

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using EFT.Airdrop;
 using EFT.Interactive;
-using Newtonsoft.Json;
 using SPT.Reflection.Patching;
 
 namespace RAID_REVIEW
@@ -20,7 +19,7 @@ namespace RAID_REVIEW
         [PatchPostfix]
         private static void Postfix(ClientAirDrop __instance)
         {
-            if (!RAID_REVIEW.inRaid || !RAID_REVIEW.EnableRecording.Value || RAID_REVIEW.sessionId == null) return;
+            if (!RAID_REVIEW.CanCapture || RAID_REVIEW.sessionId == null) return;
             try
             {
                 var container = __instance?._syncObject?.GetComponentInChildren<LootableContainer>();
@@ -36,7 +35,7 @@ namespace RAID_REVIEW
                     crateTemplateId = container.ItemOwner?.RootItem?.TemplateId ?? "",
                     x = position.x, y = position.y, z = position.z,
                 };
-                _ = Telemetry.Send("AIRDROP_LANDED", JsonConvert.SerializeObject(payload));
+                _ = Telemetry.SendSnapshot("AIRDROP_LANDED", payload);
             }
             catch (Exception ex)
             {

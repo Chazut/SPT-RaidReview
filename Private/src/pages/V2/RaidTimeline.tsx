@@ -1,5 +1,6 @@
 import { useOutletContext } from "react-router-dom";
 import { TrackingRaidData } from "../../types/api_types";
+import { displayPlayerName } from '../../helpers/playerNames';
 import { bodypart, intl, msToHMS } from "../../helpers";
 import { useEffect, useMemo, useState } from "react";
 import _ from "lodash";
@@ -116,12 +117,12 @@ export default function RaidTimeline() {
                   <>
                     {/* @ts-ignore */}
                     <td className="opacity-75 px-2 border-r border-eft">{msToHMS(tli.time)}</td>
-                    <td className="text-right pr-2"><span className="inline-flex items-center">{playerIcon(killer)}{killer ? intl(killer.name, intl_dir) : "Unknown"}</span></td>
+                    <td className="text-right pr-2"><span className="inline-flex items-center">{playerIcon(killer)}{killer ? displayPlayerName(killer.name) : "Unknown"}</span></td>
                     <td className="text-center px-2 border-l border-r border-eft">
                       <span style={{ color: '#EF4444' }}>killed </span>
                     </td>
                     <td className="text-left px-2">
-                      <span className="inline-flex items-center">{playerIcon(killed)}<strong>{killed ? intl(killed.name, intl_dir) : "Unknown"}</strong></span>
+                      <span className="inline-flex items-center">{playerIcon(killed)}<strong>{killed ? displayPlayerName(killed.name) : "Unknown"}</strong></span>
                       <span className="opacity-75"> with a </span>
                         {/* @ts-ignore */}
                       <strong>{ intl([(tli.weapon || '').replace("Name", "ShortName")], intl_dir) } [{bodypart[tli.bodyPart]? bodypart[tli.bodyPart]: tli.bodyPart}] [{ Number(tli.distance).toFixed(2) }m]</strong>
@@ -131,7 +132,7 @@ export default function RaidTimeline() {
                   <>
                     {/* @ts-ignore */}
                     <td className="opacity-75 px-2 border-r border-eft">{msToHMS(tli.time)}</td>
-                    <td className="text-right pr-2"><span className="inline-flex items-center">{playerIcon(looter)}{looter ? intl(looter.name, intl_dir) : "Unknown"}</span></td>
+                    <td className="text-right pr-2"><span className="inline-flex items-center">{playerIcon(looter)}{looter ? displayPlayerName(looter.name) : "Unknown"}</span></td>
                     <td className="text-center px-2 border-l border-r border-eft">
                       <span style={{ color: String(tli.added).match(/^(1|true)$/i) ? '#22C55E' : '#F59E0B' }}>
                       {String(tli.added).match(/^(1|true)$/i) ? " looted " : " dropped "}
@@ -186,7 +187,7 @@ export default function RaidTimeline() {
                   usernameFilter_[p.profileId] = !usernameFilter_[p.profileId]
                   setUsernameFilter(usernameFilter_);
                 }} />
-                { p.name }
+                { displayPlayerName(p.name) }
               </li>
             ) : ''
           }

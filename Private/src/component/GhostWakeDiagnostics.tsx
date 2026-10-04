@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import api from '../api/api'
 import { GhostWake, wakeCauseLabels } from '../helpers/ghostWakes'
+import { displayPlayerName } from '../helpers/playerNames'
 import { msToHMS } from '../helpers'
 
 export default function GhostWakeDiagnostics({ raidId }: { raidId: string }) {
@@ -21,7 +22,7 @@ export default function GhostWakeDiagnostics({ raidId }: { raidId: string }) {
     }, [raidId])
     const filtered = useMemo(() => {
         const query = filter.trim().toLocaleLowerCase()
-        return (wakes || []).filter(w => `${w.name} ${w.profileId} ${w.triggerName} ${w.triggerProfileId} ${w.cause} ${wakeCauseLabels[w.cause] || ''}`.toLocaleLowerCase().includes(query))
+        return (wakes || []).filter(w => `${w.name} ${displayPlayerName(w.name, '')} ${w.profileId} ${w.triggerName} ${displayPlayerName(w.triggerName, '')} ${w.triggerProfileId} ${w.cause} ${wakeCauseLabels[w.cause] || ''}`.toLocaleLowerCase().includes(query))
     }, [wakes, filter])
     const pages = Math.max(1, Math.ceil(filtered.length / 50))
     const currentPage = Math.min(page, pages - 1)
@@ -35,9 +36,9 @@ export default function GhostWakeDiagnostics({ raidId }: { raidId: string }) {
                 <thead><tr>{['Time', 'Bot', 'Cause', 'Trigger', 'Distance', 'Details'].map(label => <th key={label} style={{ padding: 6 }}>{label}</th>)}</tr></thead>
                 <tbody>{filtered.slice(currentPage * 50, currentPage * 50 + 50).map(w => <tr key={w.id} style={{ borderTop: '1px solid #302e29' }}>
                     <td style={{ padding: 6, whiteSpace: 'nowrap' }}>{msToHMS(w.time)}</td>
-                    <td title={w.profileId} style={{ padding: 6 }}>{w.name || w.profileId}</td>
+                    <td title={w.profileId} style={{ padding: 6 }}>{displayPlayerName(w.name, w.profileId)}</td>
                     <td style={{ padding: 6 }}>{wakeCauseLabels[w.cause] || w.cause}</td>
-                    <td title={w.triggerProfileId} style={{ padding: 6 }}>{w.triggerName || w.triggerProfileId || 'Not recorded'}</td>
+                    <td title={w.triggerProfileId} style={{ padding: 6 }}>{displayPlayerName(w.triggerName, w.triggerProfileId || 'Not recorded')}</td>
                     <td style={{ padding: 6 }}>{w.distance >= 0 ? `${w.distance.toFixed(1)} m` : 'N/A'}</td>
                     <td title={w.memberProfileId ? `Triggering member: ${w.memberProfileId}` : ''} style={{ padding: 6 }}>{w.detail}</td>
                 </tr>)}</tbody>

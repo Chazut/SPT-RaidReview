@@ -11,6 +11,7 @@ namespace RAID_REVIEW
 
     public class TrackingRaid
     {
+        public TrackingRaid Snapshot() => (TrackingRaid)MemberwiseClone();
         public string sessionId { get; set; }
         public string profileId { get; set; }
         public string location { get; set; }
@@ -25,7 +26,8 @@ namespace RAID_REVIEW
     }
 
     public class TrackingPlayer
-    { 
+    {
+        public TrackingPlayer Snapshot() => (TrackingPlayer)MemberwiseClone();
         public string sessionId { get; set; }
         public string profileId { get; set; }
         public int level { get; set; }
@@ -52,8 +54,8 @@ namespace RAID_REVIEW
         public float distance { get; set; }
         public string bodyPart {  get; set; }
         public string type { get; set; }
-        public string positionKiller { get; set; }
-        public string positionKilled { get; set; }
+        public JsonPosition positionKiller { get; set; }
+        public JsonPosition positionKilled { get; set; }
     }
 
     public class TrackingLootItem
@@ -173,7 +175,7 @@ namespace RAID_REVIEW
         public string personality { get; set; }
     }
 
-    public class TrackingPlayerDeadOrUnspawned 
+    public class TrackingPlayerDeadOrUnspawned
     {
         public string sessionId { get; set; }
         public string profileId { get; set; }
@@ -196,8 +198,8 @@ namespace RAID_REVIEW
         public string weaponName { get; set; }
         public string ammoId { get; set; }
         public string hitPlayerId { get; set; }
-        public string source { get; set; }
-        public string target { get; set; }
+        public JsonPosition source { get; set; }
+        public JsonPosition target { get; set; }
     }
 
     public class TrackingLooseLoot
@@ -374,6 +376,9 @@ namespace RAID_REVIEW
 
     public class TrackingOrbitMainObjective
     {
+        public string airdropStage { get; set; }
+        public string airdropId { get; set; }
+        public bool airdropLanded { get; set; }
         public string type { get; set; } // "Kills" | "LootValue" | "Quest"
         public int cellX { get; set; }
         public int cellY { get; set; }

@@ -1,3 +1,4 @@
+import { allFloors, type FloorPredicate } from '../helpers/floorFilter'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import api from '../api/api'
@@ -9,13 +10,13 @@ const icon = L.divIcon({
     html: '<span style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#241d11;border:2px solid #fbbf24;color:#fbbf24"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 10a9 9 0 0 1 18 0H3ZM3 10l6 7m12-7-6 7M9 10l2 7m4-7-2 7M9 17h6v5H9z"/></svg></span>'
 })
 
-export function AirdropOverlay({ raidId, map, ready, time }: { raidId: string; map: L.Map | null; ready: boolean; time: number }) {
+export function AirdropOverlay({ raidId, map, ready, time, onFloor = allFloors }: { raidId: string; map: L.Map | null; ready: boolean; time: number; onFloor?: FloorPredicate }) {
     const [enabled, setEnabled] = useState(() => localStorage.getItem('rr_showAirdrops') !== 'false')
     const [drops, setDrops] = useState<Airdrop[]>([])
     const [status, setStatus] = useState('loading')
     const group = useRef<L.LayerGroup | null>(null)
     const markers = useRef(new Map<string, L.Marker>())
-    const visible = useMemo(() => visibleAirdrops(drops, time), [drops, time])
+    const visible = useMemo(() => visibleAirdrops(drops, time).filter(onFloor), [drops, time, onFloor])
 
     useEffect(() => { localStorage.setItem('rr_showAirdrops', String(enabled)) }, [enabled])
     useEffect(() => {
@@ -65,6 +66,6 @@ export function AirdropOverlay({ raidId, map, ready, time }: { raidId: string; m
     return <label className="flex items-center gap-2 cursor-pointer mt-4" style={{ fontSize: 14 }} title={hint}>
         <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} className="accent-eft" />
         <strong>Airdrops</strong><span style={{ opacity: .6 }}>{visible.length}</span>
-        <AirdropFlightOverlay raidId={raidId} map={map} ready={ready} time={time} enabled={enabled} />
+        <AirdropFlightOverlay raidId={raidId} map={map} ready={ready} time={time} enabled={enabled} onFloor={onFloor} />
     </label>
 }

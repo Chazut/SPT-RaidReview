@@ -4,18 +4,15 @@
 import { useOutletContext } from "react-router-dom";
 import { TrackingRaidData, TrackingRaidDataPlayers } from '../../types/api_types'
 import './Raids.css'
-import { intl, msToHMS } from "../../helpers";
+import { msToHMS } from "../../helpers";
 
 import { useEffect, useState } from "react";
 import _ from "lodash";
 import { getLocationLabel } from '../../helpers/locations';
 import { getFactionRole, resolveBotType } from "../../helpers/players";
 import { getIsbDisplayName } from '../../helpers/isb';
-import cyr_to_en from '../../assets/cyr_to_en.json';
-
-const BOSS_NAME_OVERRIDES: Record<string, string> = {
-    'Партизан': 'Partizan',
-}
+import { displayPlayerName } from '../../helpers/playerNames';
+import { finalPlayerStatuses } from '../../helpers/playerStatuses';
 
 const FACTION_COLORS: Record<string, { color: string, label: string }> = {
     'BOSS':        { color: '#FF0000', label: 'Boss' },
@@ -68,7 +65,7 @@ function formatCompactNumber(n: number): string {
 type SortDir = 'asc' | 'desc';
 
 export default function RaidOverview() {
-    const { raid, intl: intl_dir_ot } = useOutletContext() as { raid: TrackingRaidData, intl: { [key:string] : string } };
+    const { raid } = useOutletContext() as { raid: TrackingRaidData, intl: { [key:string] : string } };
 
 
     const [ calcStats, setCalcStats ] = useState(null as null | Map<string, { kills: number, lootings: number, lootedValue: number, spawnValue: number, accuracy: number }>);
@@ -80,7 +77,6 @@ export default function RaidOverview() {
     const [ killedByMap, setKilledByMap ] = useState<Map<string, { killerName: string, weapon: string, distance: string, bodyPart: string }>>(new Map());
     const [ selectedProfileId, setSelectedProfileId ] = useState<string | null>(null);
 
-    const intl_dir : Record<string, string> = {...intl_dir_ot, ...cyr_to_en};
 
     function handleSort(key: SortKey) {
       if (sortKey === key) {
@@ -420,33 +416,7 @@ export default function RaidOverview() {
           ? raid.kills?.find(k => k.killedId === selectedProfileId)?.profileId
           : null;
 
-        // Precompute extract inference for bots. Three signals can each
-        // mean "this bot extracted":
-        //   1. Last status sample is 'Unspawned' (bot was despawned with
-        //      no killer — ORBIT's ExtractAction or SWAG/Donuts).
-        //   2. Last status sample is 'Unknown' (BotChecker fell into the
-        //      player == null branch — the Player object was removed
-        //      from the gameWorld lookup, which happens post-despawn).
-        //   3. Last sample stopped > 2 s before raidEnd AND no Dead entry
-        //      (legacy fallback for despawns that don't leave any status
-        //      record at all).
-        // The main player uses raid.exitStatus directly (authoritative) —
-        // BotChecker doesn't write Dead for the local human player so
-        // we'd otherwise show them as Alive even when they're KIA.
-        const lastSampleByProfile = new Map<string, number>();
-        const lastStatusByProfile = new Map<string, string>();
-        let raidEndTime = 0;
-        for (const ps of (raid.player_status || [])) {
-          const t = Number(ps.time);
-          if (!Number.isFinite(t)) continue;
-          if (t > raidEndTime) raidEndTime = t;
-          const prev = lastSampleByProfile.get(ps.profileId) ?? -1;
-          if (t > prev) {
-            lastSampleByProfile.set(ps.profileId, t);
-            lastStatusByProfile.set(ps.profileId, String(ps.status || ''));
-          }
-        }
-        const EXTRACT_MIN_GAP_MS = 2000;
+        const statusByProfile = finalPlayerStatuses(raid.player_status);
         const mainExtracted = /^(Survived|Runner)$/i.test(raid.exitStatus || '');
 
         return groupedBy.map((gp, groupIndex) => {
@@ -458,22 +428,14 @@ export default function RaidOverview() {
             // this keeps the two views consistent.
             const SAIN = getPlayerDifficultyAndBrain(p);
             const isMainPlayer = p.profileId === raid.profileId;
-            const lastSample = lastSampleByProfile.get(p.profileId) ?? 0;
-            const lastStatus = lastStatusByProfile.get(p.profileId) ?? '';
-            // Main player: BotChecker never writes Dead for the local
-            // human (different code path), so trust raid.exitStatus.
-            // Bots: a 'Dead' sample is authoritative; the time-gap
-            // fallback handles bots removed without status records.
+            const lastStatus = statusByProfile.get(p.profileId);
+            // The local player's raid result is authoritative.
             const isDead = isMainPlayer
               ? !mainExtracted && /^(Killed|MissingInAction|LeftRaid|Left)$/i.test(raid.exitStatus || '')
-              : !!_.chain(raid.player_status).filter((ps) => ps.profileId === p.profileId && ps.status === 'Dead').sortBy('time', 'desc').first().value();
+              : lastStatus === 'Dead';
             const isExtracted = isMainPlayer
               ? (!isDead && mainExtracted)
-              : (!isDead && (
-                  lastStatus === 'Unspawned'
-                  || lastStatus === 'Unknown'
-                  || (lastSample > 0 && raidEndTime > 0 && lastSample < raidEndTime - EXTRACT_MIN_GAP_MS)
-                ));
+              : (!isDead && (lastStatus === 'Unspawned' || lastStatus === 'Unknown'));
             const badge = getFactionBadge(p, isMainPlayer);
             const stats = calcStats?.get(p.profileId);
             const accuracy = stats?.accuracy || 0;
@@ -507,10 +469,10 @@ export default function RaidOverview() {
                 <td className="text-center p-2 uppercase border-x border-eft">{p.group}</td>
                 <td className="text-center p-2 border-x border-eft">{p.level}</td>
                 <td className="text-left p-2">
-                  <div>{intl(BOSS_NAME_OVERRIDES[p.name] || p.name, intl_dir)}</div>
+                  <div>{displayPlayerName(p.name)}</div>
                   {killInfo && (
                     <div className="text-xs opacity-50 mt-0.5">
-                      by {intl(BOSS_NAME_OVERRIDES[killInfo.killerName] || killInfo.killerName, intl_dir)} ({killInfo.weapon}, {Number(killInfo.distance).toFixed(0)}m, {killInfo.bodyPart})
+                      by {displayPlayerName(killInfo.killerName)} ({killInfo.weapon}, {Number(killInfo.distance).toFixed(0)}m, {killInfo.bodyPart})
                     </div>
                   )}
                 </td>

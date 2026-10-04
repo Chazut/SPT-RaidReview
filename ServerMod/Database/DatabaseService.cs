@@ -589,6 +589,18 @@ public class DatabaseService : IDisposable
                 );
                 CREATE INDEX IF NOT EXISTS idx_orbit_ghost_wake_raid_time ON orbit_ghost_wake(""raidId"", ""time"");
             "),
+            ("add_switch_state_table", @"
+                CREATE TABLE IF NOT EXISTS switch_state (
+                    ""id"" INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ""raidId"" TEXT NOT NULL, ""sequence"" INTEGER NOT NULL,
+                    ""switchId"" TEXT NOT NULL, ""time"" INTEGER NOT NULL,
+                    ""name"" TEXT NOT NULL, ""state"" TEXT NOT NULL,
+                    ""x"" REAL NOT NULL, ""y"" REAL NOT NULL, ""z"" REAL NOT NULL,
+                    UNIQUE(""raidId"", ""sequence""),
+                    FOREIGN KEY (""raidId"") REFERENCES raid(""raidId"")
+                );
+                CREATE INDEX IF NOT EXISTS idx_switch_state_raid_time ON switch_state(""raidId"", ""time"");
+            "),
             ("add_airdrop_landing_table", @"
                 CREATE TABLE IF NOT EXISTS airdrop_landing (
                     ""id"" INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -86,7 +86,7 @@ public class GarbageCollector
 
     private async Task DeleteRaidDataAsync(string raidId)
     {
-        var tables = new[] { "kills", "looting", "player", "player_status", "ballistic", "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field", "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight", "orbit_ghost_hearing", "orbit_ghost_wake", "airdrop_landing", "airdrop_flight", "raid" };
+        var tables = new[] { "kills", "looting", "player", "player_status", "ballistic", "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field", "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight", "orbit_ghost_hearing", "orbit_ghost_wake", "airdrop_landing", "airdrop_flight", "switch_state", "raid" };
 
         // FK enforcement off during GC: legacy DBs can carry orphan rows
         // in tables that were dropped/renamed across past migrations, and

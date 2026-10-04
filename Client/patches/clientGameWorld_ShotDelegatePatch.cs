@@ -5,7 +5,6 @@ using EFT.Ballistics;
 using EFT.Communications;
 using EFT.InventoryLogic;
 using JetBrains.Annotations;
-using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -26,32 +25,36 @@ namespace RAID_REVIEW
         [PatchPostfix]
         private static void PatchPostFix(ref ClientGameWorld __instance, Shot shotResult)
         {
-            try
+            if (!RAID_REVIEW.CanCapture) return;
+            using (RecordingPerformance.Measure(RecordingPerformance.Stage.Ballistics))
             {
-                // If in the 'hideout', or 'ballistics tacki
-                if (__instance.LocationId == "hideout" || !RAID_REVIEW.BallisticsTracking.Value) return;
-
-                var hitPlayerId = shotResult?.HittedBallisticCollider?.gameObject?.GetComponentInParent<Player>()?.ProfileId;
-                var newTackingBallistic = new TrackingBallistic
+                try
                 {
-                    sessionId = RAID_REVIEW.sessionId,
-                    profileId = shotResult.PlayerProfileID,
-                    weaponId = shotResult.Weapon.Id,
-                    weaponName = shotResult.Weapon.LocalizedShortName(),
-                    ammoId = shotResult.Ammo.Id,
-                    time = RAID_REVIEW.stopwatch.ElapsedMilliseconds,
-                    hitPlayerId = hitPlayerId ?? null,
-                    source = JsonConvert.SerializeObject(shotResult.MasterOrigin),
-                    target = JsonConvert.SerializeObject(shotResult.HitPoint)
-                };
+                    // If in the 'hideout', or 'ballistics tacki
+                    if (__instance.LocationId == "hideout" || !RAID_REVIEW.BallisticsTracking.Value) return;
 
-                Telemetry.Send("BALLISTIC", JsonConvert.SerializeObject(newTackingBallistic));
-                return;
-            }
+                    var hitPlayerId = shotResult?.HittedBallisticCollider?.gameObject?.GetComponentInParent<Player>()?.ProfileId;
+                    var newTackingBallistic = new TrackingBallistic
+                    {
+                        sessionId = RAID_REVIEW.sessionId,
+                        profileId = shotResult.PlayerProfileID,
+                        weaponId = shotResult.Weapon.Id,
+                        weaponName = shotResult.Weapon.LocalizedShortName(),
+                        ammoId = shotResult.Ammo.Id,
+                        time = RAID_REVIEW.stopwatch.ElapsedMilliseconds,
+                        hitPlayerId = hitPlayerId ?? null,
+                        source = new JsonPosition(shotResult.MasterOrigin),
+                        target = new JsonPosition(shotResult.HitPoint)
+                    };
 
-            catch (Exception ex)
-            {
-                Logger.LogError($"{ex}");
+                    Telemetry.SendSnapshot("BALLISTIC", newTackingBallistic);
+                    return;
+                }
+
+                catch (Exception ex)
+                {
+                    Logger.LogError($"{ex}");
+                }
             }
         }
 

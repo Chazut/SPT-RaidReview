@@ -58,7 +58,7 @@ public class WsPacketHandler
             var action = actionEl.GetString() ?? "";
             var payloadStr = payloadEl.GetString() ?? "{}";
 
-            if (action != "POSITION" && action != "AIRDROP_FLIGHT")
+            if (action != "POSITION" && action != "POSITION_BATCH" && action != "AIRDROP_FLIGHT")
                 _logger.Debug($"{action}|{payloadStr}");
 
             using var payloadDoc = JsonDocument.Parse(payloadStr);
@@ -246,6 +246,22 @@ public class WsPacketHandler
                     break;
                 }
 
+                case "POSITION_BATCH":
+                {
+                    if (payload.ValueKind != JsonValueKind.Array || payload.GetArrayLength() > 4096) break;
+                    string? header = null;
+                    var rows = new StringBuilder();
+                    foreach (var sample in payload.EnumerateArray())
+                    {
+                        if (sample.ValueKind != JsonValueKind.Object || GetString(sample, "sessionId") != sessionId) continue;
+                        header ??= ExtractKeysLine(sample) + "\n";
+                        rows.Append(ExtractValuesLine(sample)).Append('\n');
+                    }
+                    if (header != null)
+                        _fileService.AppendLineBuffered("positions", "", "", $"{raidId}_positions", header, rows.ToString());
+                    break;
+                }
+
                 case "POSITION":
                 {
                     if (raidId == null) break;
@@ -430,6 +446,14 @@ public class WsPacketHandler
                         ("$bZ", GetString(payload, "bZ")),
                         ("$durationMs", GetString(payload, "durationMs")),
                         ("$casualties", GetString(payload, "casualties")));
+                    break;
+                }
+
+                case "SWITCH_STATES":
+                {
+                    if (raidId == null) break;
+                    var rows = SwitchStatesPacket.Parse(payload, raidId);
+                    if (rows.Count > 0) await _db.ExecuteBatchAsync(SwitchStatesPacket.InsertSql, rows);
                     break;
                 }
 

@@ -28,7 +28,10 @@ Download a compatible version from the **[releases](https://github.com/Chazut/SP
 ### Features
 
 - Full raid replay on an interactive map (timeline scrubber, follow mode, floors)
+- **Selected floor only** filters replay markers, movement trails, loot, objectives, shots, switches and the heatmap using each map's height and building boundaries. Off by default, remembered in the browser. Unsupported maps remain unfiltered; records without a usable height, including historical 2D field zones, are hidden while filtering.
+- Switch replay: the **Switches** toggle shows initial states and later changes on the map. Markers follow the timeline, including rewind and automatic shutoff; hover to see the name, state, height and change time. Requires a new recording.
 - Airdrop replay: aircraft icons follow the recorded flight path, cyan diamonds mark release points, and yellow crates appear on landing. All follow the replay timeline and the **Airdrops** toggle. Requires a new recording; remote clients distinguish a crate first observed in flight from a confirmed release.
+- With the updated ORBIT client, **ORBIT Main Objectives** also shows a temporary **Airdrop** row from the squad's decision: approach, waiting (including the crate's descent), then loot. Select a squad to see its current stage and target. The row disappears when the detour ends and follows replay rewinds; older recordings remain supported.
 - Kill lines, death markers, killfeed details
 - Post-raid leaderboard
 - Charts: kills, looting, bots over time, factions...

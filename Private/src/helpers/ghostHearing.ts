@@ -48,6 +48,7 @@ export function activeGhostHearing(events: TrackingOrbitGhostHearing[], time: nu
 export interface HearingInvestigation {
     profileId: string
     x: number
+    y?: number
     z: number
     event: TrackingOrbitGhostHearing
 }
@@ -75,7 +76,7 @@ export function ghostHearingInvestigations(events: TrackingOrbitGhostHearing[],
         const sample = samples[lo - 1]
         if (!sample || !(sample.ghost ?? sample.dormant)) continue
         if ([sample.x, sample.z].some(v => v == null || !Number.isFinite(Number(v)))) continue
-        result.push({ profileId, event, x: Number(sample.x), z: Number(sample.z) })
+        result.push({ profileId, event, x: Number(sample.x), y: sample.y == null ? undefined : Number(sample.y), z: Number(sample.z) })
     }
     return result
 }

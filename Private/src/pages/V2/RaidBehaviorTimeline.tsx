@@ -3,10 +3,10 @@ import { LoaderFunctionArgs, useLoaderData, useOutletContext } from "react-route
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/api";
 import { TrackingPositionalData, TrackingRaidData } from "../../types/api_types";
-import { intl, msToHMS } from "../../helpers";
+import { msToHMS } from "../../helpers";
 import { getPlayerColor, getLegendIcon, buildPmcIndexMap } from "../../helpers/players";
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from "../../helpers/botBehavior";
-import cyr_to_en from '../../assets/cyr_to_en.json';
+import { displayPlayerName } from '../../helpers/playerNames';
 
 export async function loader(loaderData: LoaderFunctionArgs) {
     const positions = await api.getRaidPositionalData(loaderData.params.raidId as string) || [];
@@ -88,8 +88,7 @@ function ensureHatchStyles() {
 
 export default function RaidBehaviorTimeline() {
     const { positions } = useLoaderData() as { positions: Record<string, TrackingPositionalData[]> };
-    const { raid, intl: intl_dir_ot } = useOutletContext() as { raid: TrackingRaidData, intl: { [key: string]: string } };
-    const intl_dir: Record<string, string> = useMemo(() => ({ ...intl_dir_ot, ...cyr_to_en }), [intl_dir_ot]);
+    const { raid } = useOutletContext() as { raid: TrackingRaidData, intl: { [key: string]: string } };
     const pmcIndexMap = useMemo(() => raid?.players ? buildPmcIndexMap(raid.players) : {}, [raid?.players]);
 
     const [hoveredSegment, setHoveredSegment] = useState<{ seg: BehaviorSegment, playerName: string, x: number, y: number } | null>(null);
@@ -156,7 +155,7 @@ export default function RaidBehaviorTimeline() {
 
             playerRows.push({
                 profileId: p.profileId,
-                name: intl(p.name, intl_dir),
+                name: displayPlayerName(p.name),
                 player: p,
                 color: getPlayerColor(p, idx),
                 segments,
@@ -195,7 +194,7 @@ export default function RaidBehaviorTimeline() {
         })
 
         return { players: playerRows, raidStart, raidEnd }
-    }, [positions, raid, intl_dir, pmcIndexMap, deathTimes])
+    }, [positions, raid, pmcIndexMap, deathTimes])
 
     const { players: playerRows, raidStart, raidEnd } = data
 

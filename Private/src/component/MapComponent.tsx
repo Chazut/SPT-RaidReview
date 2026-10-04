@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { mainLabel, mainStarted, mainInterrupted, mainHoldDetail, operationDetail, escapeMainText, mainAbandoned } from '../helpers/mainObjectives'
+import { airdropDetail, findMainSquadEntry, mainLabel, mainStarted, mainInterrupted, mainHoldDetail, operationDetail, escapeMainText, mainAbandoned } from '../helpers/mainObjectives'
 
 import { useEffect, useRef, useMemo, useCallback, useLayoutEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, useLoaderData, Link } from 'react-router-dom';
@@ -15,9 +15,11 @@ import { calculateNewPosition, findInsertIndex } from '../modules/utils.js'
 import { useMapImages } from '../modules/maps-index.js';
 import { TrackingPositionalData, TrackingLooseLootItem, TrackingPlayerInventoryItem } from '../types/api_types.js';
 import { PlayerSlider } from './MapPlayerSlider.js';
+import { SwitchOverlay } from './SwitchOverlay';
 import { AirdropOverlay } from './AirdropOverlay';
 import { GhostHearingOverlay } from './GhostHearingOverlay';
 import { playerEndTimes } from '../helpers/playerPresence';
+import { createFloorFilter, hasFloors, floorSegments, positionAt, objectivePoint, mainPoint, floorHeatmap } from '../helpers/floorFilter';
 
 import { getMarkerLabel, getPlayerColor, getLegendIcon, PMC_COLORS, buildPmcIndexMap, getFactionRole, resolveBotType } from '../helpers/players'
 import { getIsbDisplayName } from '../helpers/isb'
@@ -25,12 +27,10 @@ import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecis
 
 import 'leaflet/dist/leaflet.css';
 
-const BOSS_NAME_OVERRIDES: Record<string, string> = {
-    'Партизан': 'Partizan',
-}
+import { displayPlayerName } from '../helpers/playerNames'
 
 function getDisplayName(player: any): string {
-    return BOSS_NAME_OVERRIDES[player?.name] || player?.name || 'Unknown'
+    return displayPlayerName(player?.name)
 }
 
 function classifyPlayer(player: any): string {
@@ -299,6 +299,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [availableStyles, serAvailableStyles] = useState([])
     const [selectedStyle, setSelectedStyle] = useState('svg')
     const [selectedLayer, setSelectedLayer] = useState('')
+    const [floorOnly, setFloorOnly] = useState(() => localStorage.getItem('rr_floorOnly') === 'true')
     const [followPlayer, setFollowPlayer] = useState(null)
     const [followPlayerZoomed, setFollowPlayerZoomed] = useState(false)
     const [calculatedPlayerInfo, setCalculatedPlayerInfo] = useState({})
@@ -409,31 +410,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         }
         return null
     }
-    const findLatestSquadEntry = (squadId: number, atTime: number): any => {
-        const data = orbitMainObjectivesDataRef.current
-        let best: any = null
-        let bestTime = -Infinity
-        for (const snap of data) {
-            if (snap.time > atTime) continue
-            const entry = (snap.squads || []).find((s: any) => Number(s.squadId) === squadId)
-            if (entry && snap.time > bestTime) { best = entry; bestTime = snap.time }
-        }
-        if (best) return best
-        // No snapshot ≤ cursor contains this squad. Most common cause:
-        // cursor sits in the first ~30s before SAIN has applied brains
-        // and any mains exist. Fall back to the EARLIEST future snapshot
-        // (first known state) — otherwise picking the latest would
-        // pre-spoil every main as 'completed' before the squad has even
-        // had a chance to start them.
-        let earliestFuture: any = null
-        let earliestTime = Infinity
-        for (const snap of data) {
-            if (snap.time <= atTime) continue
-            const entry = (snap.squads || []).find((s: any) => Number(s.squadId) === squadId)
-            if (entry && snap.time < earliestTime) { earliestFuture = entry; earliestTime = snap.time }
-        }
-        return earliestFuture
-    }
+    const findLatestSquadEntry = (squadId: number, atTime: number): any =>
+        findMainSquadEntry(orbitMainObjectivesDataRef.current, squadId, atTime)
     // SPT quest name lookup (zoneId → friendly title). Fetched once per
     // app load. Used to resolve user-facing names on Phobos Quest POI
     // tooltips + main objectives sidebar list (trigger IDs like
@@ -456,32 +434,6 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [collapsedSlots, setCollapsedSlots] = useState<Record<string, boolean>>({})
     const toggleSlotCollapse = (slot: string) => setCollapsedSlots(prev => ({ ...prev, [slot]: !prev[slot] }))
 
-    const highlightLooseLootItem = useCallback((item: TrackingLooseLootItem | null) => {
-        if (looseLootHighlightRef.current && MAP) {
-            MAP.removeLayer(looseLootHighlightRef.current)
-            looseLootHighlightRef.current = null
-        }
-        if (!item || !MAP) return
-        const tp = item.price * item.qty
-        const color = getLootPriceColor(tp)
-        const isC = item.inContainer === true || item.inContainer === 1
-        const ring = L.circleMarker([item.z, item.x], {
-            radius: 14,
-            color: '#fff',
-            weight: 2,
-            fillColor: color,
-            fillOpacity: 0.4,
-            interactive: false,
-        })
-        ring.bindTooltip(
-            `<span style="color:${color}">${isC ? '\u25A0' : '\u25C6'}</span> ${stripUnityRichText(item.itemName)}${item.qty > 1 ? ' x' + item.qty : ''} \u2014 \u20BD${tp.toLocaleString()}`,
-            { direction: 'top', offset: [0, -14], className: 'player-tooltip player-tooltip-html', permanent: true }
-        )
-        ring.addTo(MAP)
-        ring.openTooltip()
-        looseLootHighlightRef.current = ring
-    }, [MAP])
-
     // Events
     const [events, setEvents] = useState([])
 
@@ -501,6 +453,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     // Objective dashed-lines keyed by playerId, so the per-frame loop can keep each line's bot-end on the live
     // marker (the objective layer only rebuilds on coarse deps, so otherwise the line lags a fast-moving bot).
     const objectiveLineRef = useRef<Map<string, L.Polyline>>(new Map())
+    const questLineRef = useRef<Map<string, L.Polyline>>(new Map())
     // The focus-overlay tooltip currently applied {id, html}, so we only re-issue
     // setTooltipContent/openTooltip when it actually changes (no per-frame churn).
     const focusTooltipRef = useRef<{ id: string, html: string } | null>(null)
@@ -567,6 +520,45 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
         return map
     }, [allMaps, currentMap])
+
+    const floorAvailable = hasFloors(mapData)
+    const floorActive = floorOnly && floorAvailable
+    const onFloor = useMemo(() => createFloorFilter(mapData, selectedLayer, floorOnly), [mapData, selectedLayer, floorOnly])
+    useEffect(() => { localStorage.setItem('rr_floorOnly', String(floorOnly)) }, [floorOnly])
+    useEffect(() => {
+        if (selectedLayer && !mapData?.layers?.some(layer => layer.name === selectedLayer)) setSelectedLayer('')
+    }, [mapData, selectedLayer])
+    const currentFloorPlayers = useMemo(() => new Set(Object.keys(positions || {}).filter(id =>
+        onFloor(positionAt(positions[id], timeEndLimit)))), [positions, timeEndLimit, onFloor])
+    const filteredHeatmap = useMemo(() => floorActive
+        ? floorHeatmap(positions, onFloor)
+        : heatmapData, [floorActive, positions, onFloor, heatmapData])
+
+    const highlightLooseLootItem = useCallback((item: TrackingLooseLootItem | null) => {
+        if (looseLootHighlightRef.current && MAP) {
+            MAP.removeLayer(looseLootHighlightRef.current)
+            looseLootHighlightRef.current = null
+        }
+        if (!item || !MAP || !onFloor(item)) return
+        const tp = item.price * item.qty
+        const color = getLootPriceColor(tp)
+        const isC = item.inContainer === true || item.inContainer === 1
+        const ring = L.circleMarker([item.z, item.x], {
+            radius: 14,
+            color: '#fff',
+            weight: 2,
+            fillColor: color,
+            fillOpacity: 0.4,
+            interactive: false,
+        })
+        ring.bindTooltip(
+            `<span style="color:${color}">${isC ? '\u25A0' : '\u25C6'}</span> ${stripUnityRichText(item.itemName)}${item.qty > 1 ? ' x' + item.qty : ''} \u2014 \u20BD${tp.toLocaleString()}`,
+            { direction: 'top', offset: [0, -14], className: 'player-tooltip player-tooltip-html', permanent: true }
+        )
+        ring.addTo(MAP)
+        ring.openTooltip()
+        looseLootHighlightRef.current = ring
+    }, [MAP, onFloor])
 
     useEffect(() => {
         const wanted: { name: string, svgPath: string, hide: string[] }[] = []
@@ -670,9 +662,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 newEvents.push({
                     time: kill.time,
                     profileId: kill.profileId,
-                    profileNickname: profileNickname ? intl(profileNickname.name, intl_dir) : 'Unknown',
+                    profileNickname: profileNickname ? displayPlayerName(profileNickname.name) : 'Unknown',
                     killedId: kill.killedId,
-                    killedNickname: killedNickname ? intl(killedNickname.name, intl_dir) : 'Unknown',
+                    killedNickname: killedNickname ? displayPlayerName(killedNickname.name) : 'Unknown',
                     weapon: kill.weapon,
                     distance: Number(kill.distance),
                     bodyPart: kill.bodyPart,
@@ -861,19 +853,21 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
         mapRef.current = map
         SET_MAP(map);
-        setTimeout(() => {
-            setMapIsReady(true)
+        setMapIsReady(false)
+        const readyTimer = setTimeout(() => {
+            if (mapRef.current === map) setMapIsReady(true)
         }, 500)
 
         if (heatmapEnabled) {
-            L.heatLayer(heatmapData, { radius: 10, max: 1, blur: 10 }).addTo(map)
+            L.heatLayer(filteredHeatmap, { radius: 10, max: 1, blur: 10 }).addTo(map)
         }
+        return () => { clearTimeout(readyTimer) }
         
-    }, [mapData, mapRef, mapViewRef, selectedLayer, selectedStyle, heatmapEnabled, heatmapData, svgOverrideUrls])
+    }, [mapData, mapRef, mapViewRef, selectedLayer, selectedStyle, heatmapEnabled, filteredHeatmap, svgOverrideUrls, onFloor])
 
     // Heatmap Fetcher
     useEffect(() => {
-        if (!mapIsReady) return;
+        if (!mapIsReady || !MAP || MAP !== mapRef.current) return;
 
         (async () => {
             if (heatmapData.length === 0) {
@@ -895,7 +889,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
     // Positon Renderer
     useEffect(() => {
-        if (!mapIsReady) return;
+        if (!mapIsReady || !MAP || MAP !== mapRef.current) return;
 
         let times = []
 
@@ -914,7 +908,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
             const playerId = playerPositionKeys[i]
             const playerPositions = positions[playerId]
-            const cleanPositions = []
+            const trailSamples = []
+            const currentSample = positionAt(playerPositions, timeEndLimit)
             let currentDirection = 0
 
             const isPlayerDead = events.find((e) => e.killedId === playerId && e.time < timeEndLimit)
@@ -928,7 +923,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
                 if (timeEndLimit && timeStartLimit) {
                     if (playerPosition.time > (!isPlayerDead ? timeStartLimit : timeEndLimit * -1000) && playerPosition.time < timeEndLimit) {
-                        cleanPositions.push([playerPosition.z, playerPosition.x])
+                        trailSamples.push(playerPosition)
                     }
                 }
 
@@ -937,6 +932,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 }
             }
 
+            const cleanPositions = floorSegments(trailSamples, onFloor).map(segment => segment.map(p => [p.z, p.x]))
             const index = calculatedPlayerInfo[playerId]?.index || raidData.players.findIndex((p) => p.profileId === playerId)
             const player = calculatedPlayerInfo[playerId]?.player || raidData.players[index]
             const pickedColor = calculatedPlayerInfo[playerId]?.pickedColor || getPlayerColor(player, index)
@@ -947,8 +943,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             }
 
             // Hide player movement if enabled
-            if (MAP && !hidePlayers && cleanPositions.length > 0) {
-                let endOfLine = cleanPositions[cleanPositions.length - 1]
+            if (MAP && !hidePlayers && (cleanPositions.length > 0 || (currentSample && onFloor(currentSample)))) {
+                const endOfLine = currentSample ? [currentSample.z, currentSample.x] : null
 
                 // Determine opacity based on current focus (read from refs to avoid re-render dependency)
                 const currentFocus = playerFocusRef.current
@@ -988,7 +984,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 pl._rr_isDead = !!isPlayerDead
                 pl._rr_normalOpacity = preserveHistory ? 0.8 : isPlayerDead ? 0 : 0.8
 
-                if (!isPlayerDead && !isPlayerGone) {
+                if (!isPlayerDead && !isPlayerGone && currentSample && onFloor(currentSample)) {
                     // Get latest behavior decision + health from position data (skip BTR)
                     const isBTR = player?.type?.includes('BTR')
                     let currentDecision: string | undefined
@@ -1122,6 +1118,13 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             }
         }
 
+        for (const [pid, line] of [...objectiveLineRef.current, ...questLineRef.current]) {
+            const sample = positionAt(positions[pid], timeEndLimit)
+            const ll = line.getLatLngs() as L.LatLng[]
+            if (sample && ll.length >= 2) line.setLatLngs([[Number(sample.z), Number(sample.x)], ll[1]])
+            line.setStyle({ opacity: !hidePlayers && sample && onFloor(sample) && (presenceEnds[pid] ?? Infinity) >= timeEndLimit ? .5 : 0 })
+        }
+
         // Cull persistent markers for players not rendered this frame — i.e. the
         // player died (isPlayerDead), was hidden (hidePlayers), or scrubbed out of
         // the time window (empty cleanPositions). The old stateless rebuild got
@@ -1143,11 +1146,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             setTimeEndLimit(times[times.length - 1])
             setTimeCurrentIndex(times.length - 1)
         }
-    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, showBehavior, presenceEnds])
+    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, showBehavior, presenceEnds, onFloor])
 
     // Focus overlay: adjusts layer opacity + kill visualization without full re-render
     useEffect(() => {
-        if (!MAP || !mapIsReady) return
+        if (!MAP || MAP !== mapRef.current || !mapIsReady) return
         playerFocusRef.current = playerFocus
 
         // Issue #24 follow-up: the kill-visualization layers (kill/death lines,
@@ -1157,7 +1160,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         // them down + rebuild when the focus or relevant kill-set actually changes,
         // otherwise the skull icons strobe while hovering the killer during play.
         const killVizSig = playerFocus
-            ? `${playerFocus}|${events.filter(e => (e.killedId === playerFocus || (e.profileId === playerFocus && e.profileId !== e.killedId)) && e.time < timeEndLimit).length}`
+            ? `${floorActive}:${selectedLayer}|${playerFocus}|${events.filter(e => (e.killedId === playerFocus || (e.profileId === playerFocus && e.profileId !== e.killedId)) && e.time < timeEndLimit).length}`
             : ''
         const killVizChanged = killVizSig !== killVizSigRef.current
         if (killVizChanged) {
@@ -1283,7 +1286,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
             // Dead player: no marker on map, create a temporary one at death position
             // (gated: only (re)build when the kill-set/focus changed — see killVizSig)
-            if (killVizChanged && !marker && death) {
+            if (killVizChanged && !marker && death && onFloor(death.target)) {
                 const player = raidData.players.find(p => p.profileId === playerFocus)
                 const playerIdx = player ? raidData.players.indexOf(player) : 0
                 const color = player ? getPlayerColor(player, playerIdx) : '#999'
@@ -1304,10 +1307,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             // Kills made by hovered player (respecting timeline)
             const playerKills = events.filter(e => e.profileId === playerFocus && e.profileId !== e.killedId && e.time < timeEndLimit)
             for (const kill of playerKills) {
+                if (!onFloor(kill.target)) continue
                 const line = L.polyline(
                     [[kill.source.z, kill.source.x], [kill.target.z, kill.target.x]],
                     { color: 'red', weight: 2, dashArray: [10], dashOffset: 3, opacity: 1, interactive: false }
                 ).addTo(MAP)
+                if (!onFloor(kill.source)) MAP.removeLayer(line)
                 line._rr_focusViz = true
                 focusLayersRef.current.push(line)
                 const skullHtml = `<img src="/skull.png" /><span class="tooltiptext event event-map text-sm"><strong>${kill.killedNickname}</strong><br/>${intl([kill.weapon.replace('Name', 'ShortName')], intl_dir)}, ${kill.distance.toFixed(0)}m${kill.bodyPart ? ', ' + kill.bodyPart : ''}</span>`
@@ -1319,11 +1324,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
             // Death of the hovered player (if dead) — distinct red-ringed skull
             const deathEvent = events.find(e => e.killedId === playerFocus && e.time < timeEndLimit)
-            if (deathEvent) {
+            if (deathEvent && onFloor(deathEvent.target)) {
                 const line = L.polyline(
                     [[deathEvent.source.z, deathEvent.source.x], [deathEvent.target.z, deathEvent.target.x]],
                     { color: 'red', weight: 2, dashArray: [10], dashOffset: 3, opacity: 1, interactive: false }
                 ).addTo(MAP)
+                if (!onFloor(deathEvent.source)) MAP.removeLayer(line)
                 line._rr_focusViz = true
                 focusLayersRef.current.push(line)
                 const ownDeathHtml = `<div class="own-death-ring"><img src="/skull.png" /></div><span class="tooltiptext event event-map text-sm"><strong>${deathEvent.profileNickname}</strong><br/>killed<br/><strong>${deathEvent.killedNickname}</strong><br/>${intl([deathEvent.weapon.replace('Name', 'ShortName')], intl_dir)}, ${deathEvent.distance.toFixed(0)}m${deathEvent.bodyPart ? ', ' + deathEvent.bodyPart : ''}</span>`
@@ -1333,7 +1339,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 focusLayersRef.current.push(marker)
             }
         }
-    }, [playerFocus, MAP, mapIsReady, events, timeEndLimit, intl_dir])
+    }, [playerFocus, MAP, mapIsReady, events, timeEndLimit, intl_dir, onFloor])
 
     // Issue #24: persistent player markers live across frames; when the map
     // instance is torn down/rebuilt, drop them so the ref never holds dead layers.
@@ -1362,7 +1368,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     // Event Update
     const addedLayers = useRef(new Map());
     useEffect(() => {
-        if (!mapIsReady) return;
+        if (!mapIsReady || !MAP || MAP !== mapRef.current) return;
 
         const createdLayers = new Map();
         for (let i = 0; i < events.length; i++) {
@@ -1375,7 +1381,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             var killerMarker = L.marker([e.source.z, e.source.x], { icon: killerIcon });
             killerMarker.eventTime = e.time;
             killerMarker.eventType = 'killerIcon';
-            killerMarker.addTo(MAP);
+            if (onFloor(e.source)) killerMarker.addTo(MAP);
             createdLayers.set(`killer-${e.time}-${e.source.z}-${e.source.x}`, killerMarker);
     
             // Polyline
@@ -1388,7 +1394,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             );
             polyline.eventTime = e.time;
             polyline.eventType = 'killerLine';
-            polyline.addTo(MAP);
+            if (onFloor(e.source) && onFloor(e.target)) polyline.addTo(MAP);
             createdLayers.set(`line-${e.time}-${e.source.z}-${e.source.x}-${e.target.z}`, polyline);
     
             // Death marker
@@ -1399,7 +1405,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             var deathMarker = L.marker([e.target.z, e.target.x], { icon: deathIcon });
             deathMarker.eventTime = e.time;
             deathMarker.eventType = 'deathIcon';
-            deathMarker.addTo(MAP).on('click', () =>
+            if (onFloor(e.target)) deathMarker.addTo(MAP).on('click', () =>
                 highlight(
                     [
                         [e.target.z, e.target.x],
@@ -1418,7 +1424,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 MAP.removeLayer(layer);
             });
         };
-    }, [MAP, events, mapIsReady]);
+    }, [MAP, events, mapIsReady, onFloor]);
     
     useEffect(() => {
         const timeRange = { start: preserveHistory ? 0 : sliderTimes[timeCurrentIndex - dropOffIndex] || 0, end: sliderTimes[timeCurrentIndex] };
@@ -1444,17 +1450,19 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 }
             }
         });
-    }, [sliderTimes, timeCurrentIndex]);    
+    }, [sliderTimes, timeCurrentIndex, MAP, mapIsReady, onFloor, preserveHistory]);
 
     // Ballistics Update (with grenade detection)
-    let ballisticsLayers = new Map();
+
     useEffect(() => {
         if (hideBallistics) return;
-        if (!mapIsReady || !MAP) return;
+        if (!mapIsReady || !MAP || MAP !== mapRef.current) return;
 
+        const ballisticsLayers = new Map();
+        const transientLayers: L.Layer[] = []
         // Grenade visualization: detect throws from behavior decisions, match to ballistic clusters
         // Step 1: Find grenade throw moments from position decisions
-        const grenadeThrows: { profileId: string, time: number, x: number, z: number }[] = []
+        const grenadeThrows: { profileId: string, time: number, x: number, y: number, z: number }[] = []
         const posData = positions as any
         if (posData) {
             for (const [profileId, pArr] of Object.entries(posData)) {
@@ -1471,7 +1479,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         const prevIsGrenade = prevDec.includes('throwgrenade') || prevDec.includes('runandthrowgrenade') || prevDec === 'sain:throwgrenade'
                         if (prevIsGrenade) continue
                     }
-                    grenadeThrows.push({ profileId, time: Number(p.time), x: Number(p.x), z: Number(p.z) })
+                    grenadeThrows.push({ profileId, time: Number(p.time), x: Number(p.x), y: p.y, z: Number(p.z) })
                 }
             }
         }
@@ -1490,7 +1498,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         }
 
         // Step 3: Match throws to explosion clusters (same bot, within 10s, 3+ fragments, source far from bot)
-        const grenadeExplosions: { throwTime: number, throwX: number, throwZ: number, explosionX: number, explosionZ: number, explosionTime: number, profileId: string, weaponName: string }[] = []
+        const grenadeExplosions: { throwTime: number, throwX: number, throwY: number, throwZ: number, explosionX: number, explosionY: number, explosionZ: number, explosionTime: number, profileId: string, weaponName: string }[] = []
         for (const gt of grenadeThrows) {
             let bestKey = ''
             let bestDt = Infinity
@@ -1510,8 +1518,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             if (bestKey) {
                 const cluster = ballisticClusters[bestKey]
                 grenadeExplosions.push({
-                    throwTime: gt.time, throwX: gt.x, throwZ: gt.z,
-                    explosionX: cluster.src.x, explosionZ: cluster.src.z,
+                    throwTime: gt.time, throwX: gt.x, throwY: gt.y, throwZ: gt.z,
+                    explosionX: cluster.src.x, explosionY: cluster.src.y, explosionZ: cluster.src.z,
                     explosionTime: cluster.time, profileId: gt.profileId,
                     weaponName: cluster.weaponName
                 })
@@ -1534,6 +1542,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
         // Render grenade arcs + explosion circles (alongside normal ballistics, not replacing them)
         for (const ge of grenadeExplosions) {
+            if (!onFloor({ x: ge.explosionX, y: ge.explosionY, z: ge.explosionZ })) continue
             const throwIndex = findInsertIndex(ge.throwTime, sliderTimes)
             const explosionIndex = findInsertIndex(ge.explosionTime, sliderTimes)
             if (throwIndex > timeCurrentIndex || explosionIndex + 40 < timeCurrentIndex) continue
@@ -1550,13 +1559,14 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             explosionCircle.eventType = 'ballisticsLine'
             explosionCircle.eventId = grenadeId
             const player = raidData?.players?.find(p => p.profileId === ge.profileId)
-            const throwerName = player?.name || ge.profileId.slice(0, 8)
+            const throwerName = displayPlayerName(player?.name, ge.profileId.slice(0, 8))
             explosionCircle.bindTooltip(
                 `\u{1F4A5} <strong>${throwerName}</strong> — ${ge.weaponName || 'Grenade'}`,
                 { direction: 'top', offset: [0, -8], className: 'player-tooltip player-tooltip-html' }
             )
             explosionCircle._rr_grenade = true
             explosionCircle.addTo(MAP)
+            transientLayers.push(explosionCircle)
 
             // Arc from throw position to explosion
             const arcLine = L.polyline(
@@ -1567,7 +1577,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             arcLine.eventType = 'ballisticsLine'
             arcLine.eventId = grenadeId + '_arc'
             arcLine._rr_grenade = true
-            arcLine.addTo(MAP)
+            if (onFloor({ x: ge.throwX, y: ge.throwY, z: ge.throwZ })) arcLine.addTo(MAP)
+            transientLayers.push(arcLine)
 
             ballisticsLayers.set(grenadeId, true)
             ballisticsLayers.set(grenadeId + '_arc', true)
@@ -1588,7 +1599,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 let ballisticsId = `${i}-${ballistic.time}-${source.z}-${source.x}-${target.z}-${target.x}`;
                 let exists = ballisticsLayers.get(ballisticsId);
 
-                if (!exists && (target && source)) {
+                if (!exists && target && source && onFloor(source) && onFloor(target)) {
                     const pickedColor = calculatedPlayerInfo[ballistic.profileId]?.pickedColor;
                     const position = [[source.z, source.x], [target.z, target.x]];
 
@@ -1606,12 +1617,14 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     polyline.eventId = ballisticsId;
 
                     polyline.addTo(MAP);
+                    transientLayers.push(polyline);
                     ballisticsLayers.set(ballisticsId, true);
                 }
             }
         }
 
-    }, [timeCurrentIndex, hideBallistics]);
+        return () => { transientLayers.forEach(layer => MAP.removeLayer(layer)) }
+    }, [timeCurrentIndex, hideBallistics, MAP, mapIsReady, onFloor]);
 
     // Slider Updater
     useEffect(() => {
@@ -1762,7 +1775,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
     // Loose Loot: render / update markers on map (timeline-aware + container grouping)
     useEffect(() => {
-        if (!MAP || !mapIsReady) return
+        if (!MAP || MAP !== mapRef.current || !mapIsReady) return
 
         // Remove old layer group
         if (looseLootLayerRef.current) {
@@ -1779,6 +1792,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         const containerGroups: Record<string, TrackingLooseLootItem[]> = {}
 
         for (const item of looseLootData) {
+            if (!onFloor(item)) continue
             // Skip items picked up before current time
             if (item.itemId && pickedUpItemIds.has(item.itemId)) continue
 
@@ -1864,6 +1878,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 // Skip if this item was picked back up before current time
                 const iid = loot.itemId || loot.id
                 if (iid && rePickedIds.has(iid)) continue
+                if (!onFloor(loot)) continue
                 const lx = Number(loot.x), lz = Number(loot.z)
                 if (!lx && !lz) continue // no position data (old raids)
                 const tp = (Number(loot.price) || 0) * (Number(loot.qty) || 1)
@@ -1896,7 +1911,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 looseLootLayerRef.current = null
             }
         }
-    }, [MAP, mapIsReady, showLooseLoot, looseLootData, looseLootMinPrice, looseLootFilter, raidData?.looting, lootProgress])
+    }, [MAP, mapIsReady, showLooseLoot, looseLootData, looseLootMinPrice, looseLootFilter, raidData?.looting, lootProgress, onFloor])
 
     // Bot Quests: always fetch data (panel visibility depends on data existing)
     useEffect(() => {
@@ -1911,13 +1926,14 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
     // Bot Quests: render objective markers on map (timeline-aware)
     useEffect(() => {
-        if (!MAP || !mapIsReady) return
+        if (!MAP || MAP !== mapRef.current || !mapIsReady) return
 
         if (botQuestLayerRef.current) {
             MAP.removeLayer(botQuestLayerRef.current)
             botQuestLayerRef.current = null
         }
 
+        questLineRef.current.clear()
         if (!showBotQuests || botQuestData.length === 0) return
 
         const group = L.layerGroup()
@@ -1955,13 +1971,14 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         for (const [profileId, q] of Object.entries(latestByBot)) {
             if (q.status === 'Completed' || q.status === 'Archived' || q.status === 'Failed') continue
             if (deadBots.has(profileId)) continue
+            if (!onFloor(objectivePoint(q))) continue
             const x = Number(q.objectiveX)
             const z = Number(q.objectiveZ)
             if (x === 0 && z === 0) continue
 
             // Find bot name from raid data
             const player = raidData?.players?.find(p => p.profileId === profileId)
-            const botName = player ? (player.name || profileId) : profileId
+            const botName = displayPlayerName(player?.name, profileId)
             const icon = actionIcons[q.actionType] || '\u2753' // question mark fallback
             const isEFT = q.isEFTQuest === 1 || q.isEFTQuest === true
 
@@ -1998,6 +2015,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             { color: isEFT ? '#FBCFE8' : '#D946EF', weight: 1, dashArray: '4 4', opacity: 0.5 }
                         )
                         line._rr_quest = true
+                        line.setStyle({ opacity: onFloor(closest) ? .5 : 0 })
+                        questLineRef.current.set(profileId, line)
                         group.addLayer(line)
                     }
                 }
@@ -2013,7 +2032,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 botQuestLayerRef.current = null
             }
         }
-    }, [MAP, mapIsReady, showBotQuests, botQuestData, questProgress, killProgress, raidData?.players, raidData?.kills, positions])
+    }, [MAP, mapIsReady, showBotQuests, botQuestData, questProgress, killProgress, raidData?.players, raidData?.kills, positions, onFloor])
 
     // Bot Objectives (legacy Phobos / ORBIT): always fetch data (panel
     // visibility depends on data existing). Pulls from BOTH the legacy
@@ -2047,7 +2066,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     // dashed exchange line between the two sides. Makes bloodless skirmishes visible and explains
     // otherwise sourceless attrition damage on a dot. Cheap: 0-2 tiny layers per scrub tick.
     useEffect(() => {
-        if (!MAP || !mapIsReady) return
+        if (!MAP || MAP !== mapRef.current || !mapIsReady) return
         if (ghostFightLayerRef.current) {
             MAP.removeLayer(ghostFightLayerRef.current)
             ghostFightLayerRef.current = null
@@ -2058,6 +2077,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const start = Number(f.time)
             const end = start + Math.max(4000, Number(f.durationMs)) // short fights stay visible >= 4s
             if (timeEndLimit < start || timeEndLimit > end) continue
+            if (!onFloor({ x: f.aX, y: f.aY, z: f.aZ }) || !onFloor({ x: f.bX, y: f.bY, z: f.bZ })) continue
             const a: L.LatLngExpression = [Number(f.aZ), Number(f.aX)]
             const b: L.LatLngExpression = [Number(f.bZ), Number(f.bX)]
             group.addLayer(L.polyline([a, b], { color: '#FFB454', weight: 2, dashArray: '6 6', opacity: 0.85, interactive: false }))
@@ -2074,11 +2094,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 ghostFightLayerRef.current = null
             }
         }
-    }, [MAP, mapIsReady, ghostFightData, timeEndLimit])
+    }, [MAP, mapIsReady, ghostFightData, timeEndLimit, onFloor])
 
     // Bot Objectives (Phobos): render destination markers on map (timeline-aware)
     useEffect(() => {
-        if (!MAP || !mapIsReady) return
+        if (!MAP || MAP !== mapRef.current || !mapIsReady) return
 
         if (botObjectiveLayerRef.current) {
             MAP.removeLayer(botObjectiveLayerRef.current)
@@ -2125,12 +2145,13 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         for (const [profileId, o] of Object.entries(latestByBot)) {
             if (o.status !== 'Moving' && !(o.category?.startsWith('Ambush') && o.status !== 'Failed') && !(o.category === 'AirdropLoot' && o.status === 'Looting')) continue
             if (deadBots.has(profileId)) continue
+            if (!onFloor(objectivePoint(o))) continue
             const x = Number(o.objectiveX)
             const z = Number(o.objectiveZ)
             if (x === 0 && z === 0) continue
 
             const player = raidData?.players?.find(p => p.profileId === profileId)
-            const botName = player ? (player.name || profileId) : profileId
+            const botName = displayPlayerName(player?.name, profileId)
             const style = categoryStyle[o.category] || { icon: '❓', color: '#94A3B8' }
             const isLeader = o.isLeader === 1 || o.isLeader === true
 
@@ -2166,6 +2187,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             { color: style.color, weight: 1, dashArray: '4 4', opacity: 0.5 }
                         )
                         line._rr_objective = true
+                        line.setStyle({ opacity: onFloor(closest) ? .5 : 0 })
                         group.addLayer(line)
                         objectiveLineRef.current.set(profileId, line)
                     }
@@ -2182,7 +2204,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 botObjectiveLayerRef.current = null
             }
         }
-    }, [MAP, mapIsReady, showBotObjectives, botObjectiveData, objectiveProgress, killProgress, raidData?.players, raidData?.kills, positions])
+    }, [MAP, mapIsReady, showBotObjectives, botObjectiveData, objectiveProgress, killProgress, raidData?.players, raidData?.kills, positions, onFloor])
 
     // Phobos / ORBIT advection field: fetch snapshots once from both
     // sources and merge. Same shape, just two independent tables — drop
@@ -2218,14 +2240,14 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
     // Phobos advection field: render overlay (timeline-aware — picks the snapshot for the current time)
     useEffect(() => {
-        if (!MAP || !mapIsReady) return
+        if (!MAP || MAP !== mapRef.current || !mapIsReady) return
 
         if (phobosFieldLayerRef.current) {
             MAP.removeLayer(phobosFieldLayerRef.current)
             phobosFieldLayerRef.current = null
         }
 
-        if (!showPhobosField || phobosFieldData.length === 0) return
+        if (!showPhobosField || phobosFieldData.length === 0 || floorActive) return
 
         // Pick the latest snapshot at or before the current timeline position
         let snap = phobosFieldData[0]
@@ -2321,7 +2343,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 phobosFieldLayerRef.current = null
             }
         }
-    }, [MAP, mapIsReady, showPhobosField, showPhobosAdvection, showPhobosConvergence, showPhobosZones, phobosFieldData, phobosSnapIdx])
+    }, [MAP, mapIsReady, showPhobosField, showPhobosAdvection, showPhobosConvergence, showPhobosZones, phobosFieldData, phobosSnapIdx, floorActive])
 
     // (Phobos POIs / squad-home / squad-main-force debug overlays were
     // removed — they served their purpose during integration validation
@@ -2362,7 +2384,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     // renders when selectedSquadForMains is set (set by clicking a bot
     // marker — handled in the player-marker click effect below).
     useEffect(() => {
-        if (!MAP || !mapIsReady) return
+        if (!MAP || MAP !== mapRef.current || !mapIsReady) return
 
         if (orbitMainObjectivesLayerRef.current) {
             MAP.removeLayer(orbitMainObjectivesLayerRef.current)
@@ -2387,6 +2409,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             Quest: '#A855F7',     // purple
             ExtractCamp: '#22D3EE',
             MultiStep: '#34D399',
+            Airdrop: '#F97316',
         }
         // Single-glyph identifier inside each marker — no number,
         // because the squad picks mains opportunistically (closest
@@ -2398,9 +2421,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             Quest: '?',
             ExtractCamp: 'E',
             MultiStep: 'M',
+            Airdrop: 'A',
         }
 
-        squadEntry.mainObjectives.forEach((m: any) => {
+        squadEntry.mainObjectives.forEach((m: any, index: number) => {
+            if (!onFloor(mainPoint(m))) return
             const baseColor = colorByType[m.type] || '#888'
             // Four visual states: completed (grey), interrupted
             // (amber halo — LootValue paused by combat or out-of-cell),
@@ -2437,6 +2462,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 const friendly = resolveQuestName(m.questTriggerId || m.questTitle, questNameMap)
                 tipHtml += `<br/><span style="opacity:0.85">${friendly || m.questTitle || m.questTriggerId || ''}</span>`
             }
+            if (m.type === 'Airdrop') tipHtml += `<br/>${escapeMainText(airdropDetail(m))}`
             if (m.type === 'MultiStep') {
                 tipHtml += `<br/>${escapeMainText(operationDetail(m))}`
             }
@@ -2455,9 +2481,13 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 : 'pending'
             tipHtml += `<br/><span style="opacity:0.7;font-size:10px">${stateLabel}</span>`
             marker.bindTooltip(tipHtml, { direction: 'top', className: 'player-tooltip player-tooltip-html' })
+            // These markers belong to the snapshot overlay, not the per-frame
+            // movement renderer. Keep the circle and its label together.
+            marker._rr_objective = true
+            label._rr_objective = true
             group.addLayer(marker)
             group.addLayer(label)
-            orbitMainObjectiveMarkersRef.current.push(marker)
+            orbitMainObjectiveMarkersRef.current[index] = marker
         })
 
         group.addTo(MAP)
@@ -2469,7 +2499,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 orbitMainObjectivesLayerRef.current = null
             }
         }
-    }, [MAP, mapIsReady, selectedSquadForMains, orbitMainObjectivesData, orbitMainsProgress, questNameMap])
+    }, [MAP, mapIsReady, selectedSquadForMains, orbitMainObjectivesData, orbitMainsProgress, questNameMap, onFloor])
 
     // Loot float animations: show floating text when timeline crosses a loot event
     // Uses a ref-based approach to avoid useEffect cleanup killing the animation on re-render
@@ -2478,7 +2508,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const lootFloatStackRef = useRef<Record<string, number>>({})
 
     useEffect(() => {
-        if (!MAP || !mapIsReady || !showLootFloats) {
+        if (!MAP || MAP !== mapRef.current || !mapIsReady || !showLootFloats) {
             prevTimeEndLimitRef.current = timeEndLimit
             return
         }
@@ -2495,7 +2525,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         const newLoots = raidData.looting.filter(l => {
             const t = Number(l.time)
             const added = l.added === 'True' || l.added === 'true' || l.added === '1'
-            return added && t > prevTime && t <= timeEndLimit && l.x && l.z
+            return added && t > prevTime && t <= timeEndLimit && l.x && l.z && onFloor(l)
         })
 
         if (newLoots.length === 0) return
@@ -2531,11 +2561,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             }, 5200)
             lootFloatTimersRef.current.add(timer)
         }
-    }, [MAP, mapIsReady, showLootFloats, timeEndLimit, raidData?.looting])
+    }, [MAP, mapIsReady, showLootFloats, timeEndLimit, raidData?.looting, onFloor])
 
     // Hit flash animations: show a red flash when a bot/player gets hit
     useEffect(() => {
-        if (!MAP || !mapIsReady || !showHitFlash) {
+        if (!MAP || MAP !== mapRef.current || !mapIsReady || !showHitFlash) {
             prevTimeHitRef.current = timeEndLimit
             return
         }
@@ -2556,6 +2586,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         for (const hit of newHits) {
             try {
                 const target = JSON.parse(hit.target)
+                if (!onFloor(target)) continue
                 const icon = L.divIcon({
                     className: '',
                     html: `<div class="hit-flash-marker"></div>`,
@@ -2572,7 +2603,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 hitFlashTimersRef.current.add(timer)
             } catch {}
         }
-    }, [MAP, mapIsReady, showHitFlash, timeEndLimit, raidData?.ballistic])
+    }, [MAP, mapIsReady, showHitFlash, timeEndLimit, raidData?.ballistic, onFloor])
 
     // Compute filtered loot stats (timeline-aware)
     const looseLootStats = useMemo(() => {
@@ -2581,6 +2612,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         let container = 0
         let shown = 0
         for (const item of looseLootData) {
+            if (!onFloor(item)) continue
             if (item.itemId && pickedUpItemIds.has(item.itemId)) continue
             const isContainer = item.inContainer === true || item.inContainer === 1
             if (isContainer) container++
@@ -2591,8 +2623,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             if (looseLootFilter === 'container' && !isContainer) continue
             shown++
         }
-        return { shown, total: looseLootData.length, ground, container }
-    }, [looseLootData, looseLootMinPrice, looseLootFilter, pickedUpItemIds])
+        return { shown, total: looseLootData.filter(onFloor).length, ground, container }
+    }, [looseLootData, looseLootMinPrice, looseLootFilter, pickedUpItemIds, onFloor])
 
     // Slots that are not lootable (excluded from value totals)
     const NON_LOOTABLE_SLOTS = /^(main|SecuredContainer)$/i
@@ -2614,8 +2646,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const botsWithInventory = useMemo(() => {
         if (!raidData.player_inventory || !raidData.players) return []
         const profileIds = new Set(raidData.player_inventory.map(i => i.profileId))
-        return raidData.players.filter(p => profileIds.has(p.profileId))
-    }, [raidData.player_inventory, raidData.players])
+        return raidData.players.filter(p => profileIds.has(p.profileId) && (!floorActive || currentFloorPlayers.has(p.profileId)))
+    }, [raidData.player_inventory, raidData.players, floorActive, currentFloorPlayers])
 
     // Equipment-level slot display order
     const EQUIPMENT_SLOT_ORDER = [
@@ -2643,6 +2675,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     interface InvSlotGroup { name: string; items: TrackingPlayerInventoryItem[]; total: number; attachments?: InvSubGroup; subGroups?: InvSubGroup[] }
     const selectedBotInventory = useMemo(() => {
         if (!selectedBotProfileId || !raidData.player_inventory) return { slots: [] as InvSlotGroup[], total: 0 }
+        if (floorActive && !currentFloorPlayers.has(selectedBotProfileId)) return { slots: [], total: 0 }
         const items = raidData.player_inventory.filter(i => i.profileId === selectedBotProfileId)
 
         const equipmentGroups: Record<string, TrackingPlayerInventoryItem[]> = {}
@@ -2761,7 +2794,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         }
 
         return { slots, total }
-    }, [selectedBotProfileId, raidData.player_inventory])
+    }, [selectedBotProfileId, raidData.player_inventory, floorActive, currentFloorPlayers])
 
     // Reset collapsed slots when bot changes
     useEffect(() => {
@@ -2791,12 +2824,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const layer = m._layers[key];
         
             // Skip layers managed by other overlays (quests, loose loot, grenades, etc.)
-            if (layer._rr_quest || layer._rr_looseLoot || layer._rr_grenade || layer._rr_objective || layer._rr_phobos || layer._rr_ghostHearing || layer._rr_airdrop) continue;
+            if (layer._rr_quest || layer._rr_looseLoot || layer._rr_grenade || layer._rr_objective || layer._rr_phobos || layer._rr_ghostHearing || layer._rr_airdrop || layer._rr_switch) continue;
 
             // Persistent player-dot markers (issue #24) are mutated in place across
             // frames, not torn down here; their lifecycle is reconciled in the main
             // render effect. Other markers/polylines/circles still get cleared.
-            if (layer._rr_persistentPlayer) continue;
+            if (layer._rr_persistentPlayer || layer.eventType === 'killerLine') continue;
 
             // Focus kill-visualization layers (kill/death lines, skull markers,
             // dead-player temp marker) are now rebuilt only on focus/kill changes
@@ -2822,7 +2855,6 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     
                 if (layer.eventType === 'ballisticsLine' && (expiredTime || passedTime)) {
                     m.removeLayer(layer);
-                    ballisticsLayers.delete(layer.eventId);
                 }
             }
         }
@@ -2926,6 +2958,13 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             <div className="parent">
                 <nav className="flex top">
                     <div>
+                        <label className="inline-flex items-center gap-2 mr-3 mb-2 text-sm text-eft" title={floorAvailable
+                            ? 'Filter every replay overlay by the selected floor. Data without a recorded height (including 2D field zones) is hidden.'
+                            : 'This map has no floor boundaries.'}>
+                            <input type="checkbox" className="accent-eft" checked={floorOnly} disabled={!floorAvailable}
+                                onChange={e => setFloorOnly(e.target.checked)} />
+                            Selected floor only
+                        </label>
                         {availableLayers.map((layer) => (
                             <button
                                 key={layer.value}
@@ -2959,7 +2998,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     <div className="playerfeed text-eft">
                         <strong>Legend</strong>
                         {(() => {
-                            const visiblePlayers = raidData.players.filter((p) => p.spawnTime < timeEndLimit)
+                            const visiblePlayers = raidData.players.filter((p) => p.spawnTime < timeEndLimit && (!floorActive || currentFloorPlayers.has(p.profileId)))
                             const grouped: Record<string, { player: any, originalIndex: number }[]> = {}
                             visiblePlayers.forEach((player) => {
                                 const cat = classifyPlayer(player)
@@ -3026,7 +3065,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                                         {getLegendIcon(player, getPlayerColor(player, originalIndex), pmcIndexMap[player.profileId])}
                                                                         <div>
                                                                             <span className="capitalize">
-                                                                                {intl(getDisplayName(player), intl_dir)} ({getPlayerDifficultyAndBrain(player)})
+                                                                                {getDisplayName(player)} ({getPlayerDifficultyAndBrain(player)})
                                                                             </span>
                                                                             {botSpawnValues[player.profileId] > 0 && (
                                                                                 <span style={{ fontSize: '9px', opacity: 0.5, marginLeft: '4px' }}>{'\u20BD'}{formatCompactNumber(botSpawnValues[player.profileId])}</span>
@@ -3090,7 +3129,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                                         {getLegendIcon(player, getPlayerColor(player, originalIndex))}
                                                                         <div>
                                                                             <span className="capitalize">
-                                                                                {intl(getDisplayName(player), intl_dir)} ({getPlayerDifficultyAndBrain(player)})
+                                                                                {getDisplayName(player)} ({getPlayerDifficultyAndBrain(player)})
                                                                             </span>
                                                                             {botSpawnValues[player.profileId] > 0 && (
                                                                                 <span style={{ fontSize: '9px', opacity: 0.5, marginLeft: '4px' }}>{'\u20BD'}{formatCompactNumber(botSpawnValues[player.profileId])}</span>
@@ -3137,7 +3176,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                             {getLegendIcon(player, getPlayerColor(player, originalIndex))}
                                                             <div>
                                                                 <span className="capitalize">
-                                                                    {intl(getDisplayName(player), intl_dir)} ({getPlayerDifficultyAndBrain(player)})
+                                                                    {getDisplayName(player)} ({getPlayerDifficultyAndBrain(player)})
                                                                 </span>
                                                                 {botSpawnValues[player.profileId] > 0 && (
                                                                     <span style={{ fontSize: '9px', opacity: 0.5, marginLeft: '4px' }}>{'\u20BD'}{formatCompactNumber(botSpawnValues[player.profileId])}</span>
@@ -3186,7 +3225,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     </TransformWrapper>
                     <div className="kill-stream">
                         {events
-                            .filter((e) => findInsertIndex(e.time, sliderTimes) < timeCurrentIndex)
+                            .filter((e) => onFloor(e.target) && findInsertIndex(e.time, sliderTimes) < timeCurrentIndex)
                             .reverse()
                             .slice(0, 4)
                             .map((e, i) => (
@@ -3316,6 +3355,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                         <div style={{ maxHeight: '300px', overflowY: 'auto', borderTop: '1px solid rgba(154,136,102,0.2)', paddingTop: '4px' }}>
                                             {[...looseLootData]
                                                 .filter(item => {
+                                                    if (!onFloor(item)) return false
                                                     if (item.itemId && pickedUpItemIds.has(item.itemId)) return false
                                                     const tp = item.price * item.qty
                                                     if (tp < looseLootMinPrice) return false
@@ -3400,10 +3440,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                     }
                                                 }
                                                 return Object.entries(latestByBot)
+                                                    .filter(([, q]) => onFloor(objectivePoint(q)))
                                                     .filter(([profileId, q]) => q.questName && q.status !== 'None' && q.status !== 'Completed' && q.status !== 'Archived' && q.status !== 'Failed' && !deadOrGone.has(profileId))
                                                     .map(([profileId, q]) => {
                                                         const player = raidData?.players?.find(p => p.profileId === profileId)
-                                                        const botName = player?.name || profileId.slice(0, 8)
+                                                        const botName = displayPlayerName(player?.name, profileId.slice(0, 8))
                                                         const isEFT = q.isEFTQuest === 1 || q.isEFTQuest === true
                                                         return (
                                                             <div key={profileId} style={{ padding: '2px 0', borderBottom: '1px solid rgba(154,136,102,0.1)' }}>
@@ -3427,7 +3468,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         )}
 
                         {/* ── Bot Objectives Section (Phobos) ── */}
-                        <AirdropOverlay key={`airdrop-${raidId}`} raidId={raidId} map={MAP} ready={mapIsReady} time={timeEndLimit} />
+                        <SwitchOverlay key={`switch-${raidId}`} raidId={raidId} location={raidData.location} map={MAP} ready={mapIsReady} time={timeEndLimit} onFloor={onFloor} />
+                        <AirdropOverlay key={`airdrop-${raidId}`} raidId={raidId} map={MAP} ready={mapIsReady} time={timeEndLimit} onFloor={onFloor} />
                         {/ORBIT/i.test(raidData?.detectedMods || '') && <GhostHearingOverlay
                             key={raidId}
                             raidId={raidId}
@@ -3438,6 +3480,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             positions={positions}
                             kills={raidData?.kills}
                             playerStatuses={raidData?.player_status}
+                            onFloor={onFloor}
                         />}
 
                         {botObjectiveData.length > 0 && (
@@ -3491,10 +3534,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                     'Quest': '#D946EF', 'Synthetic': '#22C55E', 'Exfil': '#2DD4BF',
                                                 }
                                                 return Object.entries(latestByBot)
+                                                    .filter(([, q]) => onFloor(objectivePoint(q)))
                                                     .filter(([profileId, o]) => (o.status === 'Moving' || (o.category?.startsWith('Ambush') && o.status !== 'Failed') || (o.category === 'AirdropLoot' && o.status === 'Looting')) && !deadOrGone.has(profileId))
                                                     .map(([profileId, o]) => {
                                                         const player = raidData?.players?.find(p => p.profileId === profileId)
-                                                        const botName = player?.name || profileId.slice(0, 8)
+                                                        const botName = displayPlayerName(player?.name, profileId.slice(0, 8))
                                                         const isLeader = o.isLeader === 1 || o.isLeader === true
                                                         return (
                                                             <div key={profileId} style={{ padding: '2px 0', borderBottom: '1px solid rgba(154,136,102,0.1)' }}>
@@ -3572,7 +3616,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                             </label>
                                         </div>
                                         <div style={{ fontSize: '10px', opacity: 0.6, marginTop: '4px' }}>
-                                            Field shown is the snapshot closest to the current timeline position.
+                                            {floorActive ? '2D field and zones hidden: no recorded floor.' : 'Field shown is the snapshot closest to the current timeline position.'}
                                         </div>
                                     </div>
                                 )}
@@ -3598,7 +3642,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                         const leaderColor = leaderPlayer
                                             ? (calculatedPlayerInfo[leaderPid!]?.pickedColor || getPlayerColor(leaderPlayer, leaderIdx))
                                             : '#999'
-                                        const leaderName = leaderPlayer?.name || `Squad #${selectedSquadForMains}`
+                                        const leaderName = displayPlayerName(leaderPlayer?.name, `Squad #${selectedSquadForMains}`)
                                         return (
                                             <span style={{ marginLeft: '8px', fontSize: '12px', opacity: 0.9 }}>
                                                 <span style={{ color: leaderColor, fontSize: '14px', verticalAlign: 'middle' }}>●</span>{' '}
@@ -3621,6 +3665,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                     <span style={{ color: '#F59E0B' }}>{'●'} LootValue</span>
                                     <span style={{ color: '#A855F7' }}>{'●'} Quest</span>
                                     <span style={{ color: '#22D3EE' }}>{'●'} Extract camp</span>
+                                    <span style={{ color: '#F97316' }}>{'●'} Airdrop (temporary)</span>
                                     <span style={{ color: '#6B7280' }}>{'●'} Completed</span>
                                 </div>
                                 {/* Per-squad mains list — only when a squad is selected. Each
@@ -3629,17 +3674,20 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                 {selectedSquadForMains != null && (() => {
                                     const sq = findLatestSquadEntry(selectedSquadForMains, timeEndLimit)
                                     if (!sq || !sq.mainObjectives) return null
-                                    const colorByType: Record<string, string> = { Kills: '#EF4444', LootValue: '#F59E0B', Quest: '#A855F7', ExtractCamp: '#22D3EE', MultiStep: '#34D399' }
+                                    const colorByType: Record<string, string> = { Kills: '#EF4444', LootValue: '#F59E0B', Quest: '#A855F7', ExtractCamp: '#22D3EE', MultiStep: '#34D399', Airdrop: '#F97316' }
                                     return (
                                         <div style={{ marginTop: '6px', borderTop: '1px dashed rgba(154,136,102,0.3)', paddingTop: '6px' }}>
                                             {sq.mainObjectives.map((m: any, idx: number) => {
+                                                if (!onFloor(mainPoint(m))) return null
                                                 const baseColor = colorByType[m.type] || '#888'
                                                 const isStarted = mainStarted(m)
                                                 const isInterrupted = mainInterrupted(m)
                                                 const stateGlyph = mainAbandoned(m) ? '×' : m.completed ? '✓' : (isInterrupted ? '⏸' : (isStarted ? '◉' : '○'))
                                                 const stateColor = m.completed ? '#6B7280' : (isInterrupted ? '#F59E0B' : (isStarted ? '#fff' : baseColor))
                                                 let detail = ''
-                                                if (m.type === 'Quest') {
+                                                if (m.type === 'Airdrop') {
+                                                    detail = airdropDetail(m)
+                                                } else if (m.type === 'Quest') {
                                                     const friendly = resolveQuestName(m.questTriggerId || m.questTitle, questNameMap)
                                                     detail = friendly || m.questTitle || m.questTriggerId || '(no title)'
                                                 } else if (m.type === 'LootValue') {

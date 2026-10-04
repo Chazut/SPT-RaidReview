@@ -1,3 +1,5 @@
+import { displayPlayerName } from '../helpers/playerNames'
+import { allFloors, type FloorPredicate } from '../helpers/floorFilter'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import api from '../api/api'
@@ -13,6 +15,7 @@ interface Props {
     positions: Record<string, TrackingPositionalData[]>
     kills?: { killedId: string; time: number }[]
     playerStatuses?: TrackingPlayerStatus[]
+    onFloor?: FloorPredicate
 }
 
 const COLOR = '#9ed0c3'
@@ -26,7 +29,7 @@ const earIcon = L.divIcon({
     html: '<span style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;background:#142220e6;border:1px solid #9ed0c366;color:#9ed0c3;box-shadow:0 1px 3px #0008"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 4-4 4-4 7a4 4 0 0 1-8 0"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4"/></svg></span>'
 })
 
-export function GhostHearingOverlay({ raidId, map, ready, time, players, positions, kills, playerStatuses }: Props) {
+export function GhostHearingOverlay({ raidId, map, ready, time, players, positions, kills, playerStatuses, onFloor = allFloors }: Props) {
     const [enabled, setEnabled] = useState(() => localStorage.getItem('rr_showGhostHearing') === 'true')
     const [events, setEvents] = useState<TrackingOrbitGhostHearing[]>([])
     const [status, setStatus] = useState<'loading' | 'ready' | 'unsupported' | 'error'>('loading')
@@ -47,7 +50,7 @@ export function GhostHearingOverlay({ raidId, map, ready, time, players, positio
         return () => abort.abort()
     }, [raidId])
 
-    const names = useMemo(() => new Map(players.map(p => [p.profileId, p.name])), [players])
+    const names = useMemo(() => new Map(players.map(p => [p.profileId, displayPlayerName(p.name, '')])), [players])
     const endTimes = useMemo(() => {
         const result = new Map<string, number>()
         const end = (id: string, t: number) => result.set(id, Math.min(result.get(id) ?? Infinity, Number(t)))
@@ -56,8 +59,8 @@ export function GhostHearingOverlay({ raidId, map, ready, time, players, positio
             if (['Dead', 'Unspawned', 'Unknown', '1', '2', '3'].includes(String(status.status))) end(status.profileId, status.time)
         return result
     }, [kills, playerStatuses])
-    const investigations = useMemo(() => enabled ? ghostHearingInvestigations(events, positions, time, endTimes) : [],
-        [enabled, events, positions, time, endTimes])
+    const investigations = useMemo(() => enabled ? ghostHearingInvestigations(events, positions, time, endTimes).filter(onFloor) : [],
+        [enabled, events, positions, time, endTimes, onFloor])
 
     useEffect(() => {
         setHovered(null)
@@ -103,7 +106,7 @@ export function GhostHearingOverlay({ raidId, map, ready, time, players, positio
     useEffect(() => {
         const group = groupRef.current
         const h = investigations.find(h => h.profileId === hovered)
-        if (!group || !h) return
+        if (!group || !h || !onFloor({ x: h.event.sourceX, y: h.event.sourceY, z: h.event.sourceZ })) return
         const details = tag(L.layerGroup()).addTo(map!)
         const origin: L.LatLngExpression = [h.event.sourceZ, h.event.sourceX]
         tag(L.polyline([[h.z, h.x], origin], { color: COLOR, weight: 1.5, dashArray: '4 6', opacity: 0.85,
@@ -121,7 +124,7 @@ export function GhostHearingOverlay({ raidId, map, ready, time, players, positio
             details.clearLayers()
             details.remove()
         }
-    }, [investigations, hovered, names, map, ready, enabled, raidId])
+    }, [investigations, hovered, names, map, ready, enabled, raidId, onFloor])
 
     const hint = status === 'error' ? 'Could not load recorded hearing decisions. Reload to retry.'
         : status === 'unsupported' ? 'Update the RaidReview server to load hearing decisions.'

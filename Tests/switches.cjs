@@ -1,0 +1,40 @@
+const fs = require('fs'), vm = require('vm'), ts = require('../Private/node_modules/typescript');
+const source = fs.readFileSync(require.resolve('../Private/src/helpers/switches.ts'), 'utf8');
+const ctx = { exports: {} };
+vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, ctx);
+const { parseSwitches, groupSwitches, switchAt, switchName, switchAppearance } = ctx.exports;
+let checks = 0;
+function check(value, label) { checks++; if (!value) throw Error(label); }
+const row = (time, sequence, state = 'Shut', switchId = 'power') => ({ time, sequence, state, switchId, name: 'Power', x: 1, y: 2, z: 3 });
+const events = parseSwitches([row(500, 3, 'Interacting'), row(0, 1), row(500, 4, 'Open'), row(0, 2, 'Locked', 'gate'), row(1000, 5)]);
+check(events.length === 5, 'all transitions parsed and sorted');
+const groups = groupSwitches(events), power = groups.find(g => g[0].switchId === 'power');
+check(groups.length === 2, 'independent switches');
+check(switchAt(power, -1) === null, 'no future fallback');
+check(switchAt(power, 0).state === 'Shut', 'initial inactive');
+check(switchAt(power, 499).state === 'Shut', 'not activated early');
+check(switchAt(power, 500).state === 'Open', 'last sequence wins within same millisecond');
+check(switchAt(power, 999).state === 'Open', 'activated persists');
+check(switchAt(power, 1000).state === 'Shut', 'automatic shutoff represented');
+check(switchAt(power, 600).state === 'Open', 'rewind reactivates');
+check(switchAt(power, 100).state === 'Shut', 'rewind restores initial');
+check(switchAt([], 500) === null, 'old raids');
+check(parseSwitches(null).length === 0, 'missing history');
+check(parseSwitches([row(0, 1), row(0, 1)]).length === 1, 'duplicate transport deduped');
+for (const invalid of [null, {}, {...row(0, 1), x: null}, {...row(0, 1), z: 'NaN'}, row(-1, 1), row(0, 0), row(0, 1.5), {...row(0, 1), state: 1}, {...row(0, 1), switchId: ''}])
+    check(parseSwitches([invalid]).length === 0, 'malformed rows ignored');
+check(parseSwitches([{ ...row('200', '7'), x: '1' }])[0].time === 200, 'sqlite text numerics');
+check(switchName({...row(0, 1), switchId: 'Shopping_Mall_DesignStuff_00055'}) === 'Mall power', 'known switch label');
+check(switchName({...row(0, 1), name: '<script>example</script>'}) === '<script>example</script>', 'unknown label kept as plain text for DOM');
+for (const state of ['Open', 'Shut', 'Locked', 'Interacting', 'Unknown']) check(!!switchAppearance(state).label, 'state label');
+const mallPower = 'Shopping_Mall_DesignStuff_00055';
+const basementIds = ['Enable_Panel_Switch_011', 'Basement_reserve_electric_switcher_lever', 'Error_Button_Switch_011'];
+const station = parseSwitches([row(0, 1, 'Shut', mallPower), row(500, 2, 'Open', mallPower),
+    ...basementIds.map((id, i) => row(0, i + 3, 'Shut', id))]);
+const visibleStation = groupSwitches(station, 'Interchange');
+check(visibleStation.length === 1 && visibleStation[0][0].switchId === mallPower, 'only Mall power visible at station');
+check(switchAt(visibleStation[0], 500).state === 'Open', 'Mall power transitions preserved');
+check(groupSwitches(station, 'rezervbase').length === 4, 'same IDs not hidden on other locations');
+check(station.length === 5, 'recorded data preserved');
+check(groupSwitches(parseSwitches([row(0, 1, 'Shut', 'Shopping_Mall_DesignStuff_00059')]), 'interchange').length === 1, 'KIBA alarm stays visible');
+console.log(`PASS ${checks} switch replay checks`);

@@ -1,83 +1,80 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using WebSocketSharp;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using BepInEx;
 using BepInEx.Logging;
-using Comfort.Common;
 using EFT.Communications;
-using EFT.UI;
 
 namespace RAID_REVIEW
 {
     public class Telemetry
     {
-        private static WebSocket ws = null;
+        private static WebSocket ws;
+        private static OrderedPacketSender sender;
+        private static string notification;
         private static readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("Telemetry");
+        internal static bool Faulted => sender == null || sender.Faulted;
+        internal static OrderedPacketSender.Counters Counters => sender?.Snapshot() ?? default;
 
         public static void Connect(string host)
         {
-            if (ws != null)
+            Shutdown();
+            var socket = new WebSocket(host);
+            ws = socket;
+            sender = new OrderedPacketSender(2048,
+                (action, payload) => JsonConvert.SerializeObject(new WsPayload
+                {
+                    Action = action,
+                    Payload = payload is string raw ? raw : JsonConvert.SerializeObject(payload)
+                }),
+                json =>
+                {
+                    if (socket.ReadyState != WebSocketState.Open) throw new InvalidOperationException("WebSocket is disconnected");
+                    socket.Send(json);
+                    if (socket.ReadyState != WebSocketState.Open) throw new InvalidOperationException("WebSocket closed during send");
+                },
+                reason => { Logger.LogError("[RAID-REVIEW] " + reason); Interlocked.Exchange(ref notification, reason); });
+            var queue = sender;
+            socket.OnOpen += (s, e) =>
             {
-                ws.Close();
-            }
-
-            ws = new WebSocket(host);
-
-            ws.OnOpen += (sender, e) => { 
-                Logger.LogInfo("[RAID-REVIEW] WebSocket connected."); 
+                if (ws != socket) return;
                 RAID_REVIEW.WebSocketConnected = true;
-                EFT.Communications.NotificationManager.DisplayMessageNotification("Raid Review Server Connected", ENotificationDurationType.Long);
-                ws.Send("WS_CONNECTED"); 
+                Logger.LogInfo("[RAID-REVIEW] WebSocket connected.");
+                Interlocked.Exchange(ref notification, "Raid Review Server Connected");
             };
-
-            ws.OnMessage += (sender, e) =>
+            socket.OnError += (s, e) => queue.Abort("WebSocket error: " + e.Message);
+            socket.OnClose += (s, e) =>
             {
-                Logger.LogInfo("[RAID-REVIEW] Received message: " + e.Data);
+                if (ws == socket) RAID_REVIEW.WebSocketConnected = false;
+                queue.Abort("WebSocket closed");
             };
-
-            ws.OnError += (sender, e) => Logger.LogError($"[RAID-REVIEW] WebSocket error: {e.Message}");
-            ws.OnClose += (sender, e) => Logger.LogInfo("[RAID-REVIEW] WebSocket closed.");
-
-            Task.Run(() =>
-            {
-                try
-                {
-                    ws.Connect();
-                }
-                catch (Exception ex)
-                {
-                    EFT.Communications.NotificationManager.DisplayMessageNotification("Raid Review - Unable to Connect To Server", ENotificationDurationType.Long, ENotificationIconType.Alert);
-                    PreloaderUI.Instance.CloseErrorScreen();
-                    PreloaderUI.Instance.ShowErrorScreen("Raid Review - Server Connection Error", "Raid Review was unable to connect to the Websocket server, please check 'Server IP' in the F12 menu and restart game.");
-                    RAID_REVIEW.WebSocketConnected = false;
-                    Logger.LogError($"WebSocket connection error: {ex.Message}");
-                }
-            });
+            // One connection task; packets use the single ordered worker.
+            Task.Run(() => { try { socket.Connect(); } catch (Exception ex) { queue.Abort(ex.Message); } });
         }
-        public static Task Send(string Action, string Payload)
+        internal static void PumpNotification()
         {
-            return Task.Run(() =>
-            {
-                if (RAID_REVIEW.EnableRecording.Value) 
-                {
-                    try
-                    {
-                        WsPayload wsPayload = new WsPayload
-                        {
-                            Action = Action,
-                            Payload = Payload
-                        };
-                        ws.Send(JsonConvert.SerializeObject(wsPayload));
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError($"WebSocket send error: {ex.Message}");
-                    }
-                }
-            });
+            var message = Interlocked.Exchange(ref notification, null);
+            if (message != null && RAID_REVIEW.RecordingNotification.Value)
+                try { NotificationManager.DisplayMessageNotification(message, ENotificationDurationType.Long); } catch { }
+        }
+        internal static bool BeginRaid() => RAID_REVIEW.WebSocketConnected && sender != null && sender.BeginRaid();
+
+        // Callers transfer ownership and must never mutate a snapshot afterward.
+        internal static bool SendSnapshot(string action, object snapshot) => sender != null && sender.Enqueue(action, snapshot);
+
+        // Compatibility for callers that already have JSON. Completion means queued, not acknowledged.
+        public static Task Send(string action, string payload)
+        {
+            if (RAID_REVIEW.CanCapture) SendSnapshot(action, payload);
+            return Task.CompletedTask;
+        }
+        internal static void Shutdown()
+        {
+            sender?.Dispose(); sender = null;
+            var old = ws; ws = null;
+            RAID_REVIEW.WebSocketConnected = false;
+            if (old != null) Task.Run(() => { try { old.Close(); } catch { } });
         }
     }
-
 }

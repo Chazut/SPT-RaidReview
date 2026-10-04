@@ -1,3 +1,4 @@
+import { allFloors, floorSegments, type FloorPredicate } from '../helpers/floorFilter'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import api from '../api/api'
@@ -11,14 +12,19 @@ const clock = (ms: number) => Math.floor(ms / 60000) + ':' + String(Math.floor(m
 const label = (text: string) => { const node = document.createElement('div'); node.textContent = text; return node }
 function owned<T extends L.Layer>(layer: T): T { (layer as T & { _rr_airdrop: boolean })._rr_airdrop = true; return layer }
 
-export function AirdropFlightOverlay({ raidId, map, ready, time, enabled }: {
-    raidId: string; map: L.Map | null; ready: boolean; time: number; enabled: boolean
+export function AirdropFlightOverlay({ raidId, map, ready, time, enabled, onFloor = allFloors }: {
+    raidId: string; map: L.Map | null; ready: boolean; time: number; enabled: boolean; onFloor?: FloorPredicate
 }) {
     const [points, setPoints] = useState<FlightPoint[]>([])
     const [status, setStatus] = useState('loading')
     const flights = useMemo(() => groupAirdropFlights(points), [points])
-    const states = useMemo(() => flights.map(flight => ({ id: flight.id, ...flightAt(flight, time) })), [flights, time])
-    const drops = useMemo(() => visibleReleases(flights, time), [flights, time])
+    // Aircraft and release events are airborne, not assigned to a building floor.
+    const states = useMemo(() => onFloor !== allFloors ? [] : flights.map(flight => {
+        const state = flightAt(flight, time)
+        return { id: flight.id, plane: state.plane && onFloor(state.plane) ? state.plane : null,
+            trail: state.trail.flatMap(segment => floorSegments(segment, onFloor)) }
+    }), [flights, time, onFloor])
+    const drops = useMemo(() => onFloor !== allFloors ? [] : visibleReleases(flights, time).filter(onFloor), [flights, time, onFloor])
     const layerRef = useRef<L.LayerGroup | null>(null)
     const planes = useRef(new Map<string, L.Marker>())
     const trails = useRef(new Map<string, L.Polyline>())

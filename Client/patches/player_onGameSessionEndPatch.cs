@@ -1,7 +1,6 @@
-﻿using SPT.Reflection.Patching;
+using SPT.Reflection.Patching;
 using EFT;
 using EFT.Communications;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,47 +19,14 @@ namespace RAID_REVIEW
         private static void PatchPostFix(ref Player __instance, ExitStatus exitStatus, float pastTime, string locationId, string exitName)
         {
 
-            if (locationId == "hideout") return;
-
-            try { 
-                Logger.LogInfo("RAID_REVIEW :::: INFO :::: RAID Completed, Saving Tracking Data");
-
-                AirdropFlightRecorder.FinishRaid();
-                RAID_REVIEW.tracking = false;
-                RAID_REVIEW.inRaid = false;
-
-                RAID_REVIEW.stopwatch.Stop();
-                RAID_REVIEW.trackingRaid.exitStatus = exitStatus;
-                RAID_REVIEW.trackingRaid.exitName = exitName;
-                RAID_REVIEW.trackingRaid.time = DateTime.Now;
-                RAID_REVIEW.trackingRaid.timeInRaid = RAID_REVIEW.stopwatch.ElapsedMilliseconds;
-                // Use trackingRaid.type already set at raid start (myPlayer may be null on headless)
-                if (RAID_REVIEW.myPlayer != null)
-                    RAID_REVIEW.trackingRaid.type = RAID_REVIEW.myPlayer.Side == EPlayerSide.Savage ? "SCAV" : "PMC";
-                RAID_REVIEW.stopwatch.Reset();
-
-                BotChecker.BotCheckLoop(true);
-                if (RAID_REVIEW.SOLARINT_SAIN__DETECTED) _ = SAIN_Integration.CheckForSainComponents(true);
-                Telemetry.Send("PLAYER_CHECK", JsonConvert.SerializeObject(RAID_REVIEW.trackingPlayers.Values));
-                _ = AirdropFlightRecorder.SendRaidEnd(JsonConvert.SerializeObject(RAID_REVIEW.trackingRaid));
-
-                if (RAID_REVIEW.RecordingNotification.Value && RAID_REVIEW.WebSocketConnected) {
-                    EFT.Communications.NotificationManager.DisplayMessageNotification("Raid Review Recording Completed", ENotificationDurationType.Long);
-                }
-            }
-
-            catch (Exception ex)
+            if (locationId == "hideout" || !RAID_REVIEW.inRaid) return;
+            try
             {
-                Logger.LogError($"{ex.Message}");
+                RAID_REVIEW.FinishRecording(exitName, exitStatus);
+                if (RAID_REVIEW.RecordingNotification.Value && !Telemetry.Faulted)
+                    NotificationManager.DisplayMessageNotification("Raid Review recording queued for saving", ENotificationDurationType.Long);
             }
-
-            finally
-            {
-                    RAID_REVIEW.trackingPlayers = new Dictionary<string, TrackingPlayer>();
-                    RAID_REVIEW._lastBotQuestState.Clear();
-                    RAID_REVIEW._lastBotObjectiveState.Clear();
-                    RAID_REVIEW.sessionId = null;
-            }
+            catch (Exception ex) { Logger.LogError(ex); }
         }
     }
 }

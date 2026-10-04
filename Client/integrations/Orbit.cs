@@ -296,10 +296,17 @@ namespace RAID_REVIEW
             internal static readonly System.Reflection.FieldInfo OperationState = typeof(OrbitMainObjective).GetField("OperationState");
         }
 
+        private static class AirdropFields
+        {
+            internal static readonly System.Reflection.FieldInfo Stage = typeof(OrbitMainObjective).GetField("AirdropStage");
+            internal static readonly System.Reflection.FieldInfo Id = typeof(OrbitMainObjective).GetField("AirdropId");
+            internal static readonly System.Reflection.FieldInfo Landed = typeof(OrbitMainObjective).GetField("AirdropLanded");
+        }
+
         public static TrackingOrbitMainObjectives GetMainObjectivesSnapshot(string sessionId, long time)
         {
             var snap = OrbitTelemetry.GetMainObjectivesSnapshot();
-            if (snap == null || snap.Count == 0) return null;
+            if (snap == null) return null;
 
             var squads = new System.Collections.Generic.List<TrackingOrbitSquadMainObjectives>(snap.Count);
             foreach (var s in snap)
@@ -310,6 +317,9 @@ namespace RAID_REVIEW
                     mains.Add(new TrackingOrbitMainObjective
                     {
                         type = m.Type,
+                        airdropStage = AirdropFields.Stage?.GetValue(m) as string,
+                        airdropId = AirdropFields.Id?.GetValue(m) as string,
+                        airdropLanded = AirdropFields.Landed?.GetValue(m) is true,
                         cellX = m.CellX,
                         cellY = m.CellY,
                         x = m.X,

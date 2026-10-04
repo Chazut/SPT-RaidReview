@@ -1,0 +1,51 @@
+const fs = require('fs'), vm = require('vm'), ts = require('../Private/node_modules/typescript');
+const ctx = { exports: {} };
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../Private/src/helpers/floorFilter.ts'), 'utf8'),
+    { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, ctx);
+const { createFloorFilter, hasFloors, floorSegments, positionAt, mainPoint, floorHeatmap } = ctx.exports;
+const maps = require('../Private/src/assets/maps.json').flatMap(group => group.maps);
+const map = key => maps.find(m => m.key === key);
+let count = 0;
+function check(v, name) { count++; if (!v) throw Error(name); }
+const point = (x, y, z) => ({ x, y, z });
+const interchange = map('interchange-rework');
+const base = createFloorFilter(interchange, '', true);
+const second = createFloorFilter(interchange, interchange.layers[0].name, true);
+check(base(point(0, 21, 0)), 'Interchange garage is Base');
+check(!base(point(0, 28, 0)), 'unbounded Base excludes mall floor');
+check(second(point(0, 28, 0)), 'mall floor');
+check(!second(point(250, 28, 0)), 'outside mall same altitude is not mall floor');
+check(base(point(250, 28, 0)), 'exterior remains on Base');
+check(second(point(0, 25, 0)) && !second(point(0, 34, 0)), 'half-open height boundary');
+check(!second(point(0, null, 0)) && !second(point(0, '', 0)) && !second(point(0, NaN, 0)), 'unknown height never invented');
+check(second(point('0', '28', '0')), 'numeric SQLite coordinates');
+const reserve = map('reserve');
+const rbase = createFloorFilter(reserve, '', true);
+const bunker = createFloorFilter(reserve, 'Bunkers', true);
+check(bunker(point(-70, -14, 150)), 'D2 bunker regional height');
+check(bunker(point(-10, 16, 180)), 'Dome tunnel is a bunker despite positive elevation');
+check(!bunker(point(400, -14, 150)), 'same height outside regional bunker');
+check(!rbase(point(-10, 16, 180)), 'Dome tunnel excluded from Base');
+const factory = map('factory');
+const fbase = createFloorFilter(factory, '', true);
+check(fbase(point(0, 0, 0)) && !fbase(point(0, 4, 0)) && !fbase(point(0, -2, 0)), 'Factory base bounded above and below');
+check(!hasFloors(map('woods')), 'no floor metadata');
+check(createFloorFilter(map('woods'), '', true)(null), 'unavailable filter is a no-op');
+check(createFloorFilter(interchange, '', false)(null), 'disabled filter preserves legacy unknown data');
+const samples = [point(0, 28, 0), point(1, 28, 0), point(2, 21, 0), point(3, 28, 0)];
+const split = floorSegments(samples, second);
+check(split.length === 2 && split[0].length === 2 && split[1][0].x === 3, 'no bridge across a different floor');
+check(floorSegments(samples, base)[0][0].x === 2, 'complementary trajectory');
+const motion = [{ ...samples[0], time: 100 }, { ...samples[2], time: 200 }];
+check(positionAt(motion, 99) === undefined, 'no future bot before spawn');
+check(positionAt(motion, 200).y === 21, 'marker uses current floor, never last visible floor');
+check(positionAt(motion, 150).y === 28, 'rewind recovers prior floor');
+check(mainPoint({ type: 'LootValue', y: 0 }) === null, '2D cell mains not misassigned to Base');
+check(mainPoint({ type: 'Quest', y: 0 }).y === 0, 'real zero elevation preserved');
+const heat = floorHeatmap({ a: samples, b: samples }, second);
+check(heat.length === 3 && heat.every(p => p[2] === 1), 'floor heatmap excludes other floor and deduplicates');
+for (const m of maps.filter(hasFloors)) {
+    const disabled = createFloorFilter(m, '', false);
+    check(disabled(point(1, 100, 2)), `${m.key} default remains unfiltered`);
+}
+console.log(`PASS ${count} floor replay checks`);
