@@ -22,6 +22,12 @@ class Program
 
     static async Task Main()
     {
+        var camp = new TrackingOrbitMainObjective { type = "ExtractCamp", campUntilTimeExtract = true, campElapsed = 1900 };
+        var campJson = JObject.Parse(JsonConvert.SerializeObject(camp));
+        Check(campJson.Value<bool>("campUntilTimeExtract") && campJson.Value<float>("campElapsed") == 1900,
+            "record final extract-camp semantics for replay");
+        Check(!JsonConvert.DeserializeObject<TrackingOrbitMainObjective>("{\"type\":\"ExtractCamp\",\"campTargetDuration\":63}")!.campUntilTimeExtract,
+            "legacy extract camps retain timed semantics");
         var owner = Environment.CurrentManagedThreadId;
         var output = new ConcurrentQueue<string>();
         using (var worker = new OrderedPacketSender(2048, (action,payload) =>

@@ -283,6 +283,7 @@ namespace RAID_REVIEW
             internal static readonly System.Reflection.FieldInfo Started = typeof(OrbitMainObjective).GetField("CampStartedAt");
             internal static readonly System.Reflection.FieldInfo Elapsed = typeof(OrbitMainObjective).GetField("CampElapsed");
             internal static readonly System.Reflection.FieldInfo Duration = typeof(OrbitMainObjective).GetField("CampTargetDuration");
+            internal static readonly System.Reflection.FieldInfo UntilTimeExtract = typeof(OrbitMainObjective).GetField("CampUntilTimeExtract");
             internal static readonly System.Reflection.FieldInfo Holding = typeof(OrbitMainObjective).GetField("CampHolding");
         }
 
@@ -332,6 +333,7 @@ namespace RAID_REVIEW
                         campStartedAt = CampMainFields.Started?.GetValue(m) as float? ?? 0f,
                         campElapsed = CampMainFields.Elapsed?.GetValue(m) as float? ?? 0f,
                         campTargetDuration = CampMainFields.Duration?.GetValue(m) as float? ?? 0f,
+                        campUntilTimeExtract = CampMainFields.UntilTimeExtract?.GetValue(m) is true,
                         campHolding = CampMainFields.Holding?.GetValue(m) is true,
                         operationId = OperationFields.OperationId?.GetValue(m) as string,
                         operationName = OperationFields.OperationName?.GetValue(m) as string,

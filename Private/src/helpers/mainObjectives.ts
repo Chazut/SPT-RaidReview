@@ -9,6 +9,11 @@ export function mainInterrupted(main: any): boolean {
     return mainStarted(main) && (main.type === 'MultiStep' && main.operationState === 'paused' || main.type === 'LootValue' && main.lootValueInterrupted === true || main.campStartedAt > 0 && main.campHolding === false)
 }
 export function mainHoldDetail(main: any): string {
+    if (main.type === 'ExtractCamp' && main.campUntilTimeExtract) {
+        return main.campStartedAt > 0
+            ? `${Math.round(main.campElapsed || 0)}s holding cover; until time-based extraction`
+            : 'Last main; hold until time-based extraction'
+    }
     const duration = main.campTargetDuration || main.killsRoamTargetDuration || 0
     return `${Math.round(main.campElapsed || 0)} / ${Math.round(duration)}s holding cover`
 }

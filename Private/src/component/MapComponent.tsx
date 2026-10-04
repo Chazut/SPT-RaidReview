@@ -2399,6 +2399,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         const squadEntry = findLatestSquadEntry(selectedSquadForMains, timeEndLimit)
         if (!squadEntry || !squadEntry.mainObjectives || squadEntry.mainObjectives.length === 0) return
 
+        // Keep the objective circle and glyph above switch icons, below tooltips.
+        const objectivePane = MAP.getPane('rr-main-objectives') || MAP.createPane('rr-main-objectives')
+        objectivePane.style.zIndex = '625'
         const group = L.layerGroup()
         // Rebuild marker refs alongside the group so the sidebar list
         // can call openTooltip on a hovered row's marker.
@@ -2443,6 +2446,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const ringWeight = isStarted ? 4 : 2.5
             const glyph = mainAbandoned(m) ? '×' : m.completed ? '✓' : (glyphByType[m.type] || '●')
             const marker = L.circleMarker([m.z, m.x], {
+                pane: 'rr-main-objectives',
                 radius: isStarted ? 13 : 11,
                 color: ringColor,
                 weight: ringWeight,
@@ -2456,7 +2460,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 iconSize: [22, 22],
                 iconAnchor: [11, 11],
             })
-            const label = L.marker([m.z, m.x], { icon: labelIcon, interactive: false })
+            const label = L.marker([m.z, m.x], { icon: labelIcon, pane: 'rr-main-objectives', interactive: false })
             let tipHtml = `<strong>${escapeMainText(mainLabel(m))}</strong>`
             if (m.type === 'Quest') {
                 const friendly = resolveQuestName(m.questTriggerId || m.questTitle, questNameMap)

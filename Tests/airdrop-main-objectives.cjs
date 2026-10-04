@@ -3,7 +3,7 @@ const ts = require('../Private/node_modules/typescript');
 const source = fs.readFileSync(require.resolve('../Private/src/helpers/mainObjectives.ts'), 'utf8');
 const ctx = { exports: {} };
 vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, ctx);
-const { mainStarted, mainLabel, airdropDetail, findMainSquadEntry: find } = ctx.exports;
+const { mainStarted, mainLabel, mainHoldDetail, airdropDetail, findMainSquadEntry: find } = ctx.exports;
 let checks = 0;
 function check(value, label) { checks++; if (!value) throw new Error(label); }
 const main = { type: 'Kills', completed: false };
@@ -39,4 +39,8 @@ check(find([...data].reverse(), 2, 3000).mainObjectives[1].airdropLanded, 'snaps
 check(data[1].squads[0].mainObjectives.length === 2, 'lookup never mutates recorded snapshots');
 check(mainLabel(main) === 'Kills' && !mainStarted(main), 'legacy main unchanged');
 check(airdropDetail({ ...drop, airdropLanded: true }) === 'Approach', 'landed approach label');
-console.log(`PASS ${checks} airdrop main-objective replay checks`);
+check(mainHoldDetail({ type: 'ExtractCamp', campUntilTimeExtract: true }).includes('Last main'), 'final camp described before approach');
+check(mainHoldDetail({ type: 'ExtractCamp', campUntilTimeExtract: true, campStartedAt: 100, campElapsed: 1800 }) === '1800s holding cover; until time-based extraction', 'new camp has no fixed timer');
+check(mainHoldDetail({ type: 'ExtractCamp', campTargetDuration: 63 }) === '0 / 63s holding cover', 'historical TiMBo timer preserved');
+check(mainHoldDetail({ type: 'Kills', killAmbush: true, killsRoamTargetDuration: 120 }) === '0 / 120s holding cover', 'Kill ambush keeps its budget');
+console.log(`PASS ${checks} main-objective replay checks`);
