@@ -28,6 +28,7 @@ Download a compatible version from the **[releases](https://github.com/Chazut/SP
 ### Features
 
 - Full raid replay on an interactive map (timeline scrubber, follow mode, floors)
+- Airdrop replay: aircraft icons follow the recorded flight path, cyan diamonds mark release points, and yellow crates appear on landing. All follow the replay timeline and the **Airdrops** toggle. Requires a new recording; remote clients distinguish a crate first observed in flight from a confirmed release.
 - Kill lines, death markers, killfeed details
 - Post-raid leaderboard
 - Charts: kills, looting, bots over time, factions...

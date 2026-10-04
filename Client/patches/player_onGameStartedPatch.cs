@@ -1,4 +1,4 @@
-﻿using SPT.Reflection.Patching;
+using SPT.Reflection.Patching;
 using Comfort.Common;
 using EFT;
 using EFT.Communications;
@@ -40,6 +40,8 @@ namespace RAID_REVIEW
                 // Check for installed mods
                 Integrations.ModCheck();
 
+                RAID_REVIEW_AirdropLandedPatch.Reset();
+                AirdropFlightRecorder.Reset();
                 RAID_REVIEW.stopwatch.Reset();
                 RAID_REVIEW.stopwatch.Start();
 

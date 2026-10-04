@@ -520,6 +520,35 @@ public class RaidReviewWebServer
             }
         });
 
+        app.MapGet("/api/raids/{raidId}/airdrop_flights", async (HttpContext context, string raidId) =>
+        {
+            try
+            {
+                var data = await _db.QueryAsync("SELECT flightId, time, kind, dropId, x, y, z, heading FROM airdrop_flight WHERE raidId = $id ORDER BY time ASC, id ASC", ("$id", raidId));
+                await context.Response.WriteAsJsonAsync(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("[API:AIRDROP_FLIGHTS]", ex);
+                context.Response.StatusCode = 500;
+                await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+            }
+        });
+
+        app.MapGet("/api/raids/{raidId}/airdrops", async (HttpContext context, string raidId) =>
+        {
+            try
+            {
+                var data = await _db.QueryAsync("SELECT * FROM airdrop_landing WHERE raidId = $id ORDER BY time ASC, id ASC", ("$id", raidId));
+                await context.Response.WriteAsJsonAsync(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("[API:AIRDROPS]", ex);
+                context.Response.StatusCode = 500;
+            }
+        });
+
         app.MapGet("/api/raids/{raidId}/orbit_ghost_wake", async (HttpContext context, string raidId) =>
         {
             try
@@ -618,7 +647,7 @@ public class RaidReviewWebServer
             foreach (var raidId in raidIds)
             {
                 // Delete child tables first, then raid (parent) last — FK constraints require this order
-                foreach (var table in new[] { "kills", "looting", "player", "player_status", "ballistic", "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field", "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight", "orbit_ghost_hearing", "orbit_ghost_wake", "raid" })
+                foreach (var table in new[] { "kills", "looting", "player", "player_status", "ballistic", "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field", "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight", "orbit_ghost_hearing", "orbit_ghost_wake", "airdrop_landing", "airdrop_flight", "raid" })
                     await _db.ExecuteAsync($"DELETE FROM {table} WHERE raidId = $id", ("$id", raidId));
 
                 _fileService.DeleteFile("positions", "", "", $"{raidId}_positions");

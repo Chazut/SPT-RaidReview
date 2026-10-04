@@ -385,6 +385,11 @@ namespace RAID_REVIEW
         // means the squad entered roam phase ("started" for the viz).
         public float killsRoamStartedAt { get; set; }
         public float killsRoamTargetDuration { get; set; }
+        public bool killAmbush { get; set; }
+        public float campStartedAt { get; set; }
+        public float campElapsed { get; set; }
+        public float campTargetDuration { get; set; }
+        public bool campHolding { get; set; }
         // LootValue-type extras (0 for non-LootValue). lootValueEnteredAt > 0
         // means a member has entered the anchor cell. lootValueTotal is the
         // precomputed sum of handbook prices for every item in every

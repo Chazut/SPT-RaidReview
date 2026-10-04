@@ -1,3 +1,5 @@
+import { parseAirdropFlights } from '../helpers/airdropFlights';
+import { parseAirdrops } from '../helpers/airdrops';
 import { parseGhostWakes } from '../helpers/ghostWakes';
 import { ISptProfile } from '../types/api_types';
 import { TrackingRaidData, TrackingCoreDataRaids } from '../types/api_types';
@@ -209,6 +211,20 @@ const api = {
         } catch (error) {
             return [];
         }
+    },
+
+    getRaidAirdropFlights: async function(raidId: string, signal?: AbortSignal) {
+        const response = await fetch(hostname + `/api/raids/${raidId}/airdrop_flights`, { signal });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Could not load airdrop flights');
+        return parseAirdropFlights(await response.json());
+    },
+
+    getRaidAirdrops: async function(raidId: string, signal?: AbortSignal) {
+        const response = await fetch(hostname + `/api/raids/${raidId}/airdrops`, { signal });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Could not load airdrops');
+        return parseAirdrops(await response.json());
     },
 
     getRaidOrbitGhostWakes: async function(raidId: string, signal?: AbortSignal): Promise<import('../helpers/ghostWakes').GhostWake[] | null> {

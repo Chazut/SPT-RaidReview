@@ -25,6 +25,7 @@ namespace RAID_REVIEW
             try { 
                 Logger.LogInfo("RAID_REVIEW :::: INFO :::: RAID Completed, Saving Tracking Data");
 
+                AirdropFlightRecorder.FinishRaid();
                 RAID_REVIEW.tracking = false;
                 RAID_REVIEW.inRaid = false;
 
@@ -41,7 +42,7 @@ namespace RAID_REVIEW
                 BotChecker.BotCheckLoop(true);
                 if (RAID_REVIEW.SOLARINT_SAIN__DETECTED) _ = SAIN_Integration.CheckForSainComponents(true);
                 Telemetry.Send("PLAYER_CHECK", JsonConvert.SerializeObject(RAID_REVIEW.trackingPlayers.Values));
-                Telemetry.Send("END", JsonConvert.SerializeObject(RAID_REVIEW.trackingRaid));
+                _ = AirdropFlightRecorder.SendRaidEnd(JsonConvert.SerializeObject(RAID_REVIEW.trackingRaid));
 
                 if (RAID_REVIEW.RecordingNotification.Value && RAID_REVIEW.WebSocketConnected) {
                     EFT.Communications.NotificationManager.DisplayMessageNotification("Raid Review Recording Completed", ENotificationDurationType.Long);

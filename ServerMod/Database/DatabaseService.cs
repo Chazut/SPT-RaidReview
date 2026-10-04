@@ -589,6 +589,34 @@ public class DatabaseService : IDisposable
                 );
                 CREATE INDEX IF NOT EXISTS idx_orbit_ghost_wake_raid_time ON orbit_ghost_wake(""raidId"", ""time"");
             "),
+            ("add_airdrop_landing_table", @"
+                CREATE TABLE IF NOT EXISTS airdrop_landing (
+                    ""id"" INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ""raidId"" TEXT NOT NULL,
+                    ""dropId"" TEXT NOT NULL,
+                    ""time"" INTEGER NOT NULL,
+                    ""crateTemplateId"" TEXT NOT NULL,
+                    ""x"" REAL NOT NULL, ""y"" REAL NOT NULL, ""z"" REAL NOT NULL,
+                    UNIQUE(""raidId"", ""dropId""),
+                    FOREIGN KEY (""raidId"") REFERENCES raid(""raidId"")
+                );
+                CREATE INDEX IF NOT EXISTS idx_airdrop_landing_raid_time ON airdrop_landing(""raidId"", ""time"");
+            "),
+            ("add_airdrop_flight_table", @"
+                CREATE TABLE IF NOT EXISTS airdrop_flight (
+                    ""id"" INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ""raidId"" TEXT NOT NULL,
+                    ""flightId"" TEXT NOT NULL,
+                    ""time"" INTEGER NOT NULL,
+                    ""kind"" TEXT NOT NULL,
+                    ""dropId"" TEXT NOT NULL,
+                    ""x"" REAL NOT NULL, ""y"" REAL NOT NULL, ""z"" REAL NOT NULL,
+                    ""heading"" REAL NOT NULL,
+                    UNIQUE(""raidId"", ""flightId"", ""time"", ""kind""),
+                    FOREIGN KEY (""raidId"") REFERENCES raid(""raidId"")
+                );
+                CREATE INDEX IF NOT EXISTS idx_airdrop_flight_raid_time ON airdrop_flight(""raidId"", ""time"");
+            "),
             ("add_location_variant_to_raid", @"
                 ALTER TABLE raid ADD COLUMN ""locationVariant"" TEXT NOT NULL DEFAULT '';
             "),

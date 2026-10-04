@@ -276,6 +276,16 @@ namespace RAID_REVIEW
             };
         }
 
+        // Cache optional 2.2 fields once. Older ORBIT builds retain their existing main-objective API.
+        private static class CampMainFields
+        {
+            internal static readonly System.Reflection.FieldInfo Kill = typeof(OrbitMainObjective).GetField("KillAmbush");
+            internal static readonly System.Reflection.FieldInfo Started = typeof(OrbitMainObjective).GetField("CampStartedAt");
+            internal static readonly System.Reflection.FieldInfo Elapsed = typeof(OrbitMainObjective).GetField("CampElapsed");
+            internal static readonly System.Reflection.FieldInfo Duration = typeof(OrbitMainObjective).GetField("CampTargetDuration");
+            internal static readonly System.Reflection.FieldInfo Holding = typeof(OrbitMainObjective).GetField("CampHolding");
+        }
+
         public static TrackingOrbitMainObjectives GetMainObjectivesSnapshot(string sessionId, long time)
         {
             var snap = OrbitTelemetry.GetMainObjectivesSnapshot();
@@ -298,6 +308,11 @@ namespace RAID_REVIEW
                         completed = m.Completed,
                         killsRoamStartedAt = m.KillsRoamStartedAt,
                         killsRoamTargetDuration = m.KillsRoamTargetDuration,
+                        killAmbush = CampMainFields.Kill?.GetValue(m) is true,
+                        campStartedAt = CampMainFields.Started?.GetValue(m) as float? ?? 0f,
+                        campElapsed = CampMainFields.Elapsed?.GetValue(m) as float? ?? 0f,
+                        campTargetDuration = CampMainFields.Duration?.GetValue(m) as float? ?? 0f,
+                        campHolding = CampMainFields.Holding?.GetValue(m) is true,
                         lootValueEnteredAt = m.LootValueEnteredAt,
                         lootValueTotal = m.LootValueTotal,
                         lootValueInterrupted = m.LootValueInterrupted,

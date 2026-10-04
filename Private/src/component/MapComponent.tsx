@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { mainLabel, mainStarted, mainInterrupted, mainHoldDetail } from '../helpers/mainObjectives'
 
 import { useEffect, useRef, useMemo, useCallback, useLayoutEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, useLoaderData, Link } from 'react-router-dom';
@@ -14,6 +15,7 @@ import { calculateNewPosition, findInsertIndex } from '../modules/utils.js'
 import { useMapImages } from '../modules/maps-index.js';
 import { TrackingPositionalData, TrackingLooseLootItem, TrackingPlayerInventoryItem } from '../types/api_types.js';
 import { PlayerSlider } from './MapPlayerSlider.js';
+import { AirdropOverlay } from './AirdropOverlay';
 import { GhostHearingOverlay } from './GhostHearingOverlay';
 import { playerEndTimes } from '../helpers/playerPresence';
 
@@ -2101,6 +2103,10 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
         // Category → icon + color (Phobos LocationCategory)
         const categoryStyle: Record<string, { icon: string, color: string }> = {
+            'AmbushHotspot': { icon: '\u25CE', color: '#F97316' },
+            'AmbushExtract': { icon: '\u25CE', color: '#F97316' },
+            'AmbushAirdrop': { icon: '\u25CE', color: '#F97316' },
+            'AirdropLoot': { icon: '\u{1F4E6}', color: '#FACC15' },
             'ContainerLoot': { icon: '\u{1F4E6}', color: '#FACC15' }, // package, yellow
             'LooseLoot':     { icon: '\u{1F48E}', color: '#FBBF24' }, // gem, amber
             'Quest':         { icon: '\u{1F4CB}', color: '#D946EF' }, // clipboard, fuchsia
@@ -2117,7 +2123,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         }
 
         for (const [profileId, o] of Object.entries(latestByBot)) {
-            if (o.status !== 'Moving') continue
+            if (o.status !== 'Moving' && !(o.category?.startsWith('Ambush') && o.status !== 'Failed') && !(o.category === 'AirdropLoot' && o.status === 'Looting')) continue
             if (deadBots.has(profileId)) continue
             const x = Number(o.objectiveX)
             const z = Number(o.objectiveZ)
@@ -2137,7 +2143,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 interactive: true,
             })
             marker.bindTooltip(
-                `${style.icon} <strong>${botName}</strong>${isLeader ? ' ★' : ''}<br/><em>${o.category || 'Objective'}</em>`,
+                `${style.icon} <strong>${botName}</strong>${isLeader ? ' ★' : ''}<br/><em>${formatDecisionLabel('Orbit:' + (o.category || 'Objective'))}</em>`,
                 { direction: 'top', offset: [0, -8], className: 'player-tooltip player-tooltip-html' }
             )
             marker._rr_objective = true
@@ -2379,6 +2385,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             Kills: '#EF4444',     // red
             LootValue: '#F59E0B', // gold
             Quest: '#A855F7',     // purple
+            ExtractCamp: '#22D3EE',
         }
         // Single-glyph identifier inside each marker — no number,
         // because the squad picks mains opportunistically (closest
@@ -2388,6 +2395,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             Kills: 'K',
             LootValue: '$',
             Quest: '?',
+            ExtractCamp: 'E',
         }
 
         squadEntry.mainObjectives.forEach((m: any) => {
@@ -2397,11 +2405,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             // in progress (white halo + thicker), pending (regular).
             // Quest has no started/interrupted state — it transitions
             // straight from pending to completed at trigger touch.
-            const isStarted = !m.completed && (
-                (m.type === 'Kills' && m.killsRoamStartedAt > 0) ||
-                (m.type === 'LootValue' && m.lootValueEnteredAt > 0)
-            )
-            const isInterrupted = isStarted && m.type === 'LootValue' && m.lootValueInterrupted === true
+            const isStarted = mainStarted(m)
+            const isInterrupted = mainInterrupted(m)
             const fillColor = m.completed ? '#6B7280' : baseColor
             const ringColor = m.completed
                 ? '#4B5563'
@@ -2425,12 +2430,14 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 iconAnchor: [11, 11],
             })
             const label = L.marker([m.z, m.x], { icon: labelIcon, interactive: false })
-            let tipHtml = `<strong>${m.type}</strong>`
+            let tipHtml = `<strong>${mainLabel(m)}</strong>`
             if (m.type === 'Quest') {
                 const friendly = resolveQuestName(m.questTriggerId || m.questTitle, questNameMap)
                 tipHtml += `<br/><span style="opacity:0.85">${friendly || m.questTitle || m.questTriggerId || ''}</span>`
             }
-            if (m.type === 'Kills' && m.killsRoamTargetDuration > 0) {
+            if (m.type === 'ExtractCamp' || m.killAmbush) {
+                tipHtml += `<br/><span style="opacity:0.7;font-size:10px">${mainHoldDetail(m)}</span>`
+            } else if (m.type === 'Kills' && m.killsRoamTargetDuration > 0) {
                 tipHtml += `<br/><span style="opacity:0.7;font-size:10px">Roam ${m.killsRoamTargetDuration.toFixed(0)}s</span>`
             }
             if (m.type === 'LootValue' && m.lootValueTotal > 0) {
@@ -2438,7 +2445,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             }
             const stateLabel = m.completed
                 ? '✓ completed'
-                : isInterrupted ? '⏸ interrupted (combat or out of cell)'
+                : isInterrupted ? '⏸ interrupted'
                 : isStarted ? '◉ in progress (started)'
                 : 'pending'
             tipHtml += `<br/><span style="opacity:0.7;font-size:10px">${stateLabel}</span>`
@@ -2779,7 +2786,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const layer = m._layers[key];
         
             // Skip layers managed by other overlays (quests, loose loot, grenades, etc.)
-            if (layer._rr_quest || layer._rr_looseLoot || layer._rr_grenade || layer._rr_objective || layer._rr_phobos || layer._rr_ghostHearing) continue;
+            if (layer._rr_quest || layer._rr_looseLoot || layer._rr_grenade || layer._rr_objective || layer._rr_phobos || layer._rr_ghostHearing || layer._rr_airdrop) continue;
 
             // Persistent player-dot markers (issue #24) are mutated in place across
             // frames, not torn down here; their lifecycle is reconciled in the main
@@ -3415,6 +3422,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         )}
 
                         {/* ── Bot Objectives Section (Phobos) ── */}
+                        <AirdropOverlay key={`airdrop-${raidId}`} raidId={raidId} map={MAP} ready={mapIsReady} time={timeEndLimit} />
                         {/ORBIT/i.test(raidData?.detectedMods || '') && <GhostHearingOverlay
                             key={raidId}
                             raidId={raidId}
@@ -3473,11 +3481,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                     }
                                                 }
                                                 const catColor: Record<string, string> = {
+                                                    'AmbushHotspot': '#F97316', 'AmbushExtract': '#F97316', 'AmbushAirdrop': '#F97316', 'AirdropLoot': '#FACC15',
                                                     'ContainerLoot': '#FACC15', 'LooseLoot': '#FBBF24',
                                                     'Quest': '#D946EF', 'Synthetic': '#22C55E', 'Exfil': '#2DD4BF',
                                                 }
                                                 return Object.entries(latestByBot)
-                                                    .filter(([profileId, o]) => o.status === 'Moving' && !deadOrGone.has(profileId))
+                                                    .filter(([profileId, o]) => (o.status === 'Moving' || (o.category?.startsWith('Ambush') && o.status !== 'Failed') || (o.category === 'AirdropLoot' && o.status === 'Looting')) && !deadOrGone.has(profileId))
                                                     .map(([profileId, o]) => {
                                                         const player = raidData?.players?.find(p => p.profileId === profileId)
                                                         const botName = player?.name || profileId.slice(0, 8)
@@ -3487,7 +3496,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                                 <div style={{ fontSize: '12px' }}>
                                                                     <strong>{botName}</strong>{isLeader ? ' ★' : ''}
                                                                     <span style={{ color: catColor[o.category] || '#94A3B8', marginLeft: '4px', fontSize: '10px' }}>
-                                                                        {o.category || 'Objective'}
+                                                                        {formatDecisionLabel('Orbit:' + (o.category || 'Objective'))}
                                                                     </span>
                                                                 </div>
                                                             </div>
@@ -3606,6 +3615,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                     <span style={{ color: '#EF4444' }}>{'●'} Kills</span>
                                     <span style={{ color: '#F59E0B' }}>{'●'} LootValue</span>
                                     <span style={{ color: '#A855F7' }}>{'●'} Quest</span>
+                                    <span style={{ color: '#22D3EE' }}>{'●'} Extract camp</span>
                                     <span style={{ color: '#6B7280' }}>{'●'} Completed</span>
                                 </div>
                                 {/* Per-squad mains list — only when a squad is selected. Each
@@ -3614,16 +3624,13 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                 {selectedSquadForMains != null && (() => {
                                     const sq = findLatestSquadEntry(selectedSquadForMains, timeEndLimit)
                                     if (!sq || !sq.mainObjectives) return null
-                                    const colorByType: Record<string, string> = { Kills: '#EF4444', LootValue: '#F59E0B', Quest: '#A855F7' }
+                                    const colorByType: Record<string, string> = { Kills: '#EF4444', LootValue: '#F59E0B', Quest: '#A855F7', ExtractCamp: '#22D3EE' }
                                     return (
                                         <div style={{ marginTop: '6px', borderTop: '1px dashed rgba(154,136,102,0.3)', paddingTop: '6px' }}>
                                             {sq.mainObjectives.map((m: any, idx: number) => {
                                                 const baseColor = colorByType[m.type] || '#888'
-                                                const isStarted = !m.completed && (
-                                                    (m.type === 'Kills' && m.killsRoamStartedAt > 0) ||
-                                                    (m.type === 'LootValue' && m.lootValueEnteredAt > 0)
-                                                )
-                                                const isInterrupted = isStarted && m.type === 'LootValue' && m.lootValueInterrupted === true
+                                                const isStarted = mainStarted(m)
+                                                const isInterrupted = mainInterrupted(m)
                                                 const stateGlyph = m.completed ? '✓' : (isInterrupted ? '⏸' : (isStarted ? '◉' : '○'))
                                                 const stateColor = m.completed ? '#6B7280' : (isInterrupted ? '#F59E0B' : (isStarted ? '#fff' : baseColor))
                                                 let detail = ''
@@ -3634,6 +3641,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                     detail = m.lootValueTotal > 0
                                                         ? `₽ ${Math.round(m.lootValueTotal).toLocaleString()}`
                                                         : '(no value)'
+                                                } else if (m.type === 'ExtractCamp' || m.killAmbush) {
+                                                    detail = mainHoldDetail(m)
                                                 } else if (m.type === 'Kills') {
                                                     detail = `${Math.round(m.killsRoamTargetDuration || 0)}s in zone`
                                                 }
@@ -3663,7 +3672,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                         }}
                                                     >
                                                         <span style={{ color: stateColor, fontWeight: 'bold' }}>{stateGlyph}</span>
-                                                        <span style={{ color: baseColor, minWidth: '64px' }}>{m.type}</span>
+                                                        <span style={{ color: baseColor, minWidth: '64px' }}>{mainLabel(m)}</span>
                                                         <span style={{ opacity: 0.85 }}>{detail}</span>
                                                     </div>
                                                 )

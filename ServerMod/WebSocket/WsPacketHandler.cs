@@ -58,7 +58,7 @@ public class WsPacketHandler
             var action = actionEl.GetString() ?? "";
             var payloadStr = payloadEl.GetString() ?? "{}";
 
-            if (action != "POSITION")
+            if (action != "POSITION" && action != "AIRDROP_FLIGHT")
                 _logger.Debug($"{action}|{payloadStr}");
 
             using var payloadDoc = JsonDocument.Parse(payloadStr);
@@ -430,6 +430,31 @@ public class WsPacketHandler
                         ("$bZ", GetString(payload, "bZ")),
                         ("$durationMs", GetString(payload, "durationMs")),
                         ("$casualties", GetString(payload, "casualties")));
+                    break;
+                }
+
+                case "AIRDROP_FLIGHT":
+                {
+                    if (raidId == null) break;
+                    var rows = AirdropFlightPacket.Parse(payload, raidId);
+                    if (rows.Count > 0) await _db.ExecuteBatchAsync(AirdropFlightPacket.InsertSql, rows);
+                    break;
+                }
+
+                case "AIRDROP_LANDED":
+                {
+                    if (raidId == null || !payload.TryGetProperty("time", out var dropTime)
+                        || !dropTime.TryGetInt64(out var landedAt) || landedAt < 0) break;
+                    var dropId = GetString(payload, "dropId");
+                    if (string.IsNullOrEmpty(dropId) || dropId.Length > 128) break;
+                    if (!payload.TryGetProperty("x", out var px) || !px.TryGetDouble(out var x) || !double.IsFinite(x)
+                        || !payload.TryGetProperty("y", out var py) || !py.TryGetDouble(out var y) || !double.IsFinite(y)
+                        || !payload.TryGetProperty("z", out var pz) || !pz.TryGetDouble(out var z) || !double.IsFinite(z)) break;
+                    await _db.ExecuteAsync(
+                        @"INSERT OR IGNORE INTO airdrop_landing (raidId, dropId, time, crateTemplateId, x, y, z)
+                          VALUES ($raidId, $dropId, $time, $crateTemplateId, $x, $y, $z)",
+                        ("$raidId", raidId!), ("$dropId", dropId), ("$time", landedAt),
+                        ("$crateTemplateId", GetString(payload, "crateTemplateId")), ("$x", x), ("$y", y), ("$z", z));
                     break;
                 }
 

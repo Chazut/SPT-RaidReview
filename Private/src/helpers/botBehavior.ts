@@ -12,6 +12,7 @@ export const BEHAVIOR_CATEGORIES: Record<string, BehaviorCategory> = {
     patrol:   { key: 'patrol',   label: 'Patrol',   color: '#22C55E' },
     orbit:    { key: 'orbit',    label: 'Orbiting', color: '#22C55E' },
     guard:    { key: 'guard',    label: 'Guarding', color: '#15803D' },
+    ambush:   { key: 'ambush', label: 'Ambush', color: '#F97316' },
     medical:  { key: 'medical',  label: 'Medical',  color: '#EC4899' },
     loot:     { key: 'loot',     label: 'Loot',     color: '#FACC15' },
     flee:     { key: 'flee',     label: 'Flee',     color: '#A855F7' },
@@ -106,6 +107,8 @@ export function getBehaviorCategory(decision: string | undefined | null): Behavi
     if (decision.startsWith('Orbit:')) {
         // ORBIT objective category → behavior category
         const cat = decision.substring(6)
+        if (cat.includes('Ambush')) return BEHAVIOR_CATEGORIES.ambush
+        if (cat === 'AirdropLoot') return BEHAVIOR_CATEGORIES.loot
         if (cat === 'ContainerLoot' || cat === 'LooseLoot' || cat === 'Corpse') return BEHAVIOR_CATEGORIES.loot
         if (cat === 'Quest') return BEHAVIOR_CATEGORIES.quest
         if (cat === 'Exfil') return BEHAVIOR_CATEGORIES.extract
@@ -122,6 +125,16 @@ export function getBehaviorCategory(decision: string | undefined | null): Behavi
 // the raw enum name (e.g. "ContainerLoot") to a human label. Anything not
 // listed falls through to the generic camelCase splitter.
 const OBJECTIVE_CATEGORY_LABELS: Record<string, string> = {
+    AirdropLoot: 'Looting airdrop',
+    AmbushHotspot: 'Ambush at hotspot',
+    AmbushExtract: 'Ambush at extract',
+    AmbushAirdrop: 'Ambush at airdrop',
+    ApproachingAmbushHotspot: 'Approaching hotspot ambush',
+    ApproachingAmbushExtract: 'Approaching extract ambush',
+    ApproachingAmbushAirdrop: 'Approaching airdrop ambush',
+    CampingAmbushHotspot: 'Camping hotspot',
+    CampingAmbushExtract: 'Camping extract',
+    CampingAmbushAirdrop: 'Camping airdrop',
     ContainerLoot: 'Looking for loot',
     LooseLoot:     'Looking for loot',
     Corpse:        'Looting corpse',

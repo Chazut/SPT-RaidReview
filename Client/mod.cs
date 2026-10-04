@@ -756,6 +756,13 @@ namespace RAID_REVIEW
             Hook = new GameObject();
 
             Logger.LogInfo("RAID_REVIEW :::: INFO :::: Config Loaded");
+            new RAID_REVIEW_AirdropLandedPatch().Enable();
+            new RAID_REVIEW_ClientPlaneSamplePatch().Enable();
+            new RAID_REVIEW_ServerPlaneSamplePatch().Enable();
+            new RAID_REVIEW_ClientPlaneEndPatch().Enable();
+            new RAID_REVIEW_ServerPlaneEndPatch().Enable();
+            new RAID_REVIEW_AirdropReleasePatch().Enable();
+            new RAID_REVIEW_AirdropObservedPatch().Enable();
             new RAID_REVIEW_Player_OnGameStartedPatch().Enable();
             new RAID_REVIEW_Player_OnGameSessionEndPatch().Enable();
             new RAID_REVIEW_menuTaskBar_setButtonsAvailablePatch().Enable();
@@ -793,6 +800,7 @@ namespace RAID_REVIEW
                         {
                             try
                             {
+                                AirdropFlightRecorder.FinishRaid();
                                 tracking = false;
                                 inRaid = false;
                                 stopwatch.Stop();
@@ -803,7 +811,7 @@ namespace RAID_REVIEW
                                 BotChecker.BotCheckLoop(true);
                                 if (SOLARINT_SAIN__DETECTED) _ = SAIN_Integration.CheckForSainComponents(true);
                                 Telemetry.Send("PLAYER_CHECK", JsonConvert.SerializeObject(trackingPlayers.Values));
-                                Telemetry.Send("END", JsonConvert.SerializeObject(trackingRaid));
+                                _ = AirdropFlightRecorder.SendRaidEnd(JsonConvert.SerializeObject(trackingRaid));
                             }
                             catch { }
                             finally
@@ -1096,7 +1104,9 @@ namespace RAID_REVIEW
                                         if (od != null && IsIdleOrPatrolDecision(decision))
                                         {
                                             // Finished means the bot reached the objective and is guarding it.
-                                            if (od.status == "Moving" || od.status == "Looting")
+                                            if (od.category?.StartsWith("Ambush", StringComparison.Ordinal) == true)
+                                                decision = "Orbit:" + (od.status == "Finished" ? "Camping" : "Approaching") + od.category;
+                                            else if (od.status == "Moving" || od.status == "Looting")
                                                 decision = "Orbit:" + od.category;
                                             else if (od.status == "Finished")
                                                 decision = "Orbit:Guarding";
