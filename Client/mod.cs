@@ -1090,7 +1090,9 @@ namespace RAID_REVIEW
                                             if (od != null && IsIdleOrPatrolDecision(decision))
                                             {
                                                 // Finished means the bot reached the objective and is guarding it.
-                                                if (od.category?.StartsWith("Ambush", StringComparison.Ordinal) == true)
+                                                if (od.category == "SearchingAmbushExtract" || od.category == "ApproachingAmbushExtract")
+                                                    decision = "Orbit:" + od.category;
+                                                else if (od.category?.StartsWith("Ambush", StringComparison.Ordinal) == true)
                                                     decision = "Orbit:" + (od.status == "Finished" ? "Camping" : "Approaching") + od.category;
                                                 else if (od.status == "Moving" || od.status == "Looting")
                                                     decision = "Orbit:" + od.category;

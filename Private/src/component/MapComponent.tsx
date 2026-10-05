@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { airdropDetail, findMainSquadEntry, mainLabel, mainStarted, mainInterrupted, mainHoldDetail, operationDetail, escapeMainText, mainAbandoned, rushStyle, RUSH_STYLES } from '../helpers/mainObjectives'
+import { airdropDetail, findMainSquadEntry, mainLabel, mainStarted, mainInterrupted, mainHoldDetail, operationDetail, escapeMainText, mainAbandoned, rushStyle, visibleRushPoints, RUSH_STYLES } from '../helpers/mainObjectives'
 
 import { useEffect, useRef, useMemo, useCallback, useLayoutEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, useLoaderData, Link } from 'react-router-dom';
@@ -2132,6 +2132,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         const categoryStyle: Record<string, { icon: string, color: string }> = {
             'AmbushHotspot': { icon: '\u25CE', color: '#F97316' },
             'AmbushExtract': { icon: '\u25CE', color: '#F97316' },
+            'ApproachingAmbushExtract': { icon: '\u25CE', color: '#F97316' },
+            'SearchingAmbushExtract': { icon: '\u25CE', color: '#F97316' },
             'AmbushAirdrop': { icon: '\u25CE', color: '#F97316' },
             'AirdropLoot': { icon: '\u{1F4E6}', color: '#FACC15' },
             'ContainerLoot': { icon: '\u{1F4E6}', color: '#FACC15' }, // package, yellow
@@ -2438,7 +2440,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             // Draw the catalogue independently of the current target's floor. Route lines connect only
             // recorded visits; unvisited points have no fabricated execution order.
             if (m.type === 'Rush' && Array.isArray(m.rushPoints)) {
-                const points = m.rushPoints.filter((p: any) => onFloor(mainPoint(p)))
+                const visiblePoints = visibleRushPoints(m)
+                const points = visiblePoints.filter((p: any) => onFloor(mainPoint(p)))
                 for (const p of points) {
                     const color = p.state?.startsWith('skipped') ? '#F87171' : p.state === 'visited' ? '#6B7280' : rushStyle(m).color
                     const dot = L.circleMarker([p.z, p.x], { radius: 5, color, fillOpacity: .7, pane: 'rr-main-objectives', renderer: objectiveRenderer })
@@ -2446,7 +2449,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     dot._rr_objective = true
                     group.addLayer(dot)
                 }
-                const ordered = [...m.rushPoints].filter((p: any) => p.sequence > 0).sort((a: any, b: any) => a.sequence - b.sequence)
+                const ordered = [...visiblePoints].filter((p: any) => p.sequence > 0).sort((a: any, b: any) => a.sequence - b.sequence)
                 for (let i = 1; i < ordered.length; i++) {
                     const a = ordered[i - 1], b = ordered[i]
                     if (!onFloor(mainPoint(a)) || !onFloor(mainPoint(b))) continue
@@ -2499,7 +2502,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 tipHtml += `<br/>${escapeMainText(operationDetail(m))}`
             }
             if (m.type === 'ExtractCamp' || m.killAmbush) {
-                tipHtml += `<br/><span style="opacity:0.7;font-size:10px">${mainHoldDetail(m)}</span>`
+                tipHtml += `<br/><span style="opacity:0.7;font-size:10px">${escapeMainText(mainHoldDetail(m))}</span>`
             } else if (m.type === 'Kills' && m.killsRoamTargetDuration > 0) {
                 tipHtml += `<br/><span style="opacity:0.7;font-size:10px">Roam ${m.killsRoamTargetDuration.toFixed(0)}s</span>`
             }

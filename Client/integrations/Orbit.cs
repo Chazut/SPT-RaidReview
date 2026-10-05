@@ -285,6 +285,10 @@ namespace RAID_REVIEW
             internal static readonly System.Reflection.FieldInfo Duration = typeof(OrbitMainObjective).GetField("CampTargetDuration");
             internal static readonly System.Reflection.FieldInfo UntilTimeExtract = typeof(OrbitMainObjective).GetField("CampUntilTimeExtract");
             internal static readonly System.Reflection.FieldInfo Holding = typeof(OrbitMainObjective).GetField("CampHolding");
+            internal static readonly System.Reflection.FieldInfo State = typeof(OrbitMainObjective).GetField("CampState");
+            internal static readonly System.Reflection.FieldInfo Failure = typeof(OrbitMainObjective).GetField("CampFailure");
+            internal static readonly System.Reflection.FieldInfo Attempt = typeof(OrbitMainObjective).GetField("CampSearchAttempt");
+            internal static readonly System.Reflection.FieldInfo Radius = typeof(OrbitMainObjective).GetField("CampSearchRadius");
         }
 
         private static class OperationFields
@@ -354,6 +358,10 @@ namespace RAID_REVIEW
                         campTargetDuration = CampMainFields.Duration?.GetValue(m) as float? ?? 0f,
                         campUntilTimeExtract = CampMainFields.UntilTimeExtract?.GetValue(m) is true,
                         campHolding = CampMainFields.Holding?.GetValue(m) is true,
+                        campState = CampMainFields.State?.GetValue(m) as string,
+                        campFailure = CampMainFields.Failure?.GetValue(m) as string,
+                        campSearchAttempt = CampMainFields.Attempt?.GetValue(m) as int? ?? 0,
+                        campSearchRadius = CampMainFields.Radius?.GetValue(m) as float? ?? 0f,
                         rushPoints = RushFields.Read(m),
                         operationId = OperationFields.OperationId?.GetValue(m) as string,
                         operationName = OperationFields.OperationName?.GetValue(m) as string,

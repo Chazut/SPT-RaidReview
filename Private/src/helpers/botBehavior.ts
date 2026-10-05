@@ -134,6 +134,7 @@ const OBJECTIVE_CATEGORY_LABELS: Record<string, string> = {
     ApproachingAmbushAirdrop: 'Approaching airdrop ambush',
     CampingAmbushHotspot: 'Camping hotspot',
     CampingAmbushExtract: 'Camping extract',
+    SearchingAmbushExtract: 'Searching extract cover',
     CampingAmbushAirdrop: 'Camping airdrop',
     ContainerLoot: 'Looking for loot',
     LooseLoot:     'Looking for loot',

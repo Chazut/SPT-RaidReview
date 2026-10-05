@@ -12,18 +12,33 @@ export function rushStyle(main: any) {
     return RUSH_STYLES[kind] || UNKNOWN_RUSH_STYLE
 }
 
+export function visibleRushPoints(main: any): any[] {
+    if (!Array.isArray(main.rushPoints)) return []
+    const kind = main.operationId || main.operationName?.replace(/ rush$/i, '')
+    if (main.type !== 'Rush' || kind !== 'Spawn' || !main.completed) return main.rushPoints
+    // Retain recorded selections and failed attempts, hide unused catalogue candidates after the rush.
+    return main.rushPoints.filter((point: any) => point.sequence > 0 || point.state && point.state !== 'pending')
+}
+
 export function mainLabel(main: any): string {
     if (main.type === 'Rush') return main.operationName || 'Rush'
     if (main.type === 'MultiStep') return main.operationName || 'Multi-step'
     return main.type === 'ExtractCamp' ? 'Extract camp' : main.type === 'Kills' && main.killAmbush ? 'Kills (ambush)' : main.type
 }
 export function mainStarted(main: any): boolean {
+    if (!main.completed && ['approach', 'searching cover', 'holding', 'paused'].includes(main.campState)) return true
     return !main.completed && (main.type === 'Airdrop' || (main.type === 'MultiStep' || main.type === 'Rush') && !!main.operationState && main.operationState !== 'pending' || main.campStartedAt > 0 || main.type === 'Kills' && main.killsRoamStartedAt > 0 || main.type === 'LootValue' && main.lootValueEnteredAt > 0)
 }
 export function mainInterrupted(main: any): boolean {
+    if (!main.completed && main.campState === 'paused') return true
     return mainStarted(main) && ((main.type === 'MultiStep' || main.type === 'Rush') && main.operationState === 'paused' || main.type === 'LootValue' && main.lootValueInterrupted === true || main.campStartedAt > 0 && main.campHolding === false)
 }
 export function mainHoldDetail(main: any): string {
+    if (main.campState === 'failed') return `Failed: ${main.campFailure || 'No usable camp position'}`
+    if (main.campState === 'searching cover') return main.campSearchAttempt > 0
+        ? `Searching cover (${main.campSearchAttempt}/4, radius ${Math.round(main.campSearchRadius || 0)}m)` : 'Searching cover'
+    if (main.campState === 'approach') return 'Approaching camp position'
+    if (main.campState === 'paused') return `Interrupted: ${main.campFailure || 'Waiting to resume'}`
     if (main.type === 'ExtractCamp' && main.campUntilTimeExtract) {
         return main.campStartedAt > 0
             ? `${Math.round(main.campElapsed || 0)}s holding cover; until time-based extraction`
@@ -64,6 +79,7 @@ export function operationDetail(main: any): string {
     return `${main.operationStepIndex || 1}/${main.operationStepCount || '?'}: ${main.operationStep || 'Pending'} (${main.operationState || 'pending'})`
 }
 export function mainAbandoned(main: any): boolean {
+    if (main.campState === 'failed') return true
     return (main.type === 'MultiStep' || main.type === 'Rush') && main.completed === true && !!main.operationState && !['completed', 'boss seen', 'boss body found', 'boss not found'].includes(main.operationState)
 }
 export function escapeMainText(value: string): string {

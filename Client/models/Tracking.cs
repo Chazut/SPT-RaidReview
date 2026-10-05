@@ -396,6 +396,10 @@ namespace RAID_REVIEW
         public float campTargetDuration { get; set; }
         public bool campUntilTimeExtract { get; set; }
         public bool campHolding { get; set; }
+        public string campState { get; set; }
+        public string campFailure { get; set; }
+        public int campSearchAttempt { get; set; }
+        public float campSearchRadius { get; set; }
         public System.Collections.Generic.List<TrackingRushPoint> rushPoints { get; set; }
         public string operationId { get; set; }
         public string operationName { get; set; }
