@@ -2,6 +2,7 @@ export const RUSH_STYLES: Record<string, { color: string; glyph: string; label: 
     Spawn: { color: '#60A5FA', glyph: 'S', label: 'Spawn rush' },
     Boss: { color: '#EC4899', glyph: 'B', label: 'Boss rush' },
     Marked: { color: '#A3E635', glyph: 'R', label: 'Marked room rush' },
+    Sniper: { color: '#22D3EE', glyph: 'N', label: 'Sniper overwatch' },
     Custom: { color: '#C4B5FD', glyph: 'C', label: 'Custom rush' },
 }
 const UNKNOWN_RUSH_STYLE = { color: '#60A5FA', glyph: 'R', label: 'Rush' }
@@ -59,6 +60,7 @@ export function findMainSquadEntry(data: any[], squadId: number, atTime: number)
 }
 
 export function operationDetail(main: any): string {
+    if (main.operationId === 'Sniper' && main.campStartedAt > 0) return `${main.operationStep || 'Sniper post'} (${main.operationState}): ${Math.round(main.campElapsed || 0)} / ${Math.round(main.campTargetDuration || 0)}s`
     return `${main.operationStepIndex || 1}/${main.operationStepCount || '?'}: ${main.operationStep || 'Pending'} (${main.operationState || 'pending'})`
 }
 export function mainAbandoned(main: any): boolean {
