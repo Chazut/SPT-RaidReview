@@ -1,12 +1,26 @@
+export const RUSH_STYLES: Record<string, { color: string; glyph: string; label: string }> = {
+    Spawn: { color: '#60A5FA', glyph: 'S', label: 'Spawn rush' },
+    Boss: { color: '#EC4899', glyph: 'B', label: 'Boss rush' },
+    Marked: { color: '#A3E635', glyph: 'R', label: 'Marked room rush' },
+    Custom: { color: '#C4B5FD', glyph: 'C', label: 'Custom rush' },
+}
+const UNKNOWN_RUSH_STYLE = { color: '#60A5FA', glyph: 'R', label: 'Rush' }
+export function rushStyle(main: any) {
+    // Prefer the recorded kind; retain name-only compatibility for earlier recordings.
+    const kind = main.operationId || main.operationName?.replace(/ rush$/i, '')
+    return RUSH_STYLES[kind] || UNKNOWN_RUSH_STYLE
+}
+
 export function mainLabel(main: any): string {
+    if (main.type === 'Rush') return main.operationName || 'Rush'
     if (main.type === 'MultiStep') return main.operationName || 'Multi-step'
     return main.type === 'ExtractCamp' ? 'Extract camp' : main.type === 'Kills' && main.killAmbush ? 'Kills (ambush)' : main.type
 }
 export function mainStarted(main: any): boolean {
-    return !main.completed && (main.type === 'Airdrop' || main.type === 'MultiStep' && !!main.operationState && main.operationState !== 'pending' || main.campStartedAt > 0 || main.type === 'Kills' && main.killsRoamStartedAt > 0 || main.type === 'LootValue' && main.lootValueEnteredAt > 0)
+    return !main.completed && (main.type === 'Airdrop' || (main.type === 'MultiStep' || main.type === 'Rush') && !!main.operationState && main.operationState !== 'pending' || main.campStartedAt > 0 || main.type === 'Kills' && main.killsRoamStartedAt > 0 || main.type === 'LootValue' && main.lootValueEnteredAt > 0)
 }
 export function mainInterrupted(main: any): boolean {
-    return mainStarted(main) && (main.type === 'MultiStep' && main.operationState === 'paused' || main.type === 'LootValue' && main.lootValueInterrupted === true || main.campStartedAt > 0 && main.campHolding === false)
+    return mainStarted(main) && ((main.type === 'MultiStep' || main.type === 'Rush') && main.operationState === 'paused' || main.type === 'LootValue' && main.lootValueInterrupted === true || main.campStartedAt > 0 && main.campHolding === false)
 }
 export function mainHoldDetail(main: any): string {
     if (main.type === 'ExtractCamp' && main.campUntilTimeExtract) {
@@ -48,7 +62,7 @@ export function operationDetail(main: any): string {
     return `${main.operationStepIndex || 1}/${main.operationStepCount || '?'}: ${main.operationStep || 'Pending'} (${main.operationState || 'pending'})`
 }
 export function mainAbandoned(main: any): boolean {
-    return main.type === 'MultiStep' && main.completed === true && !!main.operationState && main.operationState !== 'completed'
+    return (main.type === 'MultiStep' || main.type === 'Rush') && main.completed === true && !!main.operationState && !['completed', 'boss seen', 'boss body found', 'boss not found'].includes(main.operationState)
 }
 export function escapeMainText(value: string): string {
     return value.replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]!))

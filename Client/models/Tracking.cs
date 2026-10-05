@@ -396,6 +396,7 @@ namespace RAID_REVIEW
         public float campTargetDuration { get; set; }
         public bool campUntilTimeExtract { get; set; }
         public bool campHolding { get; set; }
+        public System.Collections.Generic.List<TrackingRushPoint> rushPoints { get; set; }
         public string operationId { get; set; }
         public string operationName { get; set; }
         public string operationStep { get; set; }
@@ -418,4 +419,16 @@ namespace RAID_REVIEW
         public string questTriggerId { get; set; }
         public string questTitle { get; set; }
     }
+    public sealed class TrackingRushPoint
+    {
+        public string id { get; set; }
+        public string name { get; set; }
+        public string state { get; set; }
+        public float x { get; set; }
+        public float y { get; set; }
+        public float z { get; set; }
+        public float radius { get; set; }
+        public int sequence { get; set; }
+    }
+
 }

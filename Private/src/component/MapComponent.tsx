@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { airdropDetail, findMainSquadEntry, mainLabel, mainStarted, mainInterrupted, mainHoldDetail, operationDetail, escapeMainText, mainAbandoned } from '../helpers/mainObjectives'
+import { airdropDetail, findMainSquadEntry, mainLabel, mainStarted, mainInterrupted, mainHoldDetail, operationDetail, escapeMainText, mainAbandoned, rushStyle, RUSH_STYLES } from '../helpers/mainObjectives'
 
 import { useEffect, useRef, useMemo, useCallback, useLayoutEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, useLoaderData, Link } from 'react-router-dom';
@@ -381,6 +381,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [orbitMainObjectivesData, setOrbitMainObjectivesData] = useState<any[]>([])
     const [selectedSquadForMains, setSelectedSquadForMains] = useState<number | null>(null)
     const orbitMainObjectivesLayerRef = useRef<L.LayerGroup | null>(null)
+    const orbitMainObjectiveRendererRef = useRef<L.SVG | null>(null)
 
     // Mirror the snapshot array into a ref so the click handler (bound
     // once inside the position-renderer effect, which does NOT depend on
@@ -729,6 +730,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             id: mapData.id,
             preferCanvas: true,
         })
+
+        // Only objective shapes may receive clicks above the bot/switch pane.
+        // A canvas here would intercept the whole map, including transparent pixels.
+        const objectivePane = map.createPane('rr-main-objectives')
+        objectivePane.style.zIndex = '625'
+        orbitMainObjectiveRendererRef.current = L.svg({ pane: 'rr-main-objectives' })
 
         const zoomLevel = map.getZoom()
         setProportionalScale(calculateProportionalRadius(mapData.bounds, zoomLevel))
@@ -2399,9 +2406,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         const squadEntry = findLatestSquadEntry(selectedSquadForMains, timeEndLimit)
         if (!squadEntry || !squadEntry.mainObjectives || squadEntry.mainObjectives.length === 0) return
 
-        // Keep the objective circle and glyph above switch icons, below tooltips.
-        const objectivePane = MAP.getPane('rr-main-objectives') || MAP.createPane('rr-main-objectives')
-        objectivePane.style.zIndex = '625'
+        // Reuse one SVG renderer per map, including when the selected squad changes.
+        const objectiveRenderer = orbitMainObjectiveRendererRef.current
+        if (!objectiveRenderer) return
         const group = L.layerGroup()
         // Rebuild marker refs alongside the group so the sidebar list
         // can call openTooltip on a hovered row's marker.
@@ -2411,7 +2418,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             LootValue: '#F59E0B', // gold
             Quest: '#A855F7',     // purple
             ExtractCamp: '#22D3EE',
-            MultiStep: '#34D399',
+            MultiStep: '#34D399', Rush: '#60A5FA',
             Airdrop: '#F97316',
         }
         // Single-glyph identifier inside each marker — no number,
@@ -2423,13 +2430,33 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             LootValue: '$',
             Quest: '?',
             ExtractCamp: 'E',
-            MultiStep: 'M',
+            MultiStep: 'M', Rush: 'M',
             Airdrop: 'A',
         }
 
         squadEntry.mainObjectives.forEach((m: any, index: number) => {
+            // Draw the catalogue independently of the current target's floor. Route lines connect only
+            // recorded visits; unvisited points have no fabricated execution order.
+            if (m.type === 'Rush' && Array.isArray(m.rushPoints)) {
+                const points = m.rushPoints.filter((p: any) => onFloor(mainPoint(p)))
+                for (const p of points) {
+                    const color = p.state?.startsWith('skipped') ? '#F87171' : p.state === 'visited' ? '#6B7280' : rushStyle(m).color
+                    const dot = L.circleMarker([p.z, p.x], { radius: 5, color, fillOpacity: .7, pane: 'rr-main-objectives', renderer: objectiveRenderer })
+                    dot.bindTooltip(`${escapeMainText(p.name || p.id)}<br/>${escapeMainText(p.state || 'pending')}`, { className: 'player-tooltip player-tooltip-html' })
+                    dot._rr_objective = true
+                    group.addLayer(dot)
+                }
+                const ordered = [...m.rushPoints].filter((p: any) => p.sequence > 0).sort((a: any, b: any) => a.sequence - b.sequence)
+                for (let i = 1; i < ordered.length; i++) {
+                    const a = ordered[i - 1], b = ordered[i]
+                    if (!onFloor(mainPoint(a)) || !onFloor(mainPoint(b))) continue
+                    const line = L.polyline([[a.z, a.x], [b.z, b.x]], { color: rushStyle(m).color, weight: 1.5, dashArray: '4 6', interactive: false })
+                    line._rr_objective = true
+                    group.addLayer(line)
+                }
+            }
             if (!onFloor(mainPoint(m))) return
-            const baseColor = colorByType[m.type] || '#888'
+            const baseColor = m.type === 'Rush' ? rushStyle(m).color : colorByType[m.type] || '#888'
             // Four visual states: completed (grey), interrupted
             // (amber halo — LootValue paused by combat or out-of-cell),
             // in progress (white halo + thicker), pending (regular).
@@ -2444,9 +2471,10 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 : isStarted ? '#FFFFFF'             // white — in progress
                 : baseColor                          // pending
             const ringWeight = isStarted ? 4 : 2.5
-            const glyph = mainAbandoned(m) ? '×' : m.completed ? '✓' : (glyphByType[m.type] || '●')
+            const glyph = mainAbandoned(m) ? '×' : m.completed ? '✓' : (m.type === 'Rush' ? rushStyle(m).glyph : glyphByType[m.type] || '●')
             const marker = L.circleMarker([m.z, m.x], {
                 pane: 'rr-main-objectives',
+                renderer: objectiveRenderer,
                 radius: isStarted ? 13 : 11,
                 color: ringColor,
                 weight: ringWeight,
@@ -2467,7 +2495,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 tipHtml += `<br/><span style="opacity:0.85">${friendly || m.questTitle || m.questTriggerId || ''}</span>`
             }
             if (m.type === 'Airdrop') tipHtml += `<br/>${escapeMainText(airdropDetail(m))}`
-            if (m.type === 'MultiStep') {
+            if ((m.type === 'MultiStep' || m.type === 'Rush')) {
                 tipHtml += `<br/>${escapeMainText(operationDetail(m))}`
             }
             if (m.type === 'ExtractCamp' || m.killAmbush) {
@@ -3669,6 +3697,10 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                     <span style={{ color: '#F59E0B' }}>{'●'} LootValue</span>
                                     <span style={{ color: '#A855F7' }}>{'●'} Quest</span>
                                     <span style={{ color: '#22D3EE' }}>{'●'} Extract camp</span>
+                                    {Object.entries(RUSH_STYLES).map(([kind, style]) => (
+                                        <span key={kind} style={{ color: style.color }}>{style.glyph} {style.label}</span>
+                                    ))}
+                                    <span style={{ color: '#34D399' }}>{'●'} Multi-step</span>
                                     <span style={{ color: '#F97316' }}>{'●'} Airdrop (temporary)</span>
                                     <span style={{ color: '#6B7280' }}>{'●'} Completed</span>
                                 </div>
@@ -3678,12 +3710,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                 {selectedSquadForMains != null && (() => {
                                     const sq = findLatestSquadEntry(selectedSquadForMains, timeEndLimit)
                                     if (!sq || !sq.mainObjectives) return null
-                                    const colorByType: Record<string, string> = { Kills: '#EF4444', LootValue: '#F59E0B', Quest: '#A855F7', ExtractCamp: '#22D3EE', MultiStep: '#34D399', Airdrop: '#F97316' }
+                                    const colorByType: Record<string, string> = { Kills: '#EF4444', LootValue: '#F59E0B', Quest: '#A855F7', ExtractCamp: '#22D3EE', MultiStep: '#34D399', Rush: '#60A5FA', Airdrop: '#F97316' }
                                     return (
                                         <div style={{ marginTop: '6px', borderTop: '1px dashed rgba(154,136,102,0.3)', paddingTop: '6px' }}>
                                             {sq.mainObjectives.map((m: any, idx: number) => {
                                                 if (!onFloor(mainPoint(m))) return null
-                                                const baseColor = colorByType[m.type] || '#888'
+                                                const baseColor = m.type === 'Rush' ? rushStyle(m).color : colorByType[m.type] || '#888'
                                                 const isStarted = mainStarted(m)
                                                 const isInterrupted = mainInterrupted(m)
                                                 const stateGlyph = mainAbandoned(m) ? '×' : m.completed ? '✓' : (isInterrupted ? '⏸' : (isStarted ? '◉' : '○'))
@@ -3698,7 +3730,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                     detail = m.lootValueTotal > 0
                                                         ? `₽ ${Math.round(m.lootValueTotal).toLocaleString()}`
                                                         : '(no value)'
-                                                } else if (m.type === 'MultiStep') {
+                                                } else if ((m.type === 'MultiStep' || m.type === 'Rush')) {
                                                     detail = operationDetail(m)
                                                 } else if (m.type === 'ExtractCamp' || m.killAmbush) {
                                                     detail = mainHoldDetail(m)

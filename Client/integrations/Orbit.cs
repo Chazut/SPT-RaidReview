@@ -297,6 +297,25 @@ namespace RAID_REVIEW
             internal static readonly System.Reflection.FieldInfo OperationState = typeof(OrbitMainObjective).GetField("OperationState");
         }
 
+        private static class RushFields
+        {
+            internal static readonly System.Reflection.FieldInfo Points = typeof(OrbitMainObjective).GetField("RushPoints");
+            private static readonly System.Type PointType = Points?.FieldType.GetElementType();
+            private static readonly System.Reflection.FieldInfo Id = PointType?.GetField("Id"), Name = PointType?.GetField("Name"), State = PointType?.GetField("State"),
+                X = PointType?.GetField("X"), Y = PointType?.GetField("Y"), Z = PointType?.GetField("Z"), Radius = PointType?.GetField("Radius"), Sequence = PointType?.GetField("Sequence");
+            internal static System.Collections.Generic.List<TrackingRushPoint> Read(OrbitMainObjective main)
+            {
+                var points = Points?.GetValue(main) as System.Array;
+                if (points == null) return null;
+                var result = new System.Collections.Generic.List<TrackingRushPoint>(points.Length);
+                foreach (var p in points) result.Add(new TrackingRushPoint {
+                    id = Id?.GetValue(p) as string, name = Name?.GetValue(p) as string, state = State?.GetValue(p) as string,
+                    x = X?.GetValue(p) as float? ?? 0, y = Y?.GetValue(p) as float? ?? 0, z = Z?.GetValue(p) as float? ?? 0,
+                    radius = Radius?.GetValue(p) as float? ?? 0, sequence = Sequence?.GetValue(p) as int? ?? 0 });
+                return result;
+            }
+        }
+
         private static class AirdropFields
         {
             internal static readonly System.Reflection.FieldInfo Stage = typeof(OrbitMainObjective).GetField("AirdropStage");
@@ -335,6 +354,7 @@ namespace RAID_REVIEW
                         campTargetDuration = CampMainFields.Duration?.GetValue(m) as float? ?? 0f,
                         campUntilTimeExtract = CampMainFields.UntilTimeExtract?.GetValue(m) is true,
                         campHolding = CampMainFields.Holding?.GetValue(m) is true,
+                        rushPoints = RushFields.Read(m),
                         operationId = OperationFields.OperationId?.GetValue(m) as string,
                         operationName = OperationFields.OperationName?.GetValue(m) as string,
                         operationStep = OperationFields.OperationStep?.GetValue(m) as string,
