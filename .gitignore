@@ -18,3 +18,17 @@ CLAUDE.md
 # ServerMod build artifacts
 ServerMod/bin/
 ServerMod/public/
+
+# Local working files
+/PR_DESCRIPTION_v1.2.0.md
+/PR_DESCRIPTION_v1.3.0.md
+/RELEASE_NOTES_v1.1.0.md
+/RELEASE_NOTES_v1.1.1.md
+/RELEASE_NOTES_v1.2.0.md
+/RELEASE_NOTES_v1.3.0.md
+/RELEASE_NOTES_v1.4.0.md
+/RELEASE_NOTES_v1.5.0.md
+/RELEASE_NOTES_v1.6.0.md
+/RELEASE_NOTES_v1.6.1.md
+/notes/
+/test/
