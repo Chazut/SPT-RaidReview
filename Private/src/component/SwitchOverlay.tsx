@@ -49,7 +49,7 @@ export function SwitchOverlay({ raidId, location, map, ready, time, onFloor = al
             let entry = markers.current.get(event.switchId)
             if (entry?.sequence === event.sequence) continue
             const appearance = switchAppearance(event.state)
-            const name = switchName(event)
+            const name = switchName(event, location)
             if (!entry) {
                 const marker = L.marker([event.z, event.x], { icon: icon(appearance.color), title: name, zIndexOffset: 400 })
                 ;(marker as L.Marker & { _rr_switch: boolean })._rr_switch = true
@@ -65,7 +65,7 @@ export function SwitchOverlay({ raidId, location, map, ready, time, onFloor = al
             if (entry.marker.getTooltip()) entry.marker.setTooltipContent(text)
             else entry.marker.bindTooltip(text, { direction: 'top', offset: [0, -10] })
         }
-    }, [visible, map, ready, enabled, raidId])
+    }, [visible, map, ready, enabled, raidId, location])
 
     const hint = status === 'error' ? 'Could not load switches. Reload to retry.'
         : status === 'unsupported' ? 'Update the RaidReview server to show switches.'

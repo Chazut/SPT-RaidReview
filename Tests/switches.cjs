@@ -37,4 +37,40 @@ check(switchAt(visibleStation[0], 500).state === 'Open', 'Mall power transitions
 check(groupSwitches(station, 'rezervbase').length === 4, 'same IDs not hidden on other locations');
 check(station.length === 5, 'recorded data preserved');
 check(groupSwitches(parseSwitches([row(0, 1, 'Shut', 'Shopping_Mall_DesignStuff_00059')]), 'interchange').length === 1, 'KIBA alarm stays visible');
+// Actual IDs from historical raids and installed map scenes, with provenance.
+const recorded = require('./fixtures/map-switches-20261005.json');
+const expectedCounts = { bigmap: 1, lighthouse: 2, rezervbase: 3, interchange: 6, laboratory: 14, labyrinth: 12 };
+for (const [map, count] of Object.entries(expectedCounts)) {
+    const fixture = recorded.filter(e => e.location.toLowerCase() === map)
+        .map((e, i) => ({ ...row(0, i + 1, 'Shut', e.switchId), name: e.name }));
+    check(fixture.length >= count, `${map} fixture has all expected controls`);
+    const snapshot = JSON.stringify(fixture);
+    const filtered = groupSwitches(parseSwitches(fixture), map);
+    check(filtered.length === count, `${map} visible count matches useful controls`);
+    check(JSON.stringify(fixture) === snapshot, `${map} raw recording stays intact`);
+    check(groupSwitches(parseSwitches(fixture), map.toUpperCase()).length === count, `${map} case-insensitive map`);
+    check(groupSwitches(parseSwitches(fixture), 'modded-map').length === fixture.length, `${map} exclusions stay map-scoped`);
+    const newControl = row(0, fixture.length + 1, 'Locked', 'custom-mod-power');
+    check(groupSwitches(parseSwitches([...fixture, newControl]), map).length === count + 1, `${map} unknown mod controls retained`);
+}
+const warehouse = 'custom_DesignStuff_00034';
+const customs = parseSwitches([row(0, 1, 'Shut', warehouse), row(500, 2, 'Open', warehouse),
+    row(0, 3, 'Shut', 'switch_custom_Light_00000'), row(200, 4, 'Open', 'switch_custom_Light_00000')]);
+const customsVisible = groupSwitches(customs, 'Customs');
+check(customsVisible.length === 1, 'Customs alias filters all light transitions');
+check(switchAt(customsVisible[0], 700).state === 'Open', 'ZB-013 activation preserved');
+check(switchAt(customsVisible[0], 100).state === 'Shut', 'ZB-013 rewind preserved');
+check(groupSwitches([row(0, 1, 'Shut', '00455')], 'Reserve').length === 0, 'Reserve alias filters timer');
+for (const id of ['autoId_00000_D2_LEVER', '00453', 'autoId_00632_EXFIL'])
+    check(groupSwitches([row(0, 1, 'Shut', id)], 'rezervbase').length === 1, `${id} Reserve player control retained`);
+for (const id of ['Use', 'set_valve_01', 'disable_traps_01', 'switch_Labyrinth_DesignStaff_00006'])
+    for (const map of ['laboratory', 'labyrinth', 'factory4_day', 'factory4_night', 'shoreline', 'woods', 'tarkovstreets', 'sandbox', 'sandbox_high'])
+        check(groupSwitches([row(0, 1, 'Locked', id)], map).length === 1, `${map} ${id} controls remain visible even when locked`);
+check(groupSwitches([row(0, 1, 'Shut', 'switch_custom_Light_99999')], 'bigmap').length === 1, 'unverified ID is not hidden by a broad prefix');
+check(switchName({...row(0, 1), switchId: 'Shopping_Mall_DesignStuff_00058'}) === 'Mall alarm control', 'second useful alarm console labelled');
+for (const id of ['inner_buffer_trigger', 'outside_buffer_trigger'])
+    check(groupSwitches([row(0, 1, 'Shut', id)], 'lighthouse').length === 1, 'Lighthouse gate player controls retained');
+check(switchName(row(0, 1, 'Shut', 'autoId_00632_EXFIL'), 'laboratory') === 'Hangar gate button', 'Labs does not reuse the Reserve lever label');
+check(switchName(row(0, 1, 'Shut', 'autoId_00632_EXFIL'), 'Reserve') === 'Hermetic door lever', 'Reserve label preserved');
+check(groupSwitches([row(0, 1)], 'constructor').length === 1, 'unknown map name cannot resolve an inherited property');
 console.log(`PASS ${checks} switch replay checks`);
