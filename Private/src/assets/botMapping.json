@@ -47,6 +47,10 @@
         "name": "Raider",
         "type": "RAIDER"
     },
+    "RAIDER HUNTER|RAIDER": {
+        "name": "Raider (Hunter)",
+        "type": "RAIDER"
+    },
     "BLOODHOUND|BLOODHOUND": {
         "name": "Bloodhound",
         "type": "BLOODHOUND"
@@ -252,8 +256,8 @@
         "type": "UNTAR"
     },
     "UNTAR HUNTER|UNTAR": {
-        "name": "UNTAR Hunter",
-        "type": "UNTAR"
+        "name": "Raider (Hunter)",
+        "type": "RAIDER"
     },
     "BLACK DIV LEAD|BLACKDIV": {
         "name": "Black Div Lead",

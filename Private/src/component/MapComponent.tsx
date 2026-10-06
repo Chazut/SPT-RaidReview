@@ -21,7 +21,7 @@ import { GhostHearingOverlay } from './GhostHearingOverlay';
 import { playerEndTimes } from '../helpers/playerPresence';
 import { createFloorFilter, hasFloors, floorSegments, positionAt, objectivePoint, mainPoint, floorHeatmap } from '../helpers/floorFilter';
 
-import { getMarkerLabel, getPlayerColor, getLegendIcon, PMC_COLORS, buildPmcIndexMap, getFactionRole, resolveBotType } from '../helpers/players'
+import { getMarkerLabel, getPlayerColor, getLegendIcon, PMC_COLORS, buildPmcIndexMap, getFactionRole, resolveBotType, isRaiderHunter } from '../helpers/players'
 import { getIsbDisplayName } from '../helpers/isb'
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from '../helpers/botBehavior'
 
@@ -2945,7 +2945,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             if (botMapping.type === 'GOON') brainOutput = `Goon`
             if (botMapping.type === 'FOLLOWER') brainOutput = `Follower`
             if (botMapping.type === 'COMBINE') brainOutput = `Combine`
-            if (botMapping.type === 'RAIDER') brainOutput = `Raider`
+            if (botMapping.type === 'RAIDER') brainOutput = isRaiderHunter(player) ? 'Raider (Hunter)' : 'Raider'
             if (botMapping.type === 'ROGUE') brainOutput = `Rogue`
             if (botMapping.type === 'CULT') brainOutput = `Cultist`
             if (botMapping.type === 'SNIPER') brainOutput = `Sniper`

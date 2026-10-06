@@ -14,7 +14,13 @@ export const PMC_COLORS = [
     "#33FF8D", "#33FFF3",
 ]
 
+// Older recordings assigned hunt raiders to the faction they were hunting.
+export function isRaiderHunter(player: any): boolean {
+    return player?.type === 'RAIDER HUNTER|RAIDER' || player?.type === 'UNTAR HUNTER|UNTAR'
+}
+
 export function getMarkerLabel(player: any): string | null {
+    if (isRaiderHunter(player)) return 'Rd'
     const type = (player?.type || '').toUpperCase()
     const isb = resolveIsbCategory(player)
     if (isb) return isb === 'ISB_WT' ? 'WT' : 'IS'
@@ -134,6 +140,7 @@ export function getLegendIcon(player: any, color: string, pmcIdx?: number): JSX.
  * Returns '' if the bot has no recognizable faction role.
  */
 export function getFactionRole(player: any): string {
+    if (isRaiderHunter(player)) return 'Raider (Hunter)'
     const typeName = ((player?.type || '') as string).split('|')[0]
     if (!typeName) return ''
     // Strip the known faction prefix (longest first so "BLACK DIV" matches before "BLACK")

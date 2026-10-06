@@ -9,7 +9,7 @@ import { msToHMS } from "../../helpers";
 import { useEffect, useState } from "react";
 import _ from "lodash";
 import { getLocationLabel } from '../../helpers/locations';
-import { getFactionRole, resolveBotType } from "../../helpers/players";
+import { getFactionRole, resolveBotType, isRaiderHunter } from "../../helpers/players";
 import { getIsbDisplayName } from '../../helpers/isb';
 import { displayPlayerName } from '../../helpers/playerNames';
 import { finalPlayerStatuses } from '../../helpers/playerStatuses';
@@ -346,12 +346,10 @@ export default function RaidOverview() {
       function getPlayerDifficultyAndBrain(player: TrackingRaidDataPlayers): string {
         if (player) {
           let difficulty = player.mod_SAIN_difficulty;
-          let brain = getPlayerBrain(player);
+          let brain = isRaiderHunter(player) ? 'Raider (Hunter)' : getPlayerBrain(player);
 
-          // Combine sits under the generic FACTION_MOD category, so detect it by the "combine" prefix.
-          const category = typeof player.type === "string" && player.type.includes("|") ? player.type.split("|")[1] : "";
-          const roleName = typeof player.type === "string" && player.type.includes("|") ? player.type.split("|")[0].toLowerCase() : "";
-          if (["RUAF", "UNTAR", "BLACKDIV", "MERCENARY"].includes(category) || (category === "FACTION_MOD" && roleName.startsWith("combine"))) {
+          const category = resolveBotType(player);
+          if (["RUAF", "UNTAR", "BLACKDIV", "MERCENARY", "COMBINE"].includes(category)) {
             const role = getFactionRole(player);
             if (role) return role;
           }

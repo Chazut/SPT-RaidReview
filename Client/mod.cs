@@ -75,10 +75,8 @@ namespace RAID_REVIEW
         public static GameObject Hook;
 
         /// <summary>
-        /// MoreBotsAPI "hunt" squads (e.g. UNTAR Go Home raider hunts on Woods/Customs) spawn as plain
-        /// pmcBot with no custom role, so role mapping alone shows them as vanilla Raiders. The API's own
-        /// discriminator is the spawn id: SpawnParams.Id_spawn contains "hunt" (see MoreBotsAPI
-        /// HuntManager.OnBotCreated). Same check here.
+        /// MoreBotsAPI identifies hunt behavior through SpawnParams.Id_spawn. This marker identifies
+        /// a behavior, not the hunter's faction or the mod that created the hunt.
         /// </summary>
         public static bool IsHuntSpawn(Player player)
         {
@@ -918,10 +916,9 @@ namespace RAID_REVIEW
                                     {
                                         var role = player.Profile.Info.Settings.Role;
                                         trackingPlayer.type = MapWildSpawnType(role);
-                                        // UNTAR Go Home raider hunts: plain pmcBot spawned by MoreBotsAPI's
-                                        // hunt system — label as UNTAR hunter instead of a vanilla Raider.
+                                        // Hunt raiders retain their faction, regardless of whom they hunt.
                                         if (role.ToString() == "pmcBot" && IsHuntSpawn(player))
-                                            trackingPlayer.type = "UNTAR HUNTER|UNTAR";
+                                            trackingPlayer.type = "RAIDER HUNTER|RAIDER";
                                         // Override cyrillic names for known bosses
                                         if (role.ToString() == "bossPartisan") trackingPlayer.name = "Partizan";
                                     }
