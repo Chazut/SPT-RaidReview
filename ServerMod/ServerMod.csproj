@@ -33,21 +33,38 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <!-- Deploy to SPT user/mods folder after build with clean structure. -->
-  <Target Name="DeployToSpt" AfterTargets="Build" Condition="'$(SkipDeploy)' != 'true'">
+  <!-- Only RaidReview.dll belongs at the mod root. SPT eagerly loads top-level DLLs. -->
+  <Target Name="StagePrivateSqlite" AfterTargets="Build">
     <ItemGroup>
-      <SptInstall Include="C:\Games\SPT-4.1\SPT_Runtime\user\mods\RaidReview" Condition="Exists('C:\Games\SPT-4.1\SPT_Runtime')" />
+      <PrivateSqlite Include="$(TargetDir)Microsoft.Data.Sqlite.dll;$(TargetDir)SQLitePCLRaw.*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PrivateSqlite)" DestinationFolder="$(TargetDir)lib/sqlite" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Deploy to SPT user/mods folder after build with clean structure. -->
+  <Target Name="DeployToSpt" AfterTargets="StagePrivateSqlite" Condition="'$(SkipDeploy)' != 'true'">
+    <PropertyGroup>
+      <SptModDirectory Condition="'$(SptModDirectory)' == '' and Exists('C:\Games\SPT-4.1\SPT_Runtime')">C:\Games\SPT-4.1\SPT_Runtime\user\mods\RaidReview</SptModDirectory>
+    </PropertyGroup>
+    <ItemGroup>
+      <SptInstall Include="$(SptModDirectory)" Condition="'$(SptModDirectory)' != ''" />
     </ItemGroup>
     <ItemGroup>
       <ModDlls Include="$(OutputPath)*.dll"
-               Exclude="$(OutputPath)SPTarkov.*;$(OutputPath)SemanticVersioning.*;$(OutputPath)JetBrains.*" />
+               Exclude="$(OutputPath)SPTarkov.*;$(OutputPath)SemanticVersioning.*;$(OutputPath)JetBrains.*;$(OutputPath)Microsoft.Data.Sqlite.dll;$(OutputPath)SQLitePCLRaw.*.dll" />
       <NativeSqlite Include="$(OutputPath)runtimes\win-x64\native\e_sqlite3.dll" Condition="Exists('$(OutputPath)runtimes\win-x64\native\e_sqlite3.dll')" />
+      <LegacySqlite Include="%(SptInstall.Identity)\Microsoft.Data.Sqlite.dll" Condition="Exists('%(SptInstall.Identity)\Microsoft.Data.Sqlite.dll')" />
+      <LegacySqlite Include="%(SptInstall.Identity)\SQLitePCLRaw.*.dll" />
     </ItemGroup>
     <MakeDir Directories="%(SptInstall.Identity);%(SptInstall.Identity)\config" />
     <Copy SourceFiles="@(ModDlls)" DestinationFolder="%(SptInstall.Identity)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(PrivateSqlite)" DestinationFolder="%(SptInstall.Identity)/lib/sqlite" SkipUnchangedFiles="true" />
+    <!-- Keep old copies outside SPT's top-level scan when upgrading an existing installation. -->
+    <MakeDir Directories="%(SptInstall.Identity)/lib/sqlite/legacy" Condition="'@(LegacySqlite)' != ''" />
+    <Move SourceFiles="@(LegacySqlite)" DestinationFolder="%(SptInstall.Identity)/lib/sqlite/legacy" Condition="'@(LegacySqlite)' != ''" />
     <MakeDir Directories="%(SptInstall.Identity)\runtimes\win-x64\native" Condition="@(NativeSqlite) != ''" />
     <Copy SourceFiles="@(NativeSqlite)" DestinationFolder="%(SptInstall.Identity)\runtimes\win-x64\native" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="config\config.json" DestinationFolder="%(SptInstall.Identity)\config" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="config\config.json" DestinationFolder="%(SptInstall.Identity)\config" Condition="!Exists('%(SptInstall.Identity)\config\config.json')" />
   </Target>
 
 </Project>

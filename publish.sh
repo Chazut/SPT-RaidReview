@@ -29,7 +29,7 @@ cd "$current_dir"
 # 2. Build server mod (embeds frontend into DLL)
 echo ">> Building server mod..."
 cd ServerMod
-dotnet build -c Release --nologo -v q
+dotnet build -c Release --nologo -v q -p:SkipDeploy=true
 cd "$current_dir"
 
 # 3. Build client mod
@@ -44,14 +44,16 @@ echo ">> Packaging server mod..."
 server_dest="$dist_folder/SPT_Runtime/user/mods/RaidReview"
 mkdir -p "$server_dest"
 
-# Copy managed DLLs flat (must be next to RaidReview.dll — .NET resolves them before any mod code runs)
+# Keep SQLite outside SPT's eager top-level DLL scan.
 for f in ServerMod/bin/Release/RaidReview/*.dll; do
     base=$(basename "$f")
     case "$base" in
-        SPTarkov.*|SemanticVersioning.*|JetBrains.*) continue ;;   # Already in SPT server
+        SPTarkov.*|SemanticVersioning.*|JetBrains.*|Microsoft.Data.Sqlite.dll|SQLitePCLRaw.*) continue ;;
         *) cp "$f" "$server_dest/" ;;
     esac
 done
+mkdir -p "$server_dest/lib/sqlite"
+cp ServerMod/bin/Release/RaidReview/lib/sqlite/*.dll "$server_dest/lib/sqlite/"
 
 # Copy native SQLite runtimes (win-x64 + linux-x64) into runtimes subfolder
 # Must NOT be in the mod root — SPT mod loader would try to load them as managed assemblies

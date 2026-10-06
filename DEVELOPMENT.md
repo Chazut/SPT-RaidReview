@@ -58,6 +58,14 @@ dotnet build
 
 Output: `RaidReview.dll` + dependencies deployed to `user/mods/RaidReview/`.
 
+Use `dotnet build -c Release -p:SkipDeploy=true` while SPT is running. The build
+stages SQLite dependencies under `bin/Release/RaidReview/lib/sqlite/`; distribute
+that subfolder along with the native `runtimes/` folder. SQLite DLLs must never
+be deployed at the mod root, where SPT loads them into the shared context.
+The deployment target moves old root-level SQLite DLLs into `lib/sqlite/legacy/`
+and preserves an existing configuration. Database access crosses the private
+load context through `System.Data.Common`, with no provider types in RR's API.
+
 ## Frontend `/Private`
 
 The React frontend is built with Vite and outputs to `ServerMod/public/`, where it gets embedded into the server mod DLL as resources.

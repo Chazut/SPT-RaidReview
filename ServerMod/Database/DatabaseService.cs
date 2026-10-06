@@ -1,15 +1,12 @@
-using System.Reflection;
-using System.Runtime.InteropServices;
+using System.Data.Common;
 using System.Threading.Channels;
-using Microsoft.Data.Sqlite;
 
 namespace RaidReview.Database;
 
 public class DatabaseService : IDisposable
 {
-    private SqliteConnection? _connection;
+    private DbConnection? _connection;
     private string _dbPath = string.Empty;
-    private static IntPtr _nativeSqliteHandle;
     private Action<string>? _log;
 
     // Write-behind queue for high-rate single-row inserts (BALLISTIC during firefights, PLAYER_STATUS).
@@ -24,64 +21,7 @@ public class DatabaseService : IDisposable
 
     public async Task InitializeAsync(string dataFolder, Action<string>? log = null)
     {
-        // Pre-load the native e_sqlite3 library from the runtimes subfolder.
-        // SPT loads mods as plugins so .NET won't probe the mod folder automatically.
-        // On Linux, NativeLibrary.Load() alone isn't enough — the P/Invoke resolver in
-        // SQLitePCLRaw does its own dlopen("e_sqlite3") which doesn't find our loaded lib.
-        // We must register a DllImportResolver on the provider assembly to return our handle.
-        var modDir = Path.GetDirectoryName(typeof(DatabaseService).Assembly.Location)!;
-        var runtimesDir = Path.Combine(modDir, "runtimes");
-        var rid = RuntimeInformation.RuntimeIdentifier;
-        var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-
-        log?.Invoke($"[RAID-REVIEW] SQLite native loader: modDir={modDir}, rid={rid}, isWindows={isWindows}");
-        log?.Invoke($"[RAID-REVIEW] SQLite native loader: runtimesDir exists={Directory.Exists(runtimesDir)}");
-
-        if (Directory.Exists(runtimesDir))
-        {
-            var libName = isWindows ? "e_sqlite3.dll" : "libe_sqlite3.so";
-
-            // Try the exact RID first, then fall back to generic win-x64 / linux-x64
-            var candidates = new List<string>();
-            if (!string.IsNullOrEmpty(rid))
-                candidates.Add(Path.Combine(runtimesDir, rid, "native", libName));
-            candidates.Add(Path.Combine(runtimesDir, isWindows ? "win-x64" : "linux-x64", "native", libName));
-
-            foreach (var candidate in candidates)
-            {
-                log?.Invoke($"[RAID-REVIEW] SQLite native loader: trying {candidate} (exists={File.Exists(candidate)})");
-                if (File.Exists(candidate))
-                {
-                    try
-                    {
-                        _nativeSqliteHandle = NativeLibrary.Load(candidate);
-                        log?.Invoke($"[RAID-REVIEW] SQLite native loader: loaded {candidate} (handle=0x{_nativeSqliteHandle:X})");
-                    }
-                    catch (Exception ex)
-                    {
-                        log?.Invoke($"[RAID-REVIEW] SQLite native loader: FAILED to load {candidate}: {ex.Message}");
-                        continue;
-                    }
-                    break;
-                }
-            }
-
-            // Register a DllImportResolver on the SQLitePCLRaw provider assembly so that
-            // when it P/Invokes "e_sqlite3", we return the handle we already loaded.
-            if (_nativeSqliteHandle != IntPtr.Zero)
-            {
-                var providerAssembly = typeof(SQLitePCL.SQLite3Provider_e_sqlite3).Assembly;
-                NativeLibrary.SetDllImportResolver(providerAssembly, (libraryName, assembly, searchPath) =>
-                {
-                    if (libraryName == "e_sqlite3")
-                        return _nativeSqliteHandle;
-                    return IntPtr.Zero;
-                });
-                log?.Invoke($"[RAID-REVIEW] SQLite native loader: DllImportResolver registered on {providerAssembly.GetName().Name}");
-            }
-        }
-
-        SQLitePCL.Batteries_V2.Init();
+        SqliteRuntime.Initialize(log);
         Directory.CreateDirectory(dataFolder);
         _dbPath = Path.Combine(dataFolder, "raid_review_mod.db");
 
@@ -90,7 +30,7 @@ public class DatabaseService : IDisposable
         // re-opening the file each time. Cache=Shared lets the same
         // in-memory page cache be shared across pooled connections.
         _connectionString = $"Data Source={_dbPath};Pooling=True;Cache=Shared";
-        _connection = new SqliteConnection(_connectionString);
+        _connection = SqliteRuntime.CreateConnection(_connectionString);
         await _connection.OpenAsync();
 
         // WAL mode allows one writer + many concurrent readers without
@@ -159,14 +99,22 @@ public class DatabaseService : IDisposable
 
     private string _connectionString = string.Empty;
 
-    private static async Task ExecuteOnAsync(SqliteConnection conn, string sql)
+    private static async Task ExecuteOnAsync(DbConnection conn, string sql)
     {
         using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
         await cmd.ExecuteNonQueryAsync();
     }
 
-    public SqliteConnection Connection => _connection ?? throw new InvalidOperationException("Database not initialized.");
+    public DbConnection Connection => _connection ?? throw new InvalidOperationException("Database not initialized.");
+
+    private static void AddParameter(DbCommand command, string name, object? value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value ?? DBNull.Value;
+        command.Parameters.Add(parameter);
+    }
 
     private async Task RunMigrationsAsync()
     {
@@ -638,7 +586,7 @@ public class DatabaseService : IDisposable
         {
             var checkCmd = _connection!.CreateCommand();
             checkCmd.CommandText = "SELECT COUNT(*) FROM __migrations WHERE name = $name";
-            checkCmd.Parameters.AddWithValue("$name", name);
+            AddParameter(checkCmd, "$name", name);
             var count = (long)(await checkCmd.ExecuteScalarAsync() ?? 0L);
             if (count > 0) continue;
 
@@ -650,7 +598,7 @@ public class DatabaseService : IDisposable
                 {
                     await ExecuteAsync(stmt);
                 }
-                catch (SqliteException ex) when (ex.Message.Contains("duplicate column"))
+                catch (DbException ex) when (ex.Message.Contains("duplicate column"))
                 {
                     // Column already exists, ignore
                 }
@@ -658,7 +606,7 @@ public class DatabaseService : IDisposable
 
             var markCmd = _connection!.CreateCommand();
             markCmd.CommandText = "INSERT OR IGNORE INTO __migrations (name) VALUES ($name)";
-            markCmd.Parameters.AddWithValue("$name", name);
+            AddParameter(markCmd, "$name", name);
             await markCmd.ExecuteNonQueryAsync();
         }
     }
@@ -671,12 +619,12 @@ public class DatabaseService : IDisposable
         // and starved the Kestrel thread pool. With pooling + WAL mode
         // each handler grabs its own connection, runs its statement, and
         // releases — the pool reuses opened handles so it's cheap.
-        using var conn = new SqliteConnection(_connectionString);
+        using var conn = SqliteRuntime.CreateConnection(_connectionString);
         await conn.OpenAsync();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
         foreach (var (name, value) in parameters)
-            cmd.Parameters.AddWithValue(name, value ?? DBNull.Value);
+            AddParameter(cmd, name, value);
         await cmd.ExecuteNonQueryAsync();
     }
 
@@ -689,9 +637,9 @@ public class DatabaseService : IDisposable
     /// </summary>
     public async Task ExecuteBatchAsync(string sql, IEnumerable<(string name, object? value)[]> parameterSets)
     {
-        using var conn = new SqliteConnection(_connectionString);
+        using var conn = SqliteRuntime.CreateConnection(_connectionString);
         await conn.OpenAsync();
-        using var tx = (SqliteTransaction)await conn.BeginTransactionAsync();
+        using var tx = await conn.BeginTransactionAsync();
         using var cmd = conn.CreateCommand();
         cmd.Transaction = tx;
         cmd.CommandText = sql;
@@ -699,7 +647,7 @@ public class DatabaseService : IDisposable
         {
             cmd.Parameters.Clear();
             foreach (var (name, value) in paramSet)
-                cmd.Parameters.AddWithValue(name, value ?? DBNull.Value);
+                AddParameter(cmd, name, value);
             await cmd.ExecuteNonQueryAsync();
         }
         await tx.CommitAsync();
@@ -707,12 +655,12 @@ public class DatabaseService : IDisposable
 
     public async Task<List<Dictionary<string, object?>>> QueryAsync(string sql, params (string name, object? value)[] parameters)
     {
-        using var conn = new SqliteConnection(_connectionString);
+        using var conn = SqliteRuntime.CreateConnection(_connectionString);
         await conn.OpenAsync();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
         foreach (var (name, value) in parameters)
-            cmd.Parameters.AddWithValue(name, value ?? DBNull.Value);
+            AddParameter(cmd, name, value);
 
         var results = new List<Dictionary<string, object?>>();
         using var reader = await cmd.ExecuteReaderAsync();
