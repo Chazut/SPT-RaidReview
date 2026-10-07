@@ -394,6 +394,7 @@ namespace RAID_REVIEW
         public float campStartedAt { get; set; }
         public float campElapsed { get; set; }
         public float campTargetDuration { get; set; }
+        public double? campExtractAt { get; set; }
         public bool campUntilTimeExtract { get; set; }
         public bool campHolding { get; set; }
         public string campState { get; set; }

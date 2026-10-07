@@ -43,4 +43,15 @@ check(mainHoldDetail({ type: 'ExtractCamp', campUntilTimeExtract: true }).includ
 check(mainHoldDetail({ type: 'ExtractCamp', campUntilTimeExtract: true, campStartedAt: 100, campElapsed: 1800 }) === '1800s holding cover; until time-based extraction', 'new camp has no fixed timer');
 check(mainHoldDetail({ type: 'ExtractCamp', campTargetDuration: 63 }) === '0 / 63s holding cover', 'historical TiMBo timer preserved');
 check(mainHoldDetail({ type: 'Kills', killAmbush: true, killsRoamTargetDuration: 120 }) === '0 / 120s holding cover', 'Kill ambush keeps its budget');
+const camp = { type: 'ExtractCamp', campUntilTimeExtract: true, campStartedAt: 1, campElapsed: 30, campHolding: true, campExtractAt: 121000 };
+const camps = [{ time: 1000, squads: [entry(camp)] }];
+check(mainHoldDetail(find(camps, 2, 21000).mainObjectives[0], 21000) === '50s holding cover; 1:40 until departure', 'timer and holding advance between snapshots');
+check(mainHoldDetail(camp, 122000).endsWith('0:00 until departure'), 'deadline clamps at zero');
+check(mainHoldDetail({ ...camp, campState: 'paused', campHolding: false }, 61000).includes('Interrupted: Waiting to resume; 1:00'), 'deadline continues during combat');
+check(find([{ time: 1000, squads: [entry({ ...camp, campHolding: false })] }], 2, 21000).mainObjectives[0].campElapsed === 30, 'paused holding does not grow');
+check(find(camps.concat({ time: 2000, squads: [] }), 2, 21000).mainObjectives[0].campElapsed === 30, 'removed squad does not acquire fictional holding time');
+check(find(camps, 2, 500).mainObjectives[0].campElapsed === 30, 'future fallback remains literal');
+check(find(camps, 2, 122000).mainObjectives[0].campElapsed === 150, 'hold interpolation ends at departure');
+check(camp.campElapsed === 30 && find(camps, 2, 11000).mainObjectives[0].campElapsed === 40, 'rewind is deterministic and snapshots immutable');
+check(!mainHoldDetail({ ...camp, completed: true }, 21000).includes('until departure'), 'completed camp has no active countdown');
 console.log(`PASS ${checks} main-objective replay checks`);

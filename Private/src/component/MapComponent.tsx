@@ -2502,7 +2502,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 tipHtml += `<br/>${escapeMainText(operationDetail(m))}`
             }
             if (m.type === 'ExtractCamp' || m.killAmbush) {
-                tipHtml += `<br/><span style="opacity:0.7;font-size:10px">${escapeMainText(mainHoldDetail(m))}</span>`
+                tipHtml += `<br/><span data-rr-camp-detail style="opacity:0.7;font-size:10px">${escapeMainText(mainHoldDetail(m, timeEndLimit))}</span>`
             } else if (m.type === 'Kills' && m.killsRoamTargetDuration > 0) {
                 tipHtml += `<br/><span style="opacity:0.7;font-size:10px">Roam ${m.killsRoamTargetDuration.toFixed(0)}s</span>`
             }
@@ -2516,6 +2516,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 : 'pending'
             tipHtml += `<br/><span style="opacity:0.7;font-size:10px">${stateLabel}</span>`
             marker.bindTooltip(tipHtml, { direction: 'top', className: 'player-tooltip player-tooltip-html' })
+            marker.on('tooltipopen', () => {
+                const current = findLatestSquadEntry(selectedSquadForMains, campTimelineRef.current)?.mainObjectives?.[index]
+                const text = marker.getTooltip()?.getElement()?.querySelector('[data-rr-camp-detail]')
+                if (text && current) text.textContent = mainHoldDetail(current, campTimelineRef.current)
+            })
             // These markers belong to the snapshot overlay, not the per-frame
             // movement renderer. Keep the circle and its label together.
             marker._rr_objective = true
@@ -2535,6 +2540,19 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             }
         }
     }, [MAP, mapIsReady, selectedSquadForMains, orbitMainObjectivesData, orbitMainsProgress, questNameMap, onFloor])
+
+    // Update only visible tooltip text once per replay second, without rebuilding map layers.
+    const campTimelineRef = useRef(timeEndLimit)
+    campTimelineRef.current = timeEndLimit
+    const campTimelineSecond = Math.floor(timeEndLimit / 1000)
+    useEffect(() => {
+        if (selectedSquadForMains == null) return
+        const mains = findLatestSquadEntry(selectedSquadForMains, campTimelineRef.current)?.mainObjectives || []
+        orbitMainObjectiveMarkersRef.current.forEach((marker, index) => {
+            const text = marker?.getTooltip()?.getElement()?.querySelector('[data-rr-camp-detail]')
+            if (text && mains[index]) text.textContent = mainHoldDetail(mains[index], campTimelineRef.current)
+        })
+    }, [campTimelineSecond, selectedSquadForMains, orbitMainsProgress])
 
     // Loot float animations: show floating text when timeline crosses a loot event
     // Uses a ref-based approach to avoid useEffect cleanup killing the animation on re-render
@@ -3736,7 +3754,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                 } else if ((m.type === 'MultiStep' || m.type === 'Rush')) {
                                                     detail = operationDetail(m)
                                                 } else if (m.type === 'ExtractCamp' || m.killAmbush) {
-                                                    detail = mainHoldDetail(m)
+                                                    detail = mainHoldDetail(m, timeEndLimit)
                                                 } else if (m.type === 'Kills') {
                                                     detail = `${Math.round(m.killsRoamTargetDuration || 0)}s in zone`
                                                 }

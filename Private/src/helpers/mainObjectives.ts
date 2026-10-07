@@ -33,13 +33,21 @@ export function mainInterrupted(main: any): boolean {
     if (!main.completed && main.campState === 'paused') return true
     return mainStarted(main) && ((main.type === 'MultiStep' || main.type === 'Rush') && main.operationState === 'paused' || main.type === 'LootValue' && main.lootValueInterrupted === true || main.campStartedAt > 0 && main.campHolding === false)
 }
-export function mainHoldDetail(main: any): string {
+export function mainHoldDetail(main: any, atTime?: number): string {
     if (main.campState === 'failed') return `Failed: ${main.campFailure || 'No usable camp position'}`
-    if (main.campState === 'searching cover') return main.campSearchAttempt > 0
+    const remaining = main.type === 'ExtractCamp' && main.campUntilTimeExtract && !main.completed
+        && Number.isFinite(main.campExtractAt) && Number.isFinite(atTime)
+        ? Math.max(0, Math.ceil((main.campExtractAt - atTime!) / 1000)) : null
+    const countdown = remaining == null ? '' : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')} until departure`
+    const status = main.campState === 'searching cover' ? main.campSearchAttempt > 0
         ? `Searching cover (${main.campSearchAttempt}/4, radius ${Math.round(main.campSearchRadius || 0)}m)` : 'Searching cover'
-    if (main.campState === 'approach') return 'Approaching camp position'
-    if (main.campState === 'paused') return `Interrupted: ${main.campFailure || 'Waiting to resume'}`
+        : main.campState === 'approach' ? 'Approaching camp position'
+        : main.campState === 'paused' ? `Interrupted: ${main.campFailure || 'Waiting to resume'}` : ''
+    if (status) return countdown ? `${status}; ${countdown}` : status
     if (main.type === 'ExtractCamp' && main.campUntilTimeExtract) {
+        if (countdown) {
+            return main.campStartedAt > 0 ? `${Math.round(main.campElapsed || 0)}s holding cover; ${countdown}` : countdown
+        }
         return main.campStartedAt > 0
             ? `${Math.round(main.campElapsed || 0)}s holding cover; until time-based extraction`
             : 'Last main; hold until time-based extraction'
@@ -70,8 +78,15 @@ export function findMainSquadEntry(data: any[], squadId: number, atTime: number)
         } else if (entry && time < futureTime) { future = entry; futureTime = time }
     }
     const result = best || future
-    if (!result || best && bestTime === latestTime) return result
-    return { ...result, mainObjectives: (result.mainObjectives || []).filter((m: any) => m.type !== 'Airdrop') }
+    if (!result) return result
+    const mains = (result.mainObjectives || []).filter((m: any) => best && bestTime === latestTime || m.type !== 'Airdrop')
+    return { ...result, mainObjectives: mains.map((m: any) => {
+        // New recordings have an extraction deadline in the RR timeline. Advance only
+        // active holding time; completed/paused goals and old recordings stay literal.
+        if (!best || bestTime !== latestTime || m.completed || !m.campHolding || !Number.isFinite(m.campExtractAt)) return m
+        const delta = Math.max(0, (Math.min(atTime, m.campExtractAt) - bestTime) / 1000)
+        return { ...m, campElapsed: (m.campElapsed || 0) + delta }
+    }) }
 }
 
 export function operationDetail(main: any): string {

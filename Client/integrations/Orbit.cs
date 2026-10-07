@@ -284,6 +284,7 @@ namespace RAID_REVIEW
             internal static readonly System.Reflection.FieldInfo Elapsed = typeof(OrbitMainObjective).GetField("CampElapsed");
             internal static readonly System.Reflection.FieldInfo Duration = typeof(OrbitMainObjective).GetField("CampTargetDuration");
             internal static readonly System.Reflection.FieldInfo UntilTimeExtract = typeof(OrbitMainObjective).GetField("CampUntilTimeExtract");
+            internal static readonly System.Reflection.FieldInfo ExtractRemaining = typeof(OrbitMainObjective).GetField("CampExtractRemainingSeconds");
             internal static readonly System.Reflection.FieldInfo Holding = typeof(OrbitMainObjective).GetField("CampHolding");
             internal static readonly System.Reflection.FieldInfo State = typeof(OrbitMainObjective).GetField("CampState");
             internal static readonly System.Reflection.FieldInfo Failure = typeof(OrbitMainObjective).GetField("CampFailure");
@@ -357,6 +358,9 @@ namespace RAID_REVIEW
                         campElapsed = CampMainFields.Elapsed?.GetValue(m) as float? ?? 0f,
                         campTargetDuration = CampMainFields.Duration?.GetValue(m) as float? ?? 0f,
                         campUntilTimeExtract = CampMainFields.UntilTimeExtract?.GetValue(m) is true,
+                        campExtractAt = CampMainFields.ExtractRemaining?.GetValue(m) is float seconds
+                            && !float.IsNaN(seconds) && !float.IsInfinity(seconds)
+                            ? time + System.Math.Max(0, seconds) * 1000d : (double?)null,
                         campHolding = CampMainFields.Holding?.GetValue(m) is true,
                         campState = CampMainFields.State?.GetValue(m) as string,
                         campFailure = CampMainFields.Failure?.GetValue(m) as string,
