@@ -54,6 +54,8 @@ for f in ServerMod/bin/Release/RaidReview/*.dll; do
 done
 mkdir -p "$server_dest/lib/sqlite"
 cp ServerMod/bin/Release/RaidReview/lib/sqlite/*.dll "$server_dest/lib/sqlite/"
+# Overwrite retired root dependencies before SPT can load them on an upgrade.
+cp ServerMod/bin/Release/RaidReview/upgrade/*.dll "$server_dest/"
 
 # Copy native SQLite runtimes (win-x64 + linux-x64) into runtimes subfolder
 # Must NOT be in the mod root — SPT mod loader would try to load them as managed assemblies
@@ -67,9 +69,8 @@ for rid in win-x64 linux-x64 linux-arm64; do
     fi
 done
 
-# Copy config
-mkdir -p "$server_dest/config"
-cp "ServerMod/config/config.json" "$server_dest/config/"
+# The server creates its embedded default config on a fresh install. Never ship a
+# config.json that would overwrite a user's ports, retention or other preferences.
 
 # 5. Package client mod
 echo ">> Packaging client mod..."

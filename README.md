@@ -23,10 +23,11 @@ Download a compatible version from the **[releases](https://github.com/Chazut/SP
 - **SPT 4.1.X**: version 1.5.0 and newer.
 - **SPT 4.0.X**: versions up to 1.4.x.
 
-When upgrading an older installation, keep your `data/` and `config/` folders,
-but remove `Microsoft.Data.Sqlite.dll` and `SQLitePCLRaw.*.dll` from the root of
-`user/mods/RaidReview` before extracting the update. These dependencies now live
-in `lib/sqlite/` so they can coexist with other mods' SQLite versions.
+To upgrade, close the server and game, then extract the full ZIP over your installation
+and accept file replacements. Keep your `data/` and `config/` folders. The ZIP preserves
+your configuration and automatically replaces the old root SQLite dependencies with
+harmless upgrade placeholders. Raid Review archives those placeholders on startup;
+its actual SQLite dependencies live in `lib/sqlite/`, isolated from other mods.
 
 ---
 

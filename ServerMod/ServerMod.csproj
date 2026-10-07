@@ -31,6 +31,7 @@
       <!-- LogicalName = "frontend/" + relative path — preserves directory structure without dots-as-separators ambiguity -->
       <LogicalName>frontend/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="config/config.json" LogicalName="RaidReview.DefaultConfig.json" />
   </ItemGroup>
 
   <!-- Only RaidReview.dll belongs at the mod root. SPT eagerly loads top-level DLLs. -->
@@ -39,6 +40,19 @@
       <PrivateSqlite Include="$(TargetDir)Microsoft.Data.Sqlite.dll;$(TargetDir)SQLitePCLRaw.*.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(PrivateSqlite)" DestinationFolder="$(TargetDir)lib/sqlite" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="StageUpgradeShims" AfterTargets="StagePrivateSqlite">
+    <ItemGroup>
+      <LegacySqliteShim Include="Microsoft.Data.Sqlite"><ShimId>MicrosoftData</ShimId></LegacySqliteShim>
+      <LegacySqliteShim Include="SQLitePCLRaw.core"><ShimId>Core</ShimId></LegacySqliteShim>
+      <LegacySqliteShim Include="SQLitePCLRaw.provider.e_sqlite3"><ShimId>Provider</ShimId></LegacySqliteShim>
+      <LegacySqliteShim Include="SQLitePCLRaw.batteries_v2"><ShimId>Batteries</ShimId></LegacySqliteShim>
+    </ItemGroup>
+    <MSBuild Projects="../UpgradeShim/UpgradeShim.csproj" Targets="Restore;Build" BuildInParallel="false"
+             Properties="Configuration=$(Configuration);AssemblyName=RaidReview.LegacySqlite.%(LegacySqliteShim.ShimId);OutputPath=$(TargetDir)upgrade-build/%(LegacySqliteShim.Identity)/" />
+    <Copy SourceFiles="$(TargetDir)upgrade-build/%(LegacySqliteShim.Identity)/RaidReview.LegacySqlite.%(LegacySqliteShim.ShimId).dll"
+          DestinationFiles="$(TargetDir)upgrade/%(LegacySqliteShim.Identity).dll" />
   </Target>
 
   <!-- Deploy to SPT user/mods folder after build with clean structure. -->

@@ -23,6 +23,24 @@ public class RaidReviewConfig
     public static RaidReviewConfig Load(string modFolder)
     {
         var configPath = Path.Combine(modFolder, "config", "config.json");
+        if (!File.Exists(configPath))
+        {
+            try
+            {
+                using var defaults = typeof(RaidReviewConfig).Assembly.GetManifestResourceStream("RaidReview.DefaultConfig.json");
+                if (defaults != null)
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+                    using var output = new FileStream(configPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+                    defaults.CopyTo(output);
+                }
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                // Another startup may have created it, or this install may be read-only.
+                // Preserve existing files and retain the in-memory defaults below.
+            }
+        }
         if (File.Exists(configPath))
         {
             try

@@ -8,6 +8,11 @@ dotnet Tests/SqliteIsolation/bin/Release/net10.0/SqliteIsolation.dll other-first
 ```
 
 Modes: `other-first`, `rr-first`, `alone`, `missing-managed`, `missing-native`.
+Use `upgrade-other-first`, `upgrade-rr-first` and `upgrade-alone` for full root-DLL
+scanning of the release upgrade placeholders, automatic archival, a locked file,
+repeat startup, embedded default config creation and preservation of custom config,
+recordings and private runtime files. The build folder or extracted ZIP must include
+the four placeholders (in `upgrade/` for a build, at the mod root for a release).
 The other-mod fixture uses its actual Microsoft.Data.Sqlite, SQLitePCLRaw.core, provider.e_sqlite3 and native runtime. Tested with DaCard 2.1.0 (SQLite 10 / PCL 2) against RR (SQLite 9 / PCL 3).
 
 The harness simulates SPT's shared assembly context and metadata scan, opens both providers, exercises migrations, parameters, transactions, pooled concurrent writes and shutdown flushing. The first scenario also starts RR's own web component on ephemeral ports and verifies a WebSocket START packet through the HTTP API. It does not run SPT or either mod's entry point.

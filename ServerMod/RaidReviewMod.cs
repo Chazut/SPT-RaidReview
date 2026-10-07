@@ -31,6 +31,8 @@ public class RaidReviewMod : IOnLoad
         var modFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
             ?? AppContext.BaseDirectory;
 
+        LegacySqliteUpgrade.ArchivePlaceholders(modFolder, message => _sptLogger.Info(message));
+
         var dataFolder = Path.Combine(modFolder, "data");
 
         // Load config

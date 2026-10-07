@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Builder;
 if (args.Length < 3)
     throw new ArgumentException("Usage: mode RR-build-folder SPT-runtime-folder [other-mod-folder] [database-snapshot]");
 var mode = args[0];
+var upgrade = mode.StartsWith("upgrade-", StringComparison.Ordinal);
+if (upgrade) mode = mode[8..];
 var build = Path.GetFullPath(args[1]);
 var server = Path.GetFullPath(args[2]);
 var other = args.Length > 3 ? Path.GetFullPath(args[3]) : "";
@@ -22,6 +24,12 @@ var rid = (OperatingSystem.IsWindows() ? "win" : OperatingSystem.IsMacOS() ? "os
     + "-" + RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
 CopyTree(Path.Combine(build, "runtimes", rid), Path.Combine(folder, "runtimes", rid));
 File.Copy(Path.Combine(build, "RaidReview.dll"), Path.Combine(folder, "RaidReview.dll"));
+if (upgrade)
+{
+    var shimFolder = Directory.Exists(Path.Combine(build, "upgrade")) ? Path.Combine(build, "upgrade") : build;
+    foreach (var name in new[] { "Microsoft.Data.Sqlite.dll", "SQLitePCLRaw.core.dll", "SQLitePCLRaw.provider.e_sqlite3.dll", "SQLitePCLRaw.batteries_v2.dll" })
+        File.Copy(Path.Combine(shimFolder, name), Path.Combine(folder, name));
+}
 var checks = 0;
 void Check(bool ok, string reason) { if (!ok) throw new Exception(reason); checks++; }
 var host = new HostContext(server);
@@ -30,6 +38,57 @@ if (mode is "other-first" or "missing-managed" or "missing-native") otherConnect
 if (mode == "missing-managed") File.Delete(Path.Combine(folder, "lib/sqlite/Microsoft.Data.Sqlite.dll"));
 if (mode == "missing-native") Directory.Move(Path.Combine(folder, "runtimes"), Path.Combine(folder, "unused-runtimes"));
 var assembly = host.LoadFromAssemblyPath(Path.Combine(folder, "RaidReview.dll"));
+if (upgrade)
+{
+    // Match SPT's eager root scan, including metadata inspection of every module.
+    var loaded = new DirectoryInfo(folder).GetFiles("*.dll")
+        .OrderBy(file => file.Name, StringComparer.Ordinal)
+        .Select(file => host.LoadFromAssemblyPath(file.FullName)).ToArray();
+    Check(loaded.Length == 5, "Upgrade scans the main DLL and all four placeholders");
+    Check(loaded.SelectMany(a => a.GetTypes()).Count(type => type.Name == "ModMetadata") == 1, "Only one mod metadata type in upgraded root");
+    Check(loaded.Where(a => a != assembly).All(a => a.GetName().Name!.StartsWith("RaidReview.LegacySqlite.")), "Placeholders never occupy SQLite assembly identities");
+
+    var configType = assembly.GetType("RaidReview.Config.RaidReviewConfig", true)!;
+    var loadConfig = configType.GetMethod("Load")!;
+    var configPath = Path.Combine(folder, "config/config.json");
+    loadConfig.Invoke(null, [folder]);
+    Check(File.Exists(configPath), "Fresh install creates its embedded default configuration");
+    var customConfig = "{\"web_client_port\":18329,\"web_socket_port\":18328,\"autoDelete\":false,\"custom_future_setting\":\"preserve\"}";
+    File.WriteAllText(configPath, customConfig);
+    var configured = loadConfig.Invoke(null, [folder])!;
+    Check((int)configType.GetProperty("WebClientPort")!.GetValue(configured)! == 18329, "Existing custom port remains effective");
+    Check(File.ReadAllText(configPath) == customConfig, "Existing config is preserved byte for byte");
+
+    var protectedData = Path.Combine(folder, "data/history.keep");
+    Directory.CreateDirectory(Path.GetDirectoryName(protectedData)!);
+    File.WriteAllText(protectedData, "retained recordings");
+    var protectedFiles = Directory.GetFiles(Path.Combine(folder, "lib/sqlite"), "*.dll")
+        .Concat(Directory.GetFiles(Path.Combine(folder, "runtimes"), "*", SearchOption.AllDirectories))
+        .Append(configPath).Append(protectedData)
+        .ToDictionary(path => path, File.ReadAllBytes);
+    var cleanup = assembly.GetType("RaidReview.FileSystem.LegacySqliteUpgrade", true)!
+        .GetMethod("ArchivePlaceholders", BindingFlags.Static | BindingFlags.NonPublic)!;
+    var messages = new List<string>();
+    void Clean() => cleanup.Invoke(null, [folder, new Action<string>(messages.Add)]);
+    var lockedPath = Path.Combine(folder, "SQLitePCLRaw.core.dll");
+    using (var held = new FileStream(lockedPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+    {
+        Clean();
+        Check(Directory.GetFiles(folder, "*.dll").Length <= 2, "Unlocked placeholders archived while a locked one remains harmless");
+    }
+    Clean();
+    Check(Directory.GetFiles(folder, "*.dll").Select(Path.GetFileName).SequenceEqual(["RaidReview.dll"]), "Automatic cleanup leaves only RR at root");
+    Check(Directory.GetFiles(Path.Combine(folder, "lib/sqlite/legacy"), "*.dll", SearchOption.AllDirectories).Length == 4, "All placeholders archived without deleting backups");
+    var messageCount = messages.Count;
+    Clean();
+    Check(messages.Count == messageCount, "Repeated cleanup is a no-op");
+    foreach (var saved in protectedFiles) Check(File.ReadAllBytes(saved.Key).SequenceEqual(saved.Value), "Protected data/config/runtime unchanged: " + Path.GetFileName(saved.Key));
+    // Unrecognized files with a retired filename must not be moved by cleanup.
+    File.Copy(Path.Combine(folder, "lib/sqlite/Microsoft.Data.Sqlite.dll"), Path.Combine(folder, "Microsoft.Data.Sqlite.dll"));
+    Clean();
+    Check(File.Exists(Path.Combine(folder, "Microsoft.Data.Sqlite.dll")), "Cleanup ignores genuine or unrelated assemblies");
+    File.Delete(Path.Combine(folder, "Microsoft.Data.Sqlite.dll"));
+}
 Check(!assembly.GetReferencedAssemblies().Any(a => a.Name!.Contains("Sqlite", StringComparison.OrdinalIgnoreCase)
     || a.Name.StartsWith("SQLitePCLRaw")), "RR must not statically reference SQLite");
 Check(assembly.GetTypes().Any(t => t.Name == "ModMetadata"), "SPT metadata discovery must succeed");
@@ -68,7 +127,8 @@ if (otherConnection != null)
     command.CommandText = "select sqlite_version()";
     Console.WriteLine("Other SQLite native version: " + command.ExecuteScalar());
 }
-else Check(!host.Assemblies.Any(a => a.GetName().Name!.Contains("Sqlite", StringComparison.OrdinalIgnoreCase)), "RR alone does not populate the host with SQLite");
+else Check(!host.Assemblies.Any(a => a.GetName().Name == "Microsoft.Data.Sqlite"
+    || a.GetName().Name!.StartsWith("SQLitePCLRaw", StringComparison.Ordinal)), "RR alone does not populate the host with SQLite");
 
 await db.ExecuteAsync("create table probe(id integer primary key, text_value text, nullable_value text, real_value real, bytes blob)", P());
 await db.ExecuteAsync("insert into probe values($id,$text,$null,$real,$bytes)",
@@ -159,7 +219,7 @@ if (args.Length > 4)
     again.Dispose();
 }
 otherConnection?.Dispose();
-Console.WriteLine($"PASS {mode}: {checks} checks; temporary fixture: {folder}");
+Console.WriteLine($"PASS {(upgrade ? "upgrade-" : "")}{mode}: {checks} checks; temporary fixture: {folder}");
 
 DbConnection OpenOther()
 {
