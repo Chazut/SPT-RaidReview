@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import api from '../api/api'
 import { GhostWake, wakeCauseLabels } from '../helpers/ghostWakes'
-import { displayPlayerName } from '../helpers/playerNames'
+import { displayPlayerName, displayPlayerNamesInText } from '../helpers/playerNames'
 import { msToHMS } from '../helpers'
 
 export default function GhostWakeDiagnostics({ raidId }: { raidId: string }) {
@@ -20,10 +20,19 @@ export default function GhostWakeDiagnostics({ raidId }: { raidId: string }) {
         }).catch(() => { if (!controller.signal.aborted) setStatus('Could not load wake diagnostics. Reload to retry.') })
         return () => controller.abort()
     }, [raidId])
+    const displayWakes = useMemo(() => {
+        const names = new Map<string, string>()
+        for (const w of wakes || []) {
+            if (w.name) names.set(w.profileId, w.name)
+            if (w.triggerProfileId && w.triggerName) names.set(w.triggerProfileId, w.triggerName)
+        }
+        return (wakes || []).map(w => ({ ...w, displayDetail: displayPlayerNamesInText(w.detail,
+            [w.name, w.triggerName, names.get(w.memberProfileId)]) }))
+    }, [wakes])
     const filtered = useMemo(() => {
         const query = filter.trim().toLocaleLowerCase()
-        return (wakes || []).filter(w => `${w.name} ${displayPlayerName(w.name, '')} ${w.profileId} ${w.triggerName} ${displayPlayerName(w.triggerName, '')} ${w.triggerProfileId} ${w.cause} ${wakeCauseLabels[w.cause] || ''}`.toLocaleLowerCase().includes(query))
-    }, [wakes, filter])
+        return displayWakes.filter(w => `${w.name} ${displayPlayerName(w.name, '')} ${w.profileId} ${w.triggerName} ${displayPlayerName(w.triggerName, '')} ${w.triggerProfileId} ${w.cause} ${wakeCauseLabels[w.cause] || ''} ${w.detail} ${w.displayDetail}`.toLocaleLowerCase().includes(query))
+    }, [displayWakes, filter])
     const pages = Math.max(1, Math.ceil(filtered.length / 50))
     const currentPage = Math.min(page, pages - 1)
     return <details className="mb-4 text-eft" style={{ border: '1px solid #514a3b', borderRadius: 5, padding: 12 }}>
@@ -40,7 +49,7 @@ export default function GhostWakeDiagnostics({ raidId }: { raidId: string }) {
                     <td style={{ padding: 6 }}>{wakeCauseLabels[w.cause] || w.cause}</td>
                     <td title={w.triggerProfileId} style={{ padding: 6 }}>{displayPlayerName(w.triggerName, w.triggerProfileId || 'Not recorded')}</td>
                     <td style={{ padding: 6 }}>{w.distance >= 0 ? `${w.distance.toFixed(1)} m` : 'N/A'}</td>
-                    <td title={w.memberProfileId ? `Triggering member: ${w.memberProfileId}` : ''} style={{ padding: 6 }}>{w.detail}</td>
+                    <td title={w.memberProfileId ? `Triggering member: ${w.memberProfileId}` : ''} style={{ padding: 6 }}>{w.displayDetail}</td>
                 </tr>)}</tbody>
             </table></div>
             {filtered.length === 0 && <p>No matching wakes.</p>}

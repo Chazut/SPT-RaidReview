@@ -37,3 +37,15 @@ export function displayPlayerName(name: string | null | undefined, fallback = 'U
     cache.set(name, result)
     return result
 }
+
+/** Use the same full-name translations inside diagnostics, then transliterate any unrecorded names. */
+export function displayPlayerNamesInText(text: string, names: (string | undefined)[]): string {
+    const clean = stripUnityRichText(text)
+    const candidates = [...new Set(names.filter((name): name is string => !!name).map(stripUnityRichText))]
+        .filter(name => name && cyrillic.test(name)).sort((a, b) => b.length - a.length)
+    if (!candidates.length) return displayPlayerName(clean, '')
+
+    const escaped = candidates.map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    const pattern = new RegExp(`(?<![\\p{L}\\p{M}\\p{N}_])(?:${escaped.join('|')})(?![\\p{L}\\p{M}\\p{N}_])`, 'gu')
+    return displayPlayerName(clean.replace(pattern, name => displayPlayerName(name)), '')
+}

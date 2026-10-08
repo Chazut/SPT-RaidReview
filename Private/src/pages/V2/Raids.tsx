@@ -8,6 +8,15 @@ import { getLocationLabel } from '../../helpers/locations';
 import './Raids.css'
 import { msToHMS } from '../../helpers';
 
+const raidDateFormatter = new Intl.DateTimeFormat(undefined, {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+});
+
+function formatRaidDate(time: string) {
+    const date = new Date(time);
+    return time && Number.isFinite(date.getTime()) ? raidDateFormatter.format(date) : 'Unknown';
+}
+
 export async function loader() {
     let raids = await api.getRaids([]);
     let profiles = await api.getProfiles();
@@ -44,7 +53,7 @@ export default function Raids() {
                         <th className="text-left px-2">Map</th>
                         <th className="text-left px-2">Status</th>
                         <th className="text-left px-2">Time In Raid</th>
-                        <th className="text-left px-2">Time</th>
+                        <th className="text-left px-2">Date &amp; time</th>
                         <th className="text-left px-2">Action</th>
                     </tr>
                 </thead>
@@ -57,7 +66,7 @@ export default function Raids() {
                             <td className="text-left p-2">{ getLocationLabel(r.location, r.locationVariant) }</td>
                             <td className="text-left p-2">{ r.exitStatus }</td>
                             <td className="text-left p-2">{ msToHMS(Number(r.timeInRaid)) }</td>
-                            <td className="text-left p-2">{ new Intl.DateTimeFormat('en-US', { weekday: 'long', hour: '2-digit', minute : '2-digit' }).format(new Date(r.time)) }</td>
+                            <td className="text-left p-2">{ formatRaidDate(r.time) }</td>
                             <td className="text-left p-2 underline">
                                 <Link to={`/raid/${r.raidId}`}>View</Link>
                             </td>

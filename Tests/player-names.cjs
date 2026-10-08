@@ -11,7 +11,7 @@ function load(file) {
     }).outputText, context);
     return context.exports;
 }
-const { displayPlayerName: name } = load('../Private/src/helpers/playerNames.ts');
+const { displayPlayerName: name, displayPlayerNamesInText: detail } = load('../Private/src/helpers/playerNames.ts');
 const cases = [
     ['Санитар', 'Sanitar'], ['Дед Мороз', 'Santa Claus'], ['Партизан', 'Partizan'],
     ['Журавлёв Тестовый', 'Zhuravlyov Testovyy'], ['ЮЛИЯ-ЩУКА_42', 'YULIYA-SHCHUKA_42'],
@@ -33,3 +33,18 @@ for (let i = 0; i < 2050; i++) name('Журавлёв_' + i);
 assert.equal(name(recorded.name), 'Zhuravlyov Testovyy');
 assert.equal(name(null, 'No trigger'), 'No trigger');
 console.log(`${cases.length + 6} player-name checks passed`);
+
+// Free-form wake details must agree with the name columns, including dictionary names
+// whose established English spelling differs from a literal transliteration.
+const detailCases = [
+    ['awake bot Протасий Серый near Русик Фургон', ['Протасий Серый', 'Русик Фургон'], 'awake bot Protasiy Seryy near Rusik Furgon'],
+    ['awake bot Дед Мороз near Даймон Светлоозерский', ['Дед Мороз', 'Даймон Светлоозерский'], 'awake bot Santa Claus near Dimon Svetloozerskiy'],
+    ['awake bot <b>Дед Мороз</b> near Журавлёв Тестовый', ['<b>Дед Мороз</b>'], 'awake bot Santa Claus near Zhuravlyov Testovyy'],
+    ['awake bot Бот[1]+ near Бот[1]+', ['Бот[1]+'], 'awake bot Bot[1]+ near Bot[1]+'],
+    ['awake bot Дед Морозов near Дед Мороз', ['Дед Мороз'], 'awake bot Ded Morozov near Santa Claus'],
+    ['awake bot Даймон Светлоозерский near Даймон', ['Даймон', 'Даймон Светлоозерский'], 'awake bot Dimon Svetloozerskiy near Daymon'],
+    ['human at 199m; profile-id 01234567', [undefined], 'human at 199m; profile-id 01234567'],
+    ['', [], ''],
+];
+for (const [text, names, expected] of detailCases) assert.equal(detail(text, names), expected, text);
+console.log(`${detailCases.length} Ghost-detail name checks passed`);
