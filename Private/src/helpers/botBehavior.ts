@@ -91,6 +91,10 @@ const DECISION_TO_CATEGORY: Record<string, string> = {
     '9004': 'combat',       // SAIN CombatSoloLayer
 }
 
+// Recorded operation names distinguish extraction prerequisites from loot-only runs,
+// including older raids whose multi-step decisions have no separate purpose field.
+const EXTRACTION_OPERATIONS = new Set(['D-2', 'Bunker Hermetic Door', 'ZB-013', 'Saferoom extraction'])
+
 export function getBehaviorCategory(decision: string | undefined | null): BehaviorCategory {
     if (!decision || decision === '') return BEHAVIOR_CATEGORIES.idle
     if (decision.startsWith('QB:')) return BEHAVIOR_CATEGORIES.quest
@@ -107,6 +111,8 @@ export function getBehaviorCategory(decision: string | undefined | null): Behavi
     if (decision.startsWith('Orbit:')) {
         // ORBIT objective category → behavior category
         const cat = decision.substring(6)
+        const operation = /^MultiStep:\s+(.+?)\s+\(\d+\/\d+\)/.exec(cat)?.[1]
+        if (operation && EXTRACTION_OPERATIONS.has(operation)) return BEHAVIOR_CATEGORIES.extract
         if (cat.includes('Ambush')) return BEHAVIOR_CATEGORIES.ambush
         if (cat === 'AirdropLoot') return BEHAVIOR_CATEGORIES.loot
         if (cat === 'ContainerLoot' || cat === 'LooseLoot' || cat === 'Corpse') return BEHAVIOR_CATEGORIES.loot
