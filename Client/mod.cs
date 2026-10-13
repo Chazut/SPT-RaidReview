@@ -1093,6 +1093,8 @@ namespace RAID_REVIEW
                                                     decision = "Orbit:" + (od.status == "Finished" ? "Camping" : "Approaching") + od.category;
                                                 else if (od.status == "Moving" || od.status == "Looting")
                                                     decision = "Orbit:" + od.category;
+                                                else if (od.status == "Finished" && od.category == "SquadCover")
+                                                    decision = "Orbit:SquadCover";
                                                 else if (od.status == "Finished")
                                                     decision = "Orbit:Guarding";
                                             }

@@ -12,6 +12,7 @@ export const BEHAVIOR_CATEGORIES: Record<string, BehaviorCategory> = {
     patrol:   { key: 'patrol',   label: 'Patrol',   color: '#22C55E' },
     orbit:    { key: 'orbit',    label: 'Orbiting', color: '#22C55E' },
     guard:    { key: 'guard',    label: 'Guarding', color: '#15803D' },
+    squadCover: { key: 'squadCover', label: 'Waiting in cover', color: '#F97316' },
     ambush:   { key: 'ambush', label: 'Ambush', color: '#F97316' },
     medical:  { key: 'medical',  label: 'Medical',  color: '#EC4899' },
     loot:     { key: 'loot',     label: 'Loot',     color: '#FACC15' },
@@ -120,6 +121,7 @@ export function getBehaviorCategory(decision: string | undefined | null): Behavi
         if (cat === 'Exfil') return BEHAVIOR_CATEGORIES.extract
         if (cat === 'Synthetic') return BEHAVIOR_CATEGORIES.orbit
         if (cat === 'Guarding') return BEHAVIOR_CATEGORIES.guard
+        if (cat === 'SquadCover') return BEHAVIOR_CATEGORIES.squadCover
         return BEHAVIOR_CATEGORIES.movement
     }
     const cleanDecision = decision.startsWith('SAIN:') ? decision.substring(5) : decision
@@ -131,6 +133,7 @@ export function getBehaviorCategory(decision: string | undefined | null): Behavi
 // the raw enum name (e.g. "ContainerLoot") to a human label. Anything not
 // listed falls through to the generic camelCase splitter.
 const OBJECTIVE_CATEGORY_LABELS: Record<string, string> = {
+    SquadCover: 'Waiting in cover for squadmate',
     AirdropLoot: 'Looting airdrop',
     AmbushHotspot: 'Ambush at hotspot',
     AmbushExtract: 'Ambush at extract',

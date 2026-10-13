@@ -1,0 +1,20 @@
+const fs = require('fs'), vm = require('vm'), assert = require('node:assert/strict');
+const ts = require('../Private/node_modules/typescript');
+const context = { exports: {} };
+const source = fs.readFileSync('Private/src/helpers/botBehavior.ts', 'utf8');
+vm.runInNewContext(ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText, context);
+const h = context.exports;
+let checks=0;
+function equal(a,b){assert.equal(a,b);checks++;}
+equal(h.getBehaviorCategory('Orbit:SquadCover').color, '#F97316');
+equal(h.getBehaviorCategory('Orbit:SquadCover').label, 'Waiting in cover');
+equal(h.formatDecisionLabel('Orbit:SquadCover'), 'Waiting in cover for squadmate');
+equal(h.getDecisionSource('Orbit:SquadCover'), 'ORBIT');
+equal(h.getBehaviorCategory('Orbit:Guarding').key, 'guard');
+equal(h.getBehaviorCategory('Orbit:Synthetic').key, 'orbit');
+equal(h.getBehaviorCategory('Orbit:Corpse').key, 'loot');
+equal(h.getBehaviorCategory('SAIN:StandAndShoot').key, 'combat');
+equal(h.getBehaviorCategory('Orbit:MultiStep: D-2 (1/4) Bunker power').key, 'extract');
+equal(h.getBehaviorCategory('Orbit:CampingAmbushExtract').key, 'ambush');
+equal(h.getBehaviorCategory(undefined).key, 'idle');
+console.log(`Squad cover replay: ${checks} checks passed.`);
