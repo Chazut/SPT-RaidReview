@@ -7,7 +7,7 @@
 		<AssemblyDescription>A post raid review tool for SPT</AssemblyDescription>
 		<AssemblyCompany>EkkyLLC</AssemblyCompany>
 		<AssemblyProduct>RAID_REVIEW</AssemblyProduct>
-		<Version>1.9.0-rc.3</Version>
+		<Version>1.9.0-rc.4</Version>
 		<AssemblyVersion>1.9.0</AssemblyVersion>
 		<Copyright>2024 © Ekky</Copyright>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
