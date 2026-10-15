@@ -166,10 +166,20 @@ if (mode == "other-first")
     dynamic files = Create("FileSystem.DataFileService");
     files.Initialize(data);
     dynamic sessions = Create("Session.SessionManager", logger, config);
-    dynamic items = Create("PostRaid.ItemResolver", folder, logger);
+    var webRoot = Path.Combine(folder, "web-fixture");
+    var webMod = Path.Combine(webRoot, "user", "mods", "RR");
+    var profiles = Path.Combine(webRoot, "user", "profiles");
+    Directory.CreateDirectory(webMod);
+    Directory.CreateDirectory(profiles);
+    File.WriteAllText(Path.Combine(profiles, "headless.json"), JsonSerializer.Serialize(new {
+        info = new { id = "sqlite-test", username = "Headless_0123456789abcdef01234567" }
+    }));
+    var liveLocale = new Dictionary<string, string>();
+    Func<IReadOnlyDictionary<string, string>> localeProvider = () => liveLocale;
+    dynamic items = Create("PostRaid.ItemResolver", webMod, logger, localeProvider);
     dynamic handler = Create("WebSocket.WsPacketHandler", reopened, sessions, files, logger, items);
     dynamic compiler = Create("PostRaid.RaidPositionCompiler", files, logger);
-    dynamic web = Create("Http.RaidReviewWebServer", config, reopened, files, logger, handler, compiler, folder);
+    dynamic web = Create("Http.RaidReviewWebServer", config, reopened, files, logger, handler, compiler, webMod, items);
     await web.StartAsync();
     var app = (WebApplication)web.GetType().GetField("_app", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(web);
     try
@@ -193,6 +203,48 @@ if (mode == "other-first")
             await Task.Delay(50);
         }
         Check(raids.Contains("bigmap"), "WebSocket START persists to private SQLite and is readable through HTTP");
+        using var listed = JsonDocument.Parse(await http.GetStringAsync("/api/raids"));
+        var raidId = listed.RootElement[0].GetProperty("raidId").GetString()!;
+        await reopened.ExecuteAsync("INSERT INTO player (raidId,profileId,level,team,name,\"group\",spawnTime,type) VALUES ($id,'human',40,'Usec','Chazut',0,0,'HUMAN')", P(("$id", raidId)));
+        await reopened.ExecuteAsync("INSERT INTO looting (raidId,profileId,time,qty,itemId,itemName,added,templateId) VALUES ($id,'human','10','1','event-item','','true','mod-item')", P(("$id", raidId)));
+        await reopened.ExecuteAsync("INSERT INTO player_inventory (raidId,profileId,templateId,itemName) VALUES ($id,'human','mod-item','undefined')", P(("$id", raidId)));
+        await reopened.ExecuteAsync("INSERT INTO loose_loot (raidId,templateId,itemName,x,y,z,inContainer,containerTemplateId) VALUES ($id,'mod-item','',0,0,0,1,'duffle-template')", P(("$id", raidId)));
+        // Mods can populate locale entries after RR initialization.
+        liveLocale["mod-item ShortName"] = "Modded item";
+        liveLocale["duffle-template Name"] = "Duffle bag";
+        using var friendly = JsonDocument.Parse(await http.GetStringAsync("/api/raids"));
+        Check(friendly.RootElement[0].GetProperty("profileName").GetString() == "Chazut (headless)", "Recent raids expose a readable headless label");
+        using var detail = JsonDocument.Parse(await http.GetStringAsync("/api/raids/" + raidId));
+        Check(detail.RootElement.GetProperty("isHeadless").GetBoolean(), "Detail identifies headless recordings for legacy status handling");
+        Check(detail.RootElement.GetProperty("profileId").GetString() == "sqlite-test", "API retains actual recording identity");
+        foreach (var key in new[] { "looting", "player_inventory" })
+            Check(detail.RootElement.GetProperty(key)[0].GetProperty("itemName").GetString() == "Modded item", "Historical " + key + " names resolved through HTTP");
+        using var ground = JsonDocument.Parse(await http.GetStringAsync("/api/raids/" + raidId + "/loose_loot"));
+        Check(ground.RootElement[0].GetProperty("itemName").GetString() == "Modded item", "Historical ground loot names resolved through HTTP");
+        Check(ground.RootElement[0].GetProperty("containerName").GetString() == "Duffle bag", "Container name resolves from the saved root template at read time");
+        var containerPacket = JsonSerializer.Serialize(new { Action = "LOOSE_LOOT", Payload = JsonSerializer.Serialize(new {
+            sessionId = "sqlite-test", items = new object[] {
+                new { itemId="new-container-item", templateId="mod-item", itemName="", qty=1, x=1, y=2, z=3, inContainer=true, containerName="", containerTemplateId="duffle-template" },
+                new { itemId="legacy-container-item", templateId="mod-item", itemName="", qty=1, x=2, y=2, z=3, inContainer=true, containerName="Toolbox" },
+                new { itemId="legacy-unknown-item", templateId="mod-item", itemName="", qty=1, x=3, y=2, z=3, inContainer=true, containerName="" },
+                new { itemId="ground-item", templateId="mod-item", itemName="", qty=1, x=4, y=2, z=3, inContainer=false, containerName="" }
+            }
+        }) });
+        await ws.SendAsync(Encoding.UTF8.GetBytes(containerPacket), WebSocketMessageType.Text, true, timeout.Token);
+        List<Dictionary<string,object?>> captured = new();
+        for (int attempt = 0; attempt < 50; attempt++) {
+            captured = (List<Dictionary<string,object?>>)await reopened.QueryAsync("SELECT * FROM loose_loot WHERE raidId=$id", P(("$id", raidId)));
+            if (captured.Count == 5) break;
+            await Task.Delay(50);
+        }
+        Check(captured.Count == 5, "New and old container packets persist through WebSocket after migration");
+        var newContainer = captured.Single(row => (string?)row["itemId"] == "new-container-item");
+        Check((string?)newContainer["containerName"] == "Duffle bag" && (string?)newContainer["containerTemplateId"] == "duffle-template", "Ingest resolves and retains the container root independently from its contents");
+        Check((string?)captured.Single(row => (string?)row["itemId"] == "legacy-container-item")["containerName"] == "Toolbox", "Legacy named containers stay compatible");
+        Check((string?)captured.Single(row => (string?)row["itemId"] == "legacy-unknown-item")["containerName"] == "Container", "Legacy unnamed containers stay generic");
+        Check((string?)captured.Single(row => (string?)row["itemId"] == "ground-item")["containerName"] == "", "Ground loot remains separate from containers");
+        var stored = (Dictionary<string, object?>)await reopened.QuerySingleAsync("SELECT itemName FROM looting WHERE raidId=$id", P(("$id", raidId)));
+        Check((string)stored["itemName"]! == "", "Presentation does not rewrite recorded evidence");
         await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "test finished", timeout.Token);
         Check(errors.Count == 0, "No HTTP or WebSocket processing errors");
     }
@@ -214,6 +266,10 @@ if (args.Length > 4)
     await again.InitializeAsync(historicalData, log);
     var after = (List<Dictionary<string, object?>>)await again.QueryAsync("select raidId, location from raid order by id", P());
     Check(before.Select(r => r["raidId"]).SequenceEqual(after.Select(r => r["raidId"])), "Migrations preserve historical raids on repeated initialization");
+    var lootColumns = (List<Dictionary<string, object?>>)await again.QueryAsync("pragma table_info(loose_loot)", P());
+    Check(lootColumns.Count(row => (string?)row["name"] == "containerTemplateId") == 1, "Container root migration is idempotent on existing history");
+    var oldRoots = (Dictionary<string, object?>)await again.QuerySingleAsync("SELECT COUNT(*) n FROM loose_loot WHERE containerTemplateId <> ''", P());
+    Check((long)oldRoots["n"]! == 0, "Migration never fabricates root IDs for legacy recordings");
     Check((string)((Dictionary<string, object?>)await again.QuerySingleAsync("pragma integrity_check", P()))["integrity_check"]! == "ok", "Historical database integrity");
     Console.WriteLine($"Historical snapshot: {before.Count} raids, last location={before.Last()["location"]}");
     again.Dispose();

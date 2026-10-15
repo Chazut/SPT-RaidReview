@@ -86,5 +86,7 @@ namespace RaidReview.Session
 }
 namespace RaidReview.PostRaid
 {
-    public class ItemResolver { public string ResolveShortName(string id)=>id; public int ResolvePrice(string id)=>1; }
+    public class ItemResolver { public string ResolveShortName(string id)=>id; public int ResolvePrice(string id)=>1;
+        public string ResolveName(string name,string id)=>string.IsNullOrWhiteSpace(name)?id:name;
+        public string ResolveContainerName(string name,string id)=>string.IsNullOrWhiteSpace(name)?id:name; }
 }

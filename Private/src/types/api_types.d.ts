@@ -1,5 +1,7 @@
 
 export interface TrackingCoreDataRaids {
+  profileName?: string;
+  isHeadless?: boolean;
   id: string;
   raidId: string;
   playerId: string;
@@ -71,6 +73,8 @@ export interface TrackingOrbitGhostHearing {
 }
 
 export interface TrackingRaidData {
+  profileName?: string;
+  isHeadless?: boolean;
   detectedMods: any;
   positionsTracked: string;
   id: string;

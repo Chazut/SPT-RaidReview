@@ -580,6 +580,9 @@ public class DatabaseService : IDisposable
             ("add_location_variant_to_raid", @"
                 ALTER TABLE raid ADD COLUMN ""locationVariant"" TEXT NOT NULL DEFAULT '';
             "),
+            ("add_loose_loot_container_template", @"
+                ALTER TABLE loose_loot ADD COLUMN ""containerTemplateId"" TEXT NOT NULL DEFAULT '';
+            "),
         };
 
         foreach (var (name, sql) in migrations)

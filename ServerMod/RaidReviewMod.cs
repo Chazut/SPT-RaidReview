@@ -17,10 +17,13 @@ namespace RaidReview;
 public class RaidReviewMod : IOnLoad
 {
     private readonly ISptLogger<RaidReviewMod> _sptLogger;
+    private readonly SPTarkov.Server.Core.Services.Locales.LocaleService _localeService;
 
-    public RaidReviewMod(ISptLogger<RaidReviewMod> sptLogger)
+    public RaidReviewMod(ISptLogger<RaidReviewMod> sptLogger,
+        SPTarkov.Server.Core.Services.Locales.LocaleService localeService)
     {
         _sptLogger = sptLogger;
+        _localeService = localeService;
     }
 
     public async Task OnLoadAsync(CancellationToken cancellationToken)
@@ -100,7 +103,7 @@ public class RaidReviewMod : IOnLoad
         }
 
         // Item resolver (handbook prices + localized name fallback for headless)
-        var itemResolver = new ItemResolver(modFolder, logger);
+        var itemResolver = new ItemResolver(modFolder, logger, () => _localeService.GetLocaleDb("en"));
         itemResolver.Initialize();
 
         // WebSocket packet handler
@@ -118,7 +121,7 @@ public class RaidReviewMod : IOnLoad
         }
 
         // Start the web server (HTTP + WebSocket) on background thread
-        var webServer = new RaidReviewWebServer(config, db, fileService, logger, wsHandler, compiler, modFolder);
+        var webServer = new RaidReviewWebServer(config, db, fileService, logger, wsHandler, compiler, modFolder, itemResolver);
         _ = Task.Run(async () =>
         {
             try

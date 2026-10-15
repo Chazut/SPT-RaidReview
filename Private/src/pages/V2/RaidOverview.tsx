@@ -12,7 +12,7 @@ import { getLocationLabel } from '../../helpers/locations';
 import { getFactionRole, resolveBotType, isRaiderHunter } from "../../helpers/players";
 import { getIsbDisplayName } from '../../helpers/isb';
 import { displayPlayerName } from '../../helpers/playerNames';
-import { finalPlayerStatuses } from '../../helpers/playerStatuses';
+import { finalPlayerStatuses, peakActiveBots } from '../../helpers/playerStatuses';
 
 const FACTION_COLORS: Record<string, { color: string, label: string }> = {
     'BOSS':        { color: '#FF0000', label: 'Boss' },
@@ -264,7 +264,7 @@ export default function RaidOverview() {
 
       newRaidSummary.push({
         title: 'Peak Active Bots',
-        value: raid.player_status ? _.maxBy(_.chain(raid.player_status).filter(p => p.status === 'Alive').groupBy('time').values().value(), 'length')?.length : '?'
+        value: peakActiveBots(raid.player_status, raid.players?.filter(p => p.type === 'HUMAN').map(p => p.profileId))
       });
 
       newRaidSummary.push({
@@ -414,7 +414,7 @@ export default function RaidOverview() {
           ? raid.kills?.find(k => k.killedId === selectedProfileId)?.profileId
           : null;
 
-        const statusByProfile = finalPlayerStatuses(raid.player_status);
+        const statusByProfile = finalPlayerStatuses(raid.player_status, raid.isHeadless ? Number(raid.timeInRaid) : undefined);
         const mainExtracted = /^(Survived|Runner)$/i.test(raid.exitStatus || '');
 
         return groupedBy.map((gp, groupIndex) => {

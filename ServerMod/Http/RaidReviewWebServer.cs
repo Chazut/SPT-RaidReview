@@ -28,6 +28,7 @@ public class RaidReviewWebServer
     private readonly WsPacketHandler _wsHandler;
     private readonly RaidPositionCompiler _compiler;
     private readonly string _modFolder;
+    private readonly ItemResolver? _itemResolver;
     private WebApplication? _app;
     private readonly HashSet<string> _raidsToProcess = new();
     private byte[]? _cachedLocaleJson;
@@ -107,7 +108,8 @@ public class RaidReviewWebServer
         RaidReviewLogger logger,
         WsPacketHandler wsHandler,
         RaidPositionCompiler compiler,
-        string modFolder)
+        string modFolder,
+        ItemResolver? itemResolver = null)
     {
         _config = config;
         _db = db;
@@ -116,6 +118,27 @@ public class RaidReviewWebServer
         _wsHandler = wsHandler;
         _compiler = compiler;
         _modFolder = modFolder;
+        _itemResolver = itemResolver;
+    }
+
+    private async Task<Dictionary<string, string>> ReadProfileNames()
+    {
+        var directory = Path.GetFullPath(Path.Combine(_modFolder, "..", "..", "..", "user", "profiles"));
+        var names = new Dictionary<string, string>();
+        if (!Directory.Exists(directory)) return names;
+        foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
+        {
+            try
+            {
+                using var profile = JsonDocument.Parse(await File.ReadAllTextAsync(path));
+                if (profile.RootElement.TryGetProperty("info", out var info)
+                    && info.TryGetProperty("id", out var id) && info.TryGetProperty("username", out var username))
+                    names[id.GetString() ?? ""] = username.GetString() ?? "";
+            }
+            catch (IOException) { }
+            catch (JsonException) { }
+        }
+        return names;
     }
 
     public async Task StartAsync()
@@ -351,6 +374,12 @@ public class RaidReviewWebServer
 
             var sql = $"SELECT * FROM raid WHERE {(profileFilter != null ? profileFilter + " AND" : "")} timeInRaid > 10 ORDER BY id DESC";
             var data = await _db.QueryAsync(sql);
+            var usernames = await ReadProfileNames();
+            var humans = await _db.QueryAsync("SELECT raidId, name FROM player WHERE type = 'HUMAN'");
+            var humansByRaid = humans.ToLookup(p => p["raidId"]?.ToString() ?? "", p => p["name"]?.ToString() ?? "");
+            foreach (var row in data)
+                RecordingIdentity.Apply(row, usernames.GetValueOrDefault(row["profileId"]?.ToString() ?? ""),
+                    humansByRaid[row["raidId"]?.ToString() ?? ""]);
             await context.Response.WriteAsJsonAsync(data);
         });
 
@@ -383,6 +412,12 @@ public class RaidReviewWebServer
                 var result = raids.Count > 0
                     ? new Dictionary<string, object?>(raids[0])
                     : new Dictionary<string, object?>();
+                var usernames = await ReadProfileNames();
+                RecordingIdentity.Apply(result, usernames.GetValueOrDefault(result.GetValueOrDefault("profileId")?.ToString() ?? ""),
+                    players.Where(p => p.GetValueOrDefault("type")?.ToString() == "HUMAN")
+                        .Select(p => p.GetValueOrDefault("name")?.ToString() ?? ""));
+                _itemResolver?.ResolveRows(looting);
+                _itemResolver?.ResolveRows(playerInventory);
                 result["kills"] = kills;
                 result["looting"] = looting;
                 result["players"] = players;
@@ -424,6 +459,7 @@ public class RaidReviewWebServer
             try
             {
                 var data = await _db.QueryAsync("SELECT * FROM loose_loot WHERE raidId = $id", ("$id", raidId));
+                _itemResolver?.ResolveRows(data);
                 await context.Response.WriteAsJsonAsync(data);
             }
             catch (Exception ex)

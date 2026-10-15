@@ -22,6 +22,9 @@ class Program
 
     static async Task Main()
     {
+        var container = new TrackingLooseLootItem { templateId = "contents", containerTemplateId = "root-template", inContainer = true };
+        Check(JObject.Parse(JsonConvert.SerializeObject(container)).Value<string>("containerTemplateId") == "root-template", "container root template survives the client wire model");
+        Check(JsonConvert.DeserializeObject<TrackingLooseLootItem>("{\"inContainer\":true}")!.containerTemplateId == "", "old loose-loot payloads default to missing container metadata");
         var camp = new TrackingOrbitMainObjective { type = "ExtractCamp", campUntilTimeExtract = true, campElapsed = 1900 };
         var campJson = JObject.Parse(JsonConvert.SerializeObject(camp));
         Check(campJson.Value<bool>("campUntilTimeExtract") && campJson.Value<float>("campElapsed") == 1900,
@@ -99,6 +102,24 @@ class Program
         var replacement=new EFT.Player {ProfileId="ghost"};RecordingRoster.Add(replacement);RecordingRoster.Depart(alive);
         Check(RecordingRoster.Observe(replacement),"late removal cannot retire replacement");
         RecordingRoster.Reset();Check(RecordingRoster.Snapshot().Count==0,"raid teardown releases players");
+
+        // Headless END occurs after the world and its health controllers are gone.
+        RecordingRoster.Reset(); Telemetry.Packets.Clear();
+        var survivor = new EFT.Player { ProfileId = "headless-survivor" };
+        RecordingRoster.Add(survivor); RecordingRoster.Observe(survivor);
+        survivor.HealthController = null;
+        RecordingRoster.Depart(survivor);
+        RecordingRoster.Finish(false);
+        Check(Telemetry.Packets.Count == 1 && ((TrackingPlayerDeadOrUnspawned)Telemetry.Packets[0].Payload).status == PlayerStatus.Alive,
+            "destroyed headless world cannot turn the last living state into removal");
+        RecordingRoster.Reset(); Telemetry.Packets.Clear();
+        var finalDeath = new EFT.Player { ProfileId = "final-death", KillerId = "killer" };
+        RecordingRoster.Add(finalDeath); RecordingRoster.Observe(finalDeath);
+        finalDeath.HealthController.IsAlive = false;
+        RecordingRoster.Finish(true);
+        Check(((TrackingPlayerDeadOrUnspawned)Telemetry.Packets.Last().Payload).status == PlayerStatus.Dead,
+            "intact world still captures a final death");
+        RecordingRoster.Reset();
 
         await ServerCompatibility();
         Console.WriteLine($"PASS {checks} recording pipeline checks");

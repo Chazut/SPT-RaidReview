@@ -14,11 +14,14 @@ public class ItemResolver
     private bool _initialized;
     private readonly string _modFolder;
     private readonly RaidReviewLogger _logger;
+    private readonly Func<IReadOnlyDictionary<string, string>>? _runtimeLocales;
 
-    public ItemResolver(string modFolder, RaidReviewLogger logger)
+    public ItemResolver(string modFolder, RaidReviewLogger logger,
+        Func<IReadOnlyDictionary<string, string>>? runtimeLocales = null)
     {
         _modFolder = modFolder;
         _logger = logger;
+        _runtimeLocales = runtimeLocales;
     }
 
     public void Initialize()
@@ -84,7 +87,57 @@ public class ItemResolver
     public string ResolveShortName(string templateId)
     {
         if (string.IsNullOrEmpty(templateId)) return "";
+        // Query the live locale after mods have loaded; disk JSON contains only base items.
+        var locales = _runtimeLocales?.Invoke();
+        if (locales != null)
+        {
+            foreach (var suffix in new[] { " ShortName", " Name" })
+                if (locales.TryGetValue(templateId + suffix, out var name) && HasName(name))
+                    return name;
+        }
         return _shortNames.TryGetValue(templateId, out var n) ? n : "";
+    }
+
+    public static bool HasName(string? name) => !string.IsNullOrWhiteSpace(name)
+        && !string.Equals(name.Trim(), "undefined", StringComparison.OrdinalIgnoreCase)
+        && !string.Equals(name.Trim(), "null", StringComparison.OrdinalIgnoreCase);
+
+    public string ResolveName(string? name, string? templateId)
+    {
+        if (HasName(name)) return name!;
+        var resolved = ResolveShortName(templateId ?? "");
+        if (HasName(resolved)) return resolved;
+        return string.IsNullOrWhiteSpace(templateId) ? "Unknown item" : $"Unknown item ({templateId})";
+    }
+
+    public string ResolveContainerName(string? name, string? containerTemplateId)
+    {
+        if (HasName(name) && !string.Equals(name!.Trim(), "Container", StringComparison.OrdinalIgnoreCase)) return name;
+        if (!string.IsNullOrWhiteSpace(containerTemplateId))
+        {
+            var locales = _runtimeLocales?.Invoke();
+            if (locales != null && locales.TryGetValue(containerTemplateId + " Name", out var fullName) && HasName(fullName))
+                return fullName;
+            var resolved = ResolveShortName(containerTemplateId);
+            if (HasName(resolved)) return resolved;
+        }
+        // Older recordings did not keep this ID. Never infer a container from its contents.
+        return "Container";
+    }
+
+    // Resolve historical recordings at read time without rewriting the saved evidence.
+    public void ResolveRows(IEnumerable<Dictionary<string, object?>> rows)
+    {
+        foreach (var row in rows)
+        {
+            var name = row.GetValueOrDefault("itemName")?.ToString();
+            if (!HasName(name))
+                row["itemName"] = ResolveName(name, row.GetValueOrDefault("templateId")?.ToString());
+            var inContainer = row.GetValueOrDefault("inContainer")?.ToString();
+            if (inContainer == "1" || string.Equals(inContainer, "true", StringComparison.OrdinalIgnoreCase))
+                row["containerName"] = ResolveContainerName(row.GetValueOrDefault("containerName")?.ToString(),
+                    row.GetValueOrDefault("containerTemplateId")?.ToString());
+        }
     }
 
     /// <summary>

@@ -672,7 +672,8 @@ namespace RAID_REVIEW
                                             qty = contained.StackObjectsCount,
                                             x = pos.x, y = pos.y, z = pos.z,
                                             inContainer = true,
-                                            containerName = cName
+                                            containerName = cName,
+                                            containerTemplateId = rootItem.TemplateId.ToString()
                                         });
                                     }
                                 }
@@ -1213,7 +1214,7 @@ namespace RAID_REVIEW
                 SwitchRecorder.FinishRaid();
                 AirdropFlightRecorder.FinishRaid();
                 RAID_REVIEW_Player_OnItemAddedOrRemovedPatch.FlushPending(true);
-                RecordingRoster.Finish();
+                RecordingRoster.Finish(MapLoaded());
                 stopwatch.Stop();
                 trackingRaid.exitName = exitName;
                 trackingRaid.exitStatus = exitStatus;

@@ -68,8 +68,11 @@ namespace RAID_REVIEW
                 time = RAID_REVIEW.stopwatch.ElapsedMilliseconds, status = state
             });
         }
-        internal static void Finish()
+        internal static void Finish(bool worldAvailable = true)
         {
+            // Once the headless world is gone, disposed health controllers and Unity
+            // references are not evidence that every remaining bot left the raid.
+            if (!worldAvailable) return;
             foreach (var player in Snapshot())
             {
                 // Headless teardown can already have disposed individual health controllers.

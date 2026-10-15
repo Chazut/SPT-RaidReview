@@ -315,14 +315,17 @@ public class WsPacketHandler
                                 ("$y", GetString(item, "y")),
                                 ("$z", GetString(item, "z")),
                                 ("$inContainer", item.TryGetProperty("inContainer", out var ic) && ic.GetBoolean() ? "1" : "0"),
-                                ("$containerName", GetString(item, "containerName")),
+                                ("$containerName", item.TryGetProperty("inContainer", out var inContainer) && inContainer.GetBoolean()
+                                    ? StripUnityRichText(_itemResolver.ResolveContainerName(GetString(item, "containerName"), GetString(item, "containerTemplateId")))
+                                    : GetString(item, "containerName")),
+                                ("$containerTemplateId", GetString(item, "containerTemplateId")),
                             });
                         }
                         if (batch.Count > 0)
                         {
                             await _db.ExecuteBatchAsync(
-                                @"INSERT OR IGNORE INTO loose_loot (raidId, itemId, templateId, itemName, price, qty, x, y, z, inContainer, containerName)
-                                  VALUES ($raidId, $itemId, $templateId, $itemName, $price, $qty, $x, $y, $z, $inContainer, $containerName)",
+                                @"INSERT OR IGNORE INTO loose_loot (raidId, itemId, templateId, itemName, price, qty, x, y, z, inContainer, containerName, containerTemplateId)
+                                  VALUES ($raidId, $itemId, $templateId, $itemName, $price, $qty, $x, $y, $z, $inContainer, $containerName, $containerTemplateId)",
                                 batch);
                         }
                     }
@@ -612,10 +615,7 @@ public class WsPacketHandler
     /// </summary>
     private string ResolveItemName(JsonElement el)
     {
-        var name = GetString(el, "itemName");
-        if (!string.IsNullOrEmpty(name)) return StripUnityRichText(name);
-        var templateId = GetString(el, "templateId");
-        return StripUnityRichText(_itemResolver.ResolveShortName(templateId));
+        return StripUnityRichText(_itemResolver.ResolveName(GetString(el, "itemName"), GetString(el, "templateId")));
     }
 
     /// <summary>

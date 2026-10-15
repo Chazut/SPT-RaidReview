@@ -221,6 +221,7 @@ namespace RAID_REVIEW
         public float z { get; set; }
         public bool inContainer { get; set; }
         public string containerName { get; set; }
+        public string containerTemplateId { get; set; } = "";
     }
 
     public class TrackingPlayerInventory
