@@ -121,6 +121,7 @@ class Program
             "intact world still captures a final death");
         RecordingRoster.Reset();
 
+        TerminalStatusTests.Run(Check);
         await ServerCompatibility();
         Console.WriteLine($"PASS {checks} recording pipeline checks");
     }

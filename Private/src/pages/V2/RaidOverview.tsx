@@ -12,7 +12,7 @@ import { getLocationLabel } from '../../helpers/locations';
 import { getFactionRole, resolveBotType, isRaiderHunter } from "../../helpers/players";
 import { getIsbDisplayName } from '../../helpers/isb';
 import { displayPlayerName } from '../../helpers/playerNames';
-import { finalPlayerStatuses, peakActiveBots } from '../../helpers/playerStatuses';
+import { finalPlayerStatuses, peakActiveBots, playerStatusLabel } from '../../helpers/playerStatuses';
 
 const FACTION_COLORS: Record<string, { color: string, label: string }> = {
     'BOSS':        { color: '#FF0000', label: 'Boss' },
@@ -433,7 +433,7 @@ export default function RaidOverview() {
               : lastStatus === 'Dead';
             const isExtracted = isMainPlayer
               ? (!isDead && mainExtracted)
-              : (!isDead && (lastStatus === 'Unspawned' || lastStatus === 'Unknown'));
+              : (!isDead && lastStatus === 'Extracted');
             const badge = getFactionBadge(p, isMainPlayer);
             const stats = calcStats?.get(p.profileId);
             const accuracy = stats?.accuracy || 0;
@@ -479,7 +479,7 @@ export default function RaidOverview() {
                     ? <span className="text-red-500 font-semibold">KIA</span>
                     : isExtracted
                       ? <span className="text-blue-400 font-semibold">Extracted</span>
-                      : <span className="text-green-500 font-semibold">Alive</span>
+                      : <span className={`${lastStatus === 'Alive' || isMainPlayer ? 'text-green-500' : 'text-gray-400'} font-semibold`}>{isMainPlayer ? 'Alive' : playerStatusLabel(lastStatus)}</span>
                   }
                 </td>
                 <td className="text-right p-2 capitalize">{raid.detectedMods?.match(/SAIN/gi) ? SAIN : ''}</td>

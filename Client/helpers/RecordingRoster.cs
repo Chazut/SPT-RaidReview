@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System;
 using System.Reflection;
+using HarmonyLib;
 using EFT;
 using SPT.Reflection.Patching;
 
@@ -11,9 +13,10 @@ namespace RAID_REVIEW
         private static readonly HashSet<string> departed = new HashSet<string>();
         private static readonly Dictionary<string, PlayerStatus> statuses = new Dictionary<string, PlayerStatus>();
         private static readonly List<Player> snapshot = new List<Player>(64);
+        private static readonly Dictionary<string, PlayerStatus> confirmed = new Dictionary<string, PlayerStatus>();
         private static readonly List<string> gone = new List<string>();
 
-        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); snapshot.Clear(); }
+        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); confirmed.Clear(); snapshot.Clear(); }
         internal static void Seed(GameWorld world)
         {
             Reset();
@@ -25,6 +28,12 @@ namespace RAID_REVIEW
             if (player == null) return;
             active[player.ProfileId] = player;
             departed.Remove(player.ProfileId);
+        }
+        internal static void Confirm(Player player, PlayerStatus status)
+        {
+            if (player == null || (status != PlayerStatus.Dead && status != PlayerStatus.Extracted)) return;
+            if (confirmed.TryGetValue(player.ProfileId, out var previous) && previous == PlayerStatus.Dead) return;
+            confirmed[player.ProfileId] = status;
         }
         internal static void Depart(Player player)
         {
@@ -39,7 +48,7 @@ namespace RAID_REVIEW
             snapshot.Clear(); gone.Clear();
             foreach (var entry in active)
             {
-                if (entry.Value == null) { Record(entry.Key, PlayerStatus.Unspawned); gone.Add(entry.Key); }
+                if (entry.Value == null) { Record(entry.Key, confirmed.TryGetValue(entry.Key, out var terminal) ? terminal : PlayerStatus.Unspawned); gone.Add(entry.Key); }
                 else snapshot.Add(entry.Value);
             }
             foreach (var id in gone) { active.Remove(id); departed.Remove(id); }
@@ -48,11 +57,21 @@ namespace RAID_REVIEW
         internal static bool Observe(Player player)
         {
             var id = player.ProfileId;
-            bool alive;
-            try { alive = player.HealthController != null && player.HealthController.IsAlive; }
-            catch { alive = false; }
-            var state = !alive ? (player.KillerId == null ? PlayerStatus.Unspawned : PlayerStatus.Dead)
-                : departed.Contains(id) ? PlayerStatus.Unspawned : PlayerStatus.Alive;
+            PlayerStatus state;
+            if (!confirmed.TryGetValue(id, out state))
+            {
+                // Death does not require a killer: mines, falls and scripted deaths have none.
+                // A disposed/missing controller alone cannot prove a death or an extraction.
+                try
+                {
+                    var health = player.HealthController;
+                    state = health != null && !health.IsAlive ? PlayerStatus.Dead
+                        : departed.Contains(id) ? PlayerStatus.Unspawned
+                        : health == null ? PlayerStatus.Unknown : PlayerStatus.Alive;
+                }
+                catch { state = PlayerStatus.Unknown; }
+                if (state == PlayerStatus.Dead) confirmed[id] = state;
+            }
             Record(id, state);
             if (state == PlayerStatus.Alive) return true;
             active.Remove(id); departed.Remove(id);
@@ -100,4 +119,39 @@ namespace RAID_REVIEW
             if (RAID_REVIEW.CanCapture && iPlayer is Player player) RecordingRoster.Depart(player);
         }
     }
+    internal sealed class RecordingDeathPatch : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod() => AccessTools.Method(typeof(Player), "OnDead", new[] { typeof(EDamageType) });
+        [PatchPrefix]
+        private static void Prefix(Player __instance)
+        {
+            if (RAID_REVIEW.CanCapture) RecordingRoster.Confirm(__instance, PlayerStatus.Dead);
+        }
+    }
+    internal sealed class RecordingExtractPatch : ModulePatch
+    {
+        private static FieldInfo owner;
+        protected override MethodBase GetTargetMethod()
+        {
+            for (var type = typeof(BotLeaveData); type != null && owner == null; type = type.BaseType)
+                foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly))
+                    if (field.FieldType == typeof(BotOwner)) { owner = field; break; }
+            if (owner == null) throw new MissingFieldException("BotLeaveData owner");
+            return typeof(BotLeaveData).GetMethod(nameof(BotLeaveData.RemoveFromMap));
+        }
+        [PatchPrefix]
+        private static void Prefix(BotLeaveData __instance, out Player __state)
+        {
+            __state = null;
+            if (!RAID_REVIEW.CanCapture) return;
+            var player = (owner.GetValue(__instance) as BotOwner)?.GetPlayer;
+            if (player?.HealthController?.IsAlive == true) __state = player;
+        }
+        [PatchPostfix]
+        private static void Postfix(BotLeaveData __instance, Player __state)
+        {
+            if (__state != null && __instance.LeaveComplete) RecordingRoster.Confirm(__state, PlayerStatus.Extracted);
+        }
+    }
+
 }

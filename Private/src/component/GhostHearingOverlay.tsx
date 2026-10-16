@@ -56,7 +56,7 @@ export function GhostHearingOverlay({ raidId, map, ready, time, players, positio
         const end = (id: string, t: number) => result.set(id, Math.min(result.get(id) ?? Infinity, Number(t)))
         for (const kill of kills || []) end(kill.killedId, kill.time)
         for (const status of playerStatuses || [])
-            if (['Dead', 'Unspawned', 'Unknown', '1', '2', '3'].includes(String(status.status))) end(status.profileId, status.time)
+            if (['Dead', 'Unspawned', 'Unknown', 'Extracted', '1', '2', '3', '4'].includes(String(status.status))) end(status.profileId, status.time)
         return result
     }, [kills, playerStatuses])
     const investigations = useMemo(() => enabled ? ghostHearingInvestigations(events, positions, time, endTimes).filter(onFloor) : [],

@@ -742,6 +742,8 @@ namespace RAID_REVIEW
             PerformanceLogging.SettingChanged += (sender, args) => RecordingPerformance.Reset();
             new RecordingRegisterPatch().Enable();
             new RecordingUnregisterPatch().Enable();
+            new RecordingDeathPatch().Enable();
+            new RecordingExtractPatch().Enable();
 
             PlayerTracking = Config.Bind<bool>("Tracking Settings", "Player Tracking", true, "Enables location tracking of players and bots.");
             KillTracking = Config.Bind<bool>("Tracking Settings", "Kill Tracking", true, "Enables location tracking of kills.");

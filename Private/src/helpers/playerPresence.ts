@@ -2,8 +2,8 @@ type Position = { time: number | string }
 type Status = { profileId: string, time: number | string, status: string | number }
 type Kill = { killedId: string, time: number | string }
 
-// A clean extraction ends the position stream without producing a kill. Use the same
-// two-second tail tolerance as the behaviour timeline, and retain historical trails.
+// Bound marker presence by recorded terminal events or a stopped position stream.
+// A stopped stream alone does not establish why the bot left; keep historical trails.
 export function playerEndTimes(positions: Record<string, Position[]>, statuses: Status[] = [], kills: Kill[] = []): Record<string, number> {
     const ends: Record<string, number> = {}
     const lasts: Record<string, number> = {}
@@ -22,7 +22,7 @@ export function playerEndTimes(positions: Record<string, Position[]>, statuses: 
     for (const kill of kills || []) end(kill.killedId, Number(kill.time))
     for (const status of statuses || []) {
         // An early Unknown can precede a valid spawn. Do not erase later recorded life.
-        if (['Dead', 'Unspawned', 'Unknown', '1', '2', '3'].includes(String(status.status))
+        if (['Dead', 'Unspawned', 'Unknown', 'Extracted', '1', '2', '3', '4'].includes(String(status.status))
             && Number(status.time) >= (lasts[status.profileId] ?? 0)) end(status.profileId, Number(status.time))
     }
     for (const [id, last] of Object.entries(lasts)) {

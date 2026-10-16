@@ -5,7 +5,8 @@ namespace EFT
     public enum ExitStatus { Survived, Killed }
     public interface IPlayer { }
     public class Health { public bool IsAlive = true; }
-    public class Player : IPlayer { public string ProfileId, KillerId; public Health HealthController = new(); }
+    public class Player : IPlayer { public string ProfileId, KillerId; public Health HealthController = new(); public void OnDead(EDamageType damage) { HealthController.IsAlive=false; } }
+    public class BotOwner { public Player GetPlayer; }
     public class GameWorld
     {
         public List<Player> AllPlayersEverExisted = new();
@@ -13,6 +14,9 @@ namespace EFT
         public void UnregisterPlayer(IPlayer iPlayer) { }
     }
 }
+public enum EDamageType { Undefined, Landmine, Fall }
+public class LeaveBase { protected EFT.BotOwner bot; public LeaveBase(EFT.BotOwner bot) { this.bot=bot; } }
+public class BotLeaveData : LeaveBase { public bool LeaveComplete; public BotLeaveData(EFT.BotOwner bot):base(bot) { } public void RemoveFromMap() { LeaveComplete=true; } }
 namespace EFT.HealthSystem { public class Unused { } }
 namespace BepInEx { public class Unused { } }
 namespace Comfort.Common { public class Unused { } }

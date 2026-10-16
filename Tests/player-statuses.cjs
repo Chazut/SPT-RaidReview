@@ -5,7 +5,7 @@ const context = { exports: {} };
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(require.resolve('../Private/src/helpers/playerStatuses.ts'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }
 }).outputText, context);
-const { finalPlayerStatuses } = context.exports;
+const { finalPlayerStatuses, playerStatusLabel, peakActiveBots } = context.exports;
 const sample = (profileId, time, status) => ({ profileId, time, status });
 let checks = 0;
 function check(samples, id, expected, message) {
@@ -26,7 +26,7 @@ check([sample('bot', 200, 'Alive'), sample('bot', 100, 'Unknown')], 'bot', 'Aliv
 check([sample('bot', '100', 'Alive'), sample('bot', '200', 'Unspawned')], 'bot', 'Unspawned', 'real removal and string timestamps');
 check([sample('bot', 100, 'Alive'), sample('bot', 200, 'Unknown')], 'bot', 'Unknown', 'preserve legacy terminal status');
 check([sample('bot', 100, 'Alive'), sample('bot', NaN, 'Unspawned')], 'bot', 'Alive', 'invalid timestamp is not removal');
-for (const [value, expected] of [[0, 'Alive'], [1, 'Dead'], [2, 'Unspawned'], [3, 'Unknown']]) {
+for (const [value, expected] of [[0, 'Alive'], [1, 'Dead'], [2, 'Unspawned'], [3, 'Unknown'], [4, 'Extracted']]) {
     check([sample('bot', 100, value)], 'bot', expected, 'numeric enum');
     check([sample('bot', 100, String(value))], 'bot', expected, 'serialized numeric enum');
 }
@@ -34,6 +34,13 @@ check([], 'missing', undefined, 'no packet is not evidence of extraction');
 assert.equal(finalPlayerStatuses().size, 0); checks++;
 const frozen = Object.freeze([Object.freeze(sample('bot', 100, 'Alive'))]);
 check(frozen, 'bot', 'Alive', 'recorded data remains unchanged');
+for(const [status,label] of [['Dead','KIA'],['Unspawned','Removed'],['Unknown','Unknown'],['Alive','Alive'],['Extracted','Extracted'],[undefined,'Unknown']]) {
+    assert.equal(playerStatusLabel(status),label);checks++;
+}
+check([sample('bot',100,'Alive'),sample('bot',NaN,'Dead')],'bot','Alive','invalid death timestamp ignored');
+check([sample('bot',100,'Alive'),sample('bot',200,'Extracted')],'bot','Extracted','explicit successful extraction');
+check([sample('bot',100,'Dead'),sample('bot',200,'Extracted')],'bot','Dead','death remains terminal');
+assert.equal(peakActiveBots([sample('one',0,'Alive'),sample('one',100,4),sample('two',200,'Alive')]),1);checks++;
 
 // Optional local replay fixture exported read-only from RR; never modifies raids.
 if (process.argv[2]) {

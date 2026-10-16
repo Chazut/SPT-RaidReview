@@ -110,8 +110,12 @@ export default function RaidBehaviorTimeline() {
                 }
             }
         }
+        for (const status of raid?.player_status || []) {
+            if (['Dead', '1'].includes(String(status.status)) && Number.isFinite(Number(status.time)))
+                map[status.profileId] = Math.min(map[status.profileId] ?? Infinity, Number(status.time))
+        }
         return map
-    }, [raid?.kills])
+    }, [raid?.kills, raid?.player_status])
 
     const data = useMemo(() => {
         if (!positions || !raid?.players) return { players: [] as any[], raidStart: 0, raidEnd: 0 }
@@ -136,22 +140,11 @@ export default function RaidBehaviorTimeline() {
             }
 
             const idx = raid.players.indexOf(p)
-            // Extract time = bot stopped reporting positions but had no
-            // death event. Conservative threshold: last position must
-            // be at least 2 s before the latest raid time (so a bot
-            // who simply happens to be at the very tail of the data
-            // isn't false-flagged as extracted). Raw raidEnd is the
-            // max time across ALL bots — if this bot's last sample is
-            // significantly earlier, they probably extracted.
-            let lastSampleTime = 0
-            for (const e of entries) {
-                const t = Number(e.time)
-                if (t > lastSampleTime) lastSampleTime = t
-            }
             const deathTime = deathTimes[p.profileId] ?? null
-            let extractTime: number | null = null
-            // Compute later once we know raidEnd — push as null for now,
-            // patch in the loop below.
+            const confirmedExit = (raid.player_status || []).filter(s => s.profileId === p.profileId
+                && ['Extracted', '4'].includes(String(s.status)) && Number.isFinite(Number(s.time)))
+            const extractTime = deathTime == null && confirmedExit.length
+                ? Math.min(...confirmedExit.map(s => Number(s.time))) : null
 
             playerRows.push({
                 profileId: p.profileId,
@@ -162,26 +155,8 @@ export default function RaidBehaviorTimeline() {
                 pmcIdx: pmcIndexMap[p.profileId],
                 spawnTime: p.spawnTime,
                 deathTime,
-                extractTime, // patched after raidEnd is finalised
+                extractTime,
             })
-            // Stash the lastSampleTime on the row so we can resolve
-            // extractTime after the raidEnd is known.
-            ;(playerRows[playerRows.length - 1] as any)._lastSampleTime = lastSampleTime
-        }
-
-        // Resolve extract time per row. A bot is considered extracted
-        // when it stopped sending positions at least 2 s before raidEnd
-        // AND has no death event. The last-sample time becomes the
-        // extractTime; the post-extract span is drawn as a blue hash.
-        const extractMinGapMs = 2000
-        for (const row of playerRows) {
-            const lastSample = (row as any)._lastSampleTime as number
-            if (row.deathTime != null) continue
-            if (lastSample > 0 && lastSample < raidEnd - extractMinGapMs)
-            {
-                row.extractTime = lastSample
-            }
-            delete (row as any)._lastSampleTime
         }
 
         // Sort by team/side, then by name
