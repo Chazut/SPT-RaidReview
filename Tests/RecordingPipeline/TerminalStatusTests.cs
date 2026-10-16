@@ -25,17 +25,50 @@ internal static class TerminalStatusTests
         RecordingRoster.Depart(p);RecordingRoster.Observe(p);
         check(Last()==PlayerStatus.Dead,"death callback survives health disposal before capture");
         foreach(var completed in new[]{false,true})
+        foreach(var destroyed in new[]{false,true})
+        foreach(var death in new[]{false,true})
         {
             RecordingRoster.Reset();Telemetry.Packets.Clear();p=new Player{ProfileId="exfil"};RecordingRoster.Add(p);
+            RecordingRoster.Observe(p);
             var leave=new BotLeaveData(new BotOwner{GetPlayer=p});
             check(Invoke(typeof(RecordingExtractPatch),"GetTargetMethod",new RecordingExtractPatch()) is MethodInfo,"exfil finds inherited owner field");
             object[] prefix={leave,null};Invoke(typeof(RecordingExtractPatch),"Prefix",null,prefix);
-            check(ReferenceEquals(prefix[1],p),"only living exfil entrant retained");
+            check((string)prefix[1]=="exfil","live exfil identity captured before teardown");
+            if(death) Invoke(typeof(RecordingDeathPatch),"Prefix",null,p);
             RecordingRoster.Depart(p);p.HealthController=null;leave.LeaveComplete=completed;
-            Invoke(typeof(RecordingExtractPatch),"Postfix",null,leave,prefix[1]);RecordingRoster.Observe(p);
-            check(Last()==(completed?PlayerStatus.Extracted:PlayerStatus.Unspawned),"only completed native extraction is Extracted");
-            RecordingRoster.Confirm(p,PlayerStatus.Dead);RecordingRoster.Confirm(p,PlayerStatus.Extracted);RecordingRoster.Observe(p);
-            check(Last()==PlayerStatus.Dead,"confirmed death takes precedence over extraction");
+            p.Destroyed=destroyed;
+            Invoke(typeof(RecordingExtractPatch),"Postfix",null,leave,prefix[1]);
+            foreach(var current in RecordingRoster.Snapshot()) RecordingRoster.Observe(current);
+            var expected=death?PlayerStatus.Dead:completed?PlayerStatus.Extracted:PlayerStatus.Unspawned;
+            check(Last()==expected,"death/success/failure preserved after live or destroyed component");
+            var packet=(TrackingPlayerDeadOrUnspawned)Telemetry.Packets.Last().Payload;
+            check(packet.profileId=="exfil","status retains original profile identity");
+            var count=Telemetry.Packets.Count;
+            RecordingRoster.Finish();RecordingRoster.Finish(false);
+            check(Telemetry.Packets.Count==count,"terminal status emitted once including headless finish");
+        }
+        RecordingRoster.Reset();Telemetry.Packets.Clear();
+        p=new Player{ProfileId="before-pool"};RecordingRoster.Add(p);
+        var pooledLeave=new BotLeaveData(new BotOwner{GetPlayer=p});
+        object[] pooledPrefix={pooledLeave,null};Invoke(typeof(RecordingExtractPatch),"Prefix",null,pooledPrefix);
+        RecordingRoster.Depart(p);p.Destroyed=true;p.ProfileId="recycled-profile";pooledLeave.LeaveComplete=true;
+        Invoke(typeof(RecordingExtractPatch),"Postfix",null,pooledLeave,pooledPrefix[1]);RecordingRoster.Snapshot();
+        check(Last()==PlayerStatus.Extracted && ((TrackingPlayerDeadOrUnspawned)Telemetry.Packets.Last().Payload).profileId=="before-pool",
+            "pool identity changes cannot redirect confirmation");
+        foreach(var alive in new[]{false,true})
+        {
+            RecordingRoster.Reset();Telemetry.Packets.Clear();
+            p=new Player{ProfileId="no-success"};p.HealthController.IsAlive=alive;RecordingRoster.Add(p);
+            var leave=new BotLeaveData(new BotOwner{GetPlayer=p});object[] prefix={leave,null};
+            RAID_REVIEW.RAID_REVIEW.CanCapture=false;
+            Invoke(typeof(RecordingExtractPatch),"Prefix",null,prefix);
+            check(prefix[1]==null,"extraction outside capture has no identity");
+            RAID_REVIEW.RAID_REVIEW.CanCapture=true;
+            Invoke(typeof(RecordingExtractPatch),"Prefix",null,prefix);
+            check((prefix[1]!=null)==alive,"only living players qualify for extraction");
+            // No postfix represents a native exception, so no success may be inferred.
+            RecordingRoster.Depart(p);RecordingRoster.Observe(p);
+            check(Last()==(alive?PlayerStatus.Unspawned:PlayerStatus.Dead),"failed extraction or dead entrant never becomes Extracted");
         }
         RecordingRoster.Reset();Telemetry.Packets.Clear();p=new Player{ProfileId="missing-health",HealthController=null};
         RecordingRoster.Add(p);RecordingRoster.Observe(p);check(Last()==PlayerStatus.Unknown,"missing health alone is unknown");

@@ -31,9 +31,13 @@ namespace RAID_REVIEW
         }
         internal static void Confirm(Player player, PlayerStatus status)
         {
-            if (player == null || (status != PlayerStatus.Dead && status != PlayerStatus.Extracted)) return;
-            if (confirmed.TryGetValue(player.ProfileId, out var previous) && previous == PlayerStatus.Dead) return;
-            confirmed[player.ProfileId] = status;
+            if (player != null) Confirm(player.ProfileId, status);
+        }
+        internal static void Confirm(string profileId, PlayerStatus status)
+        {
+            if (string.IsNullOrEmpty(profileId) || (status != PlayerStatus.Dead && status != PlayerStatus.Extracted)) return;
+            if (confirmed.TryGetValue(profileId, out var previous) && previous == PlayerStatus.Dead) return;
+            confirmed[profileId] = status;
         }
         internal static void Depart(Player player)
         {
@@ -140,17 +144,20 @@ namespace RAID_REVIEW
             return typeof(BotLeaveData).GetMethod(nameof(BotLeaveData.RemoveFromMap));
         }
         [PatchPrefix]
-        private static void Prefix(BotLeaveData __instance, out Player __state)
+        private static void Prefix(BotLeaveData __instance, out string __state)
         {
             __state = null;
             if (!RAID_REVIEW.CanCapture) return;
             var player = (owner.GetValue(__instance) as BotOwner)?.GetPlayer;
-            if (player?.HealthController?.IsAlive == true) __state = player;
+            // RemoveFromMap returns the bot to its pool and destroys the Player component
+            // before the postfix. Retain identity without depending on that Unity object.
+            if (player?.HealthController?.IsAlive == true) __state = player.ProfileId;
         }
         [PatchPostfix]
-        private static void Postfix(BotLeaveData __instance, Player __state)
+        private static void Postfix(BotLeaveData __instance, string __state)
         {
-            if (__state != null && __instance.LeaveComplete) RecordingRoster.Confirm(__state, PlayerStatus.Extracted);
+            if (RAID_REVIEW.CanCapture && __state != null && __instance.LeaveComplete)
+                RecordingRoster.Confirm(__state, PlayerStatus.Extracted);
         }
     }
 

@@ -5,7 +5,23 @@ namespace EFT
     public enum ExitStatus { Survived, Killed }
     public interface IPlayer { }
     public class Health { public bool IsAlive = true; }
-    public class Player : IPlayer { public string ProfileId, KillerId; public Health HealthController = new(); public void OnDead(EDamageType damage) { HealthController.IsAlive=false; } }
+    public class Player : IPlayer
+    {
+        public string ProfileId, KillerId;
+        public bool Destroyed;
+        public Health HealthController = new();
+        public void OnDead(EDamageType damage) { HealthController.IsAlive=false; }
+        // Unity compares a destroyed component equal to null although its CLR reference survives.
+        public static bool operator ==(Player a, Player b)
+        {
+            if (ReferenceEquals(a, null)) return ReferenceEquals(b, null) || b.Destroyed;
+            if (ReferenceEquals(b, null)) return a.Destroyed;
+            return ReferenceEquals(a, b);
+        }
+        public static bool operator !=(Player a, Player b) => !(a == b);
+        public override bool Equals(object obj) => ReferenceEquals(this, obj);
+        public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
+    }
     public class BotOwner { public Player GetPlayer; }
     public class GameWorld
     {
