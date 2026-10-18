@@ -22,6 +22,29 @@ class Program
 
     static async Task Main()
     {
+        foreach (var side in new[] { EFT.EPlayerSide.Savage, EFT.EPlayerSide.Usec, EFT.EPlayerSide.Bear })
+        {
+            foreach (var isAI in new[] { false, true })
+            {
+                var participant = new TrackingPlayer {
+                    profileId = "participant", team = side,
+                    type = RecordingPlayerIdentity.Type(isAI, side),
+                    name = RecordingPlayerIdentity.Name(isAI, "Scav name", "fums")
+                };
+                Check(isAI ? participant.type != "HUMAN" : participant.type == "HUMAN", "human identity survives every faction");
+                Check(participant.name == (isAI ? "Scav name" : "fums"), "human account name preferred, bot name preserved");
+                var wire = JsonConvert.SerializeObject(participant.Snapshot());
+                var row = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(wire)!;
+                var presentation = new Dictionary<string, object?> { ["profileId"] = "host", ["type"] = "PMC" };
+                RaidReview.PostRaid.RecordingIdentity.Apply(presentation, "Headless_0123456789abcdef01234567", new[] { row });
+                Check((string?)presentation["type"] == (!isAI && side == EFT.EPlayerSide.Savage ? "SCAV" : "PMC"), "serialized player faction determines headless raid type");
+                Check((string?)presentation["profileName"] == (isAI ? "Headless" : "fums (headless)"), "serialized human name determines headless label");
+                Check((string?)presentation["profileId"] == "host" && participant.profileId == "participant", "recording and participant IDs remain intact");
+            }
+        }
+        foreach (var nickname in new[] { null, "", " " })
+            Check(RecordingPlayerIdentity.Name(false, "Fallback", nickname) == "Fallback", "missing PMC name retains recorded nickname");
+        Check(RecordingPlayerIdentity.Type(true, EFT.EPlayerSide.Savage) == "SCAV|SCAV", "AI Scav default remains intact before role mapping");
         var container = new TrackingLooseLootItem { templateId = "contents", containerTemplateId = "root-template", inContainer = true };
         Check(JObject.Parse(JsonConvert.SerializeObject(container)).Value<string>("containerTemplateId") == "root-template", "container root template survives the client wire model");
         Check(JsonConvert.DeserializeObject<TrackingLooseLootItem>("{\"inContainer\":true}")!.containerTemplateId == "", "old loose-loot payloads default to missing container metadata");

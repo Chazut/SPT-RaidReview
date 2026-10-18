@@ -4,6 +4,8 @@
     <PackageReference Include="HarmonyX" Version="2.16.0" />
     <Compile Include="../../Client/helpers/OrderedPacketSender.cs" Link="OrderedPacketSender.cs" />
     <Compile Include="../../Client/helpers/RecordingRoster.cs" Link="RecordingRoster.cs" />
+    <Compile Include="../../Client/helpers/RecordingPlayerIdentity.cs" Link="RecordingPlayerIdentity.cs" />
+    <Compile Include="../../ServerMod/PostRaid/RecordingIdentity.cs" Link="RecordingIdentity.cs" />
     <Compile Include="../../Client/models/Tracking.cs" Link="Tracking.cs" />
     <Compile Include="../../Client/models/JsonPosition.cs" Link="JsonPosition.cs" />
     <Compile Include="../../Client/models/Packets.cs" Link="Packets.cs" />

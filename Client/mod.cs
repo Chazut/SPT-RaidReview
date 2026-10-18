@@ -890,12 +890,12 @@ namespace RAID_REVIEW
                                 {
                                     sessionId = sessionId,
                                     profileId = player.ProfileId,
-                                    name = player.Profile.Nickname,
+                                    name = RecordingPlayerIdentity.Name(player.IsAI, player.Profile.Nickname, player.Profile.Info.MainProfileNickname),
                                     level = player.Profile.Info.Level,
                                     team = player.Side,
                                     group = player?.AIData?.BotOwner?.BotsGroup?.Id ?? 0,
                                     spawnTime = stopwatch.ElapsedMilliseconds,
-                                    type = player.IsAI ? "BOT" : "HUMAN",
+                                    type = RecordingPlayerIdentity.Type(player.IsAI, player.Side),
                                     mod_SAIN_brain = "UNKNOWN",
                                     mod_SAIN_difficulty = "",
                                     mod_SAIN_name = ""
@@ -904,7 +904,6 @@ namespace RAID_REVIEW
                                 if (player.Side == EPlayerSide.Savage)
                                 {
                                     trackingPlayer.mod_SAIN_brain = "SCAV";
-                                    trackingPlayer.type = "SCAV|SCAV";
                                 }
                                 else if (player.Side == EPlayerSide.Usec || player.Side == EPlayerSide.Bear)
                                 {

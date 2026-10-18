@@ -31,18 +31,46 @@ Check((string?)containers[0]["containerName"] == "Duffle bag", "container root r
 Check((string?)containers[0]["itemName"] == "Contents" && (string?)containers[0]["containerTemplateId"] == duffle, "contents and root identity preserved");
 Check((string?)containers[1]["containerName"] == "Container", "legacy missing root never inferred from contents");
 Check((string?)containers[2]["containerName"] == "", "ground loot gets no invented container");
-var identity = new Dictionary<string,object?> { ["profileId"] = "headless-id" };
-RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", new[] {"Chazut", "Chazut"});
+Dictionary<string, object?> Human(string name, object? team = null) => new() { ["name"] = name, ["type"] = "HUMAN", ["team"] = team ?? "Usec" };
+var identity = new Dictionary<string,object?> { ["profileId"] = "headless-id", ["type"] = "PMC" };
+RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", new[] { Human("Chazut"), Human("Chazut") });
 Check((string?)identity["profileName"] == "Chazut (headless)" && (bool)identity["isHeadless"]!, "readable recording owner");
 Check((string?)identity["profileId"] == "headless-id", "session identity never rewritten");
-RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", Array.Empty<string>());
+RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", Array.Empty<Dictionary<string, object?>>());
 Check((string?)identity["profileName"] == "Headless", "headless without participants");
-RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", new[] {"Alice", "Bob"});
+RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", new[] { Human("Alice"), Human("Bob", "Bear") });
 Check((string?)identity["profileName"] == "Alice, Bob (headless)", "multiple humans retained");
-RecordingIdentity.Apply(identity, "Chazut", new[] {"Remote"});
+RecordingIdentity.Apply(identity, "Chazut", new[] { Human("Remote", "Savage") });
 Check((string?)identity["profileName"] == "Chazut" && !(bool)identity["isHeadless"]!, "ordinary recording unchanged");
-RecordingIdentity.Apply(identity, "Headless_fan", new[] {"Remote"});
+Check((string?)identity["type"] == "PMC", "remote Scav does not change ordinary PMC recording");
+RecordingIdentity.Apply(identity, "Headless_fan", new[] { Human("Remote", "Savage") });
 Check(!(bool)identity["isHeadless"]!, "ordinary username beginning Headless is not a host");
+Check((string?)identity["type"] == "PMC", "headless-like nickname does not change raid type");
+foreach (var side in new object[] { "Savage", "4", 4L })
+{
+    identity["type"] = "PMC";
+    RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", new[] { Human("fums", side),
+        new Dictionary<string, object?> { ["name"] = "AI PMC", ["type"] = "PMC|USEC", ["team"] = "Usec" } });
+    Check((string?)identity["type"] == "SCAV" && (string?)identity["profileName"] == "fums (headless)", "Scav human defines headless presentation, not AI faction");
+}
+foreach (var side in new object[] { "Usec", "Bear", "1", "2", 1L, 2L })
+{
+    identity["type"] = "SCAV";
+    RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", new[] { Human("fums", side) });
+    Check((string?)identity["type"] == "PMC", "PMC human sides normalize to PMC");
+}
+foreach (var players in new[] {
+    new[] { Human("Alice", "Savage"), Human("Bob", "Usec") },
+    new[] { Human("Alice", "Savage"), Human("Bob", "unknown") },
+    new[] { new Dictionary<string, object?> { ["name"] = "Old Scav", ["type"] = "SCAV|SCAV", ["team"] = "4" } },
+    Array.Empty<Dictionary<string, object?>>() })
+{
+    identity["type"] = "PMC";
+    RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", players);
+    Check((string?)identity["type"] == "PMC", "ambiguous, missing or old misclassified humans do not fabricate a raid type");
+}
+RecordingIdentity.Apply(identity, "Headless_6acf7c122b70675b98bf862a", new[] { Human("Alice", "4"), Human("Bob", "Savage") });
+Check((string?)identity["type"] == "SCAV" && (string?)identity["profileName"] == "Alice, Bob (headless)", "Scav squad names retained");
 if (args.Length == 2)
 {
     locale = JsonSerializer.Deserialize<Dictionary<string,string>>(File.ReadAllText(args[0]))!;

@@ -78,7 +78,7 @@ namespace RAID_REVIEW
                     {
                         sessionId = RAID_REVIEW.sessionId,
                         profileId = RAID_REVIEW.myPlayer.ProfileId,
-                        name = RAID_REVIEW.myPlayer.Profile.Nickname,
+                        name = RecordingPlayerIdentity.Name(false, RAID_REVIEW.myPlayer.Profile.Nickname, RAID_REVIEW.myPlayer.Profile.Info.MainProfileNickname),
                         level = RAID_REVIEW.myPlayer.Profile.Info.Level,
                         team = RAID_REVIEW.myPlayer.Side,
                         group = 0,

@@ -53,6 +53,7 @@ its actual SQLite dependencies live in `lib/sqlite/`, isolated from other mods.
   behaviour are unchanged. Older replays are recognized when their saved role or
   ISB display name identifies a White Tusk.
 - Fika support, see [REMOTE_HOST_AND_FIKA.md](REMOTE_HOST_AND_FIKA.md)
+- Headless recordings show the human player's name followed by `(headless)` and derive PMC/SCAV from the recorded human participants. Scav players retain their human identity and use their main profile nickname when available. Update both the client plugin on the headless host and the server mod; older raids that recorded these players as bots cannot be reliably relabeled.
 
 ---
 

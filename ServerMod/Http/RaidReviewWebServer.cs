@@ -141,6 +141,16 @@ public class RaidReviewWebServer
         return names;
     }
 
+    private async Task ApplyRecordingIdentities(List<Dictionary<string, object?>> raids)
+    {
+        var usernames = await ReadProfileNames();
+        var humans = await _db.QueryAsync("SELECT raidId, name, team, type FROM player WHERE type = 'HUMAN'");
+        var humansByRaid = humans.ToLookup(p => p["raidId"]?.ToString() ?? "");
+        foreach (var raid in raids)
+            RecordingIdentity.Apply(raid, usernames.GetValueOrDefault(raid["profileId"]?.ToString() ?? ""),
+                humansByRaid[raid["raidId"]?.ToString() ?? ""]);
+    }
+
     public async Task StartAsync()
     {
         var builder = WebApplication.CreateBuilder();
@@ -374,12 +384,7 @@ public class RaidReviewWebServer
 
             var sql = $"SELECT * FROM raid WHERE {(profileFilter != null ? profileFilter + " AND" : "")} timeInRaid > 10 ORDER BY id DESC";
             var data = await _db.QueryAsync(sql);
-            var usernames = await ReadProfileNames();
-            var humans = await _db.QueryAsync("SELECT raidId, name FROM player WHERE type = 'HUMAN'");
-            var humansByRaid = humans.ToLookup(p => p["raidId"]?.ToString() ?? "", p => p["name"]?.ToString() ?? "");
-            foreach (var row in data)
-                RecordingIdentity.Apply(row, usernames.GetValueOrDefault(row["profileId"]?.ToString() ?? ""),
-                    humansByRaid[row["raidId"]?.ToString() ?? ""]);
+            await ApplyRecordingIdentities(data);
             await context.Response.WriteAsJsonAsync(data);
         });
 
@@ -414,8 +419,7 @@ public class RaidReviewWebServer
                     : new Dictionary<string, object?>();
                 var usernames = await ReadProfileNames();
                 RecordingIdentity.Apply(result, usernames.GetValueOrDefault(result.GetValueOrDefault("profileId")?.ToString() ?? ""),
-                    players.Where(p => p.GetValueOrDefault("type")?.ToString() == "HUMAN")
-                        .Select(p => p.GetValueOrDefault("name")?.ToString() ?? ""));
+                    players);
                 _itemResolver?.ResolveRows(looting);
                 _itemResolver?.ResolveRows(playerInventory);
                 result["kills"] = kills;
@@ -679,6 +683,7 @@ public class RaidReviewWebServer
             var data = await _db.QueryAsync(
                 "SELECT * FROM raid WHERE profileId = $id AND timeInRaid > 10 ORDER BY id DESC",
                 ("$id", profileId));
+            await ApplyRecordingIdentities(data);
             await context.Response.WriteAsJsonAsync(data);
         });
 

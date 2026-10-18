@@ -1,7 +1,7 @@
 // Runtime boundaries only. Sender, DTOs, roster and server packet dispatch use their production sources.
 namespace EFT
 {
-    public enum EPlayerSide { Savage, Usec, Bear }
+    public enum EPlayerSide { Savage = 4, Usec = 1, Bear = 2 }
     public enum ExitStatus { Survived, Killed }
     public interface IPlayer { }
     public class Health { public bool IsAlive = true; }

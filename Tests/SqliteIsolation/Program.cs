@@ -245,6 +245,44 @@ if (mode == "other-first")
         Check((string?)captured.Single(row => (string?)row["itemId"] == "ground-item")["containerName"] == "", "Ground loot remains separate from containers");
         var stored = (Dictionary<string, object?>)await reopened.QuerySingleAsync("SELECT itemName FROM looting WHERE raidId=$id", P(("$id", raidId)));
         Check((string)stored["itemName"]! == "", "Presentation does not rewrite recorded evidence");
+
+        // A headless START precedes participant capture and still carries PMC.
+        // Exercise real PLAYER packets, including numeric EFT teams, through all raid APIs.
+        await reopened.ExecuteAsync("DELETE FROM player WHERE raidId=$id", P(("$id", raidId)));
+        using (var empty = JsonDocument.Parse(await http.GetStringAsync("/api/raids/" + raidId)))
+            Check(empty.RootElement.GetProperty("profileName").GetString() == "Headless", "Headless waits for human identity instead of guessing");
+        foreach (var participant in new[] {
+            new { profileId="ai-pmc", name="Bot PMC", team=1, type="PMC|USEC" },
+            new { profileId="ai-scav", name="Bot Scav", team=4, type="SCAV|SCAV" },
+            new { profileId="human-scav", name="fums", team=4, type="HUMAN" } })
+        {
+            var participantPacket = JsonSerializer.Serialize(new { Action="PLAYER", Payload=JsonSerializer.Serialize(new {
+                sessionId="sqlite-test", participant.profileId, participant.name, participant.team, participant.type,
+                level=20, group=0, spawnTime=3000, mod_SAIN_brain="SCAV", mod_SAIN_difficulty=""
+            }) });
+            await ws.SendAsync(Encoding.UTF8.GetBytes(participantPacket), WebSocketMessageType.Text, true, timeout.Token);
+        }
+        var scavReady = false;
+        for (int attempt=0; attempt<50; attempt++)
+        {
+            using var poll = JsonDocument.Parse(await http.GetStringAsync("/api/raids/" + raidId));
+            if (poll.RootElement.GetProperty("type").GetString() == "SCAV") { scavReady=true; break; }
+            await Task.Delay(50);
+        }
+        Check(scavReady, "Late human Scav packet corrects headless raid presentation");
+        foreach (var endpoint in new[] { "/api/raids", "/api/profile/sqlite-test/raids/all", "/api/raids/" + raidId })
+        {
+            using var response = JsonDocument.Parse(await http.GetStringAsync(endpoint));
+            var presentedRaid = response.RootElement.ValueKind == JsonValueKind.Array ? response.RootElement[0] : response.RootElement;
+            Check(presentedRaid.GetProperty("type").GetString() == "SCAV", endpoint + " displays SCAV");
+            Check(presentedRaid.GetProperty("profileName").GetString() == "fums (headless)", endpoint + " displays player name with headless suffix");
+            Check(presentedRaid.GetProperty("profileId").GetString() == "sqlite-test", endpoint + " preserves session identity");
+        }
+        var rawRaid = (Dictionary<string, object?>)await reopened.QuerySingleAsync("SELECT type FROM raid WHERE raidId=$id", P(("$id", raidId)));
+        Check((string?)rawRaid["type"] == "PMC", "Read-time resolution preserves original START evidence without a migration");
+        await reopened.ExecuteAsync("UPDATE player SET team='2' WHERE raidId=$id AND profileId='human-scav'", P(("$id", raidId)));
+        using (var pmc = JsonDocument.Parse(await http.GetStringAsync("/api/raids/" + raidId)))
+            Check(pmc.RootElement.GetProperty("type").GetString() == "PMC", "Human PMC remains PMC despite Scav bots");
         await ws.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "test finished", timeout.Token);
         Check(errors.Count == 0, "No HTTP or WebSocket processing errors");
     }
