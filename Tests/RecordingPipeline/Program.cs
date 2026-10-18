@@ -22,6 +22,17 @@ class Program
 
     static async Task Main()
     {
+        foreach (var (x,z,yaw) in new[] { (0f,1f,0f), (1f,0f,90f), (0f,-1f,180f), (-1f,0f,270f), (1f,1f,45f), (-1f,1f,315f) })
+        {
+            Check(Math.Abs(BodyOrientation.FromForward(x,z,false)!.Value-yaw)<0.001f, "body forward has a signed full-circle yaw");
+            Check(BodyOrientation.FromForward(x,z,true)==null, "Ghost never records stale body rotation");
+        }
+        foreach (var (x,z) in new[] { (0f,0f), (float.NaN,1f), (1f,float.PositiveInfinity), (float.NegativeInfinity,0f) })
+            Check(BodyOrientation.FromForward(x,z,false)==null, "invalid or vertical-only body forward is unavailable");
+        var sleepingSample = new TrackingPlayerData("s","a",0,0,0,0,0,100,100,ghost:true);
+        var sleepingWire = JObject.Parse(JsonConvert.SerializeObject(sleepingSample, new JsonSerializerSettings { NullValueHandling=NullValueHandling.Ignore }));
+        Check(sleepingWire.ContainsKey("bodyYaw") && sleepingWire["bodyYaw"]!.Type==JTokenType.Null,
+            "null orientation keeps its CSV column even when serializer ignores other nulls");
         foreach (var side in new[] { EFT.EPlayerSide.Savage, EFT.EPlayerSide.Usec, EFT.EPlayerSide.Bear })
         {
             foreach (var isAI in new[] { false, true })
@@ -155,10 +166,22 @@ class Program
         async Task Packet(string action,object payload)=>await handler.HandleMessageAsync(Encoding.UTF8.GetBytes(Serialize(action,payload)));
         await Packet("START",new {sessionId="s",profileId="s"});
         Check(sessions.GetProfile("s").RaidId!=null,"server START session");
-        var positions=new[]{new TrackingPlayerData("s","a",200,1,2,3,0,100,100,"Orbit:Guarding",true),new TrackingPlayerData("s","b",200,4,5,6,90,90,100)};
+        var positions=new[]{new TrackingPlayerData("s","a",200,1,2,3,0,100,100,"Orbit:Guarding",true),new TrackingPlayerData("s","b",200,4,5,6,270,90,100) { bodyYaw=270 }};
         await Packet("POSITION_BATCH",positions);
         Check(files.Writes.Count==1,"one buffered write per batch");
         var batch=files.Writes[0];
+        files.Contents["orientation_positions"] = batch.Header + batch.Rows;
+        var compiler = new RaidReview.PostRaid.RaidPositionCompiler(files,log);
+        var compiled = compiler.Compile("orientation")!;
+        Check(compiled["a"][0].BodyYaw==null && compiled["a"][0].Ghost, "Ghost first row keeps column alignment");
+        Check(compiled["b"][0].BodyYaw==270 && compiled["b"][0].Health==90, "awake orientation survives client, WS batch and CSV compiler");
+        var replay=JObject.Parse(files.Contents["orientation_V4_positions.json"]);
+        Check(replay["b"]![0]!.Value<float>("bodyYaw")==270 && replay["a"]![0]!["bodyYaw"]!.Type==JTokenType.Null, "camelCase replay retains nullable yaw");
+        files.Contents["legacy_positions"]="profileId,time,x,y,z,dir,raid_id,ghost\na,0,1,2,3,170,r,false\n";
+        Check(compiler.Compile("legacy")!["a"][0].BodyYaw==null, "legacy dir never becomes body orientation");
+        files.Contents["invalid_positions"]="profileId,time,x,y,z,dir,raid_id,bodyYaw,ghost\na,0,1,2,3,0,r,NaN,false\na,1,1,2,3,0,r,Infinity,false\na,2,1,2,3,0,r,-90,false\na,3,1,2,3,0,r,360,false\na,4,1,2,3,0,r,90,true\na,5,1,2,3,0,r,,false\n";
+        var invalid = compiler.Compile("invalid")!["a"];
+        Check(invalid.Select(p=>p.BodyYaw).SequenceEqual(new float?[] { null,null,270,0,null,null }), "nonfinite, missing and Ghost angles suppressed; valid angles normalized");
         await Packet("POSITION",positions[0]);await Packet("POSITION",positions[1]);
         Check(files.Writes[1].Header==batch.Header,"old and new header match");
         Check(files.Writes[1].Rows+files.Writes[2].Rows==batch.Rows,"sample schema, timestamps and ghost flag preserved");

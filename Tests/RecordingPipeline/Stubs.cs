@@ -85,6 +85,9 @@ namespace RaidReview.FileSystem
     {
         public List<(string File,string Header,string Rows)> Writes = new();
         public bool Flushed;
+        public Dictionary<string, string> Contents = new();
+        public string? ReadFile(string a,string b,string c,string file) => Contents.GetValueOrDefault(file);
+        public void WriteFile(string a,string b,string c,string file,string contents) => Contents[file] = contents;
         public void AppendLineBuffered(string a,string b,string c,string file,string header,string rows) => Writes.Add((file,header,rows));
         public void FlushAndCloseAll() => Flushed=true;
     }

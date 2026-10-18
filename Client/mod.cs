@@ -990,18 +990,6 @@ namespace RAID_REVIEW
 
                                     Vector3 playerPosition = player.Position;
 
-                                    Vector3 playerFacing = player.LookDirection;
-
-                                    Vector3 playerDirection = playerPosition - playerFacing;
-
-                                    playerDirection.Normalize();
-                                    Vector3 referenceVector = new Vector3(0, 0, 1);
-                                    referenceVector.Normalize();
-
-                                    float dotProduct = Vector3.Dot(playerDirection, referenceVector);
-                                    float angle = Mathf.Acos(dotProduct) * Mathf.Rad2Deg;
-                                    float dir = angle;
-
                                     // Health Data
                                     ValueStruct commonHealth = player.HealthController.GetBodyPartHealth(EBodyPart.Common, true);
                                     float currentHealth = commonHealth.Current;
@@ -1127,7 +1115,14 @@ namespace RAID_REVIEW
                                         catch { }
                                     }
 
-                                    var trackingPlayerData = new TrackingPlayerData(sessionId, player.ProfileId, captureTime, playerPosition.x, playerPosition.y, playerPosition.z, dir, currentHealth, currentHealthMaximum, decision, ghost);
+                                    var bodyForward = player.Transform.forward;
+                                    var bodyYaw = BodyOrientation.FromForward(bodyForward.x, bodyForward.z, ghost);
+                                    // Retain dir for wire compatibility. Only bodyYaw identifies reliable
+                                    // orientation samples; historical dir values cannot be used as a fallback.
+                                    var trackingPlayerData = new TrackingPlayerData(sessionId, player.ProfileId, captureTime, playerPosition.x, playerPosition.y, playerPosition.z, bodyYaw ?? 0f, currentHealth, currentHealthMaximum, decision, ghost)
+                                    {
+                                        bodyYaw = bodyYaw
+                                    };
                                     positions.Add(trackingPlayerData);
                                 }
 

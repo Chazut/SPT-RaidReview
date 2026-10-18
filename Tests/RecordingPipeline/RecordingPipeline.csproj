@@ -5,6 +5,9 @@
     <Compile Include="../../Client/helpers/OrderedPacketSender.cs" Link="OrderedPacketSender.cs" />
     <Compile Include="../../Client/helpers/RecordingRoster.cs" Link="RecordingRoster.cs" />
     <Compile Include="../../Client/helpers/RecordingPlayerIdentity.cs" Link="RecordingPlayerIdentity.cs" />
+    <Compile Include="../../Client/helpers/BodyOrientation.cs" Link="BodyOrientation.cs" />
+    <Compile Include="../../ServerMod/Models/TrackingModels.cs" Link="TrackingModels.cs" />
+    <Compile Include="../../ServerMod/PostRaid/RaidPositionCompiler.cs" Link="RaidPositionCompiler.cs" />
     <Compile Include="../../ServerMod/PostRaid/RecordingIdentity.cs" Link="RecordingIdentity.cs" />
     <Compile Include="../../Client/models/Tracking.cs" Link="Tracking.cs" />
     <Compile Include="../../Client/models/JsonPosition.cs" Link="JsonPosition.cs" />

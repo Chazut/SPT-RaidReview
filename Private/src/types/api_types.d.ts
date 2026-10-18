@@ -22,6 +22,7 @@ export interface TrackingPositionalData {
   y: Number
   z: Number
   dir: Number
+  bodyYaw?: number | null // Body orientation; absent in older recordings, unavailable in Ghost.
   decision?: string
   ghost?: boolean
   hearingRange?: number | null

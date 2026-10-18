@@ -66,6 +66,10 @@ public class RaidPositionCompiler
                     case "y": float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var y); entry.Y = y; break;
                     case "z": float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var z); entry.Z = z; break;
                     case "dir": float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var d); entry.Dir = d; break;
+                    case "bodyYaw":
+                        if (float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var yaw) && float.IsFinite(yaw))
+                            entry.BodyYaw = ((yaw % 360f) + 360f) % 360f;
+                        break;
                     case "raid_id": entry.RaidId = val; break;
                     case "health": if (float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var h)) entry.Health = h; break;
                     case "maxHealth": if (float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out var mh)) entry.MaxHealth = mh; break;
@@ -79,6 +83,7 @@ public class RaidPositionCompiler
                     case "dormant": entry.Ghost = val == "True" || val == "true" || val == "1"; break; // "dormant": pre-rename recordings
                 }
             }
+            if (entry.Ghost) entry.BodyYaw = null;
             allPositions.Add(entry);
         }
 

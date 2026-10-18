@@ -179,6 +179,26 @@
   background: transparent !important;
   border: none !important;
 }
+.rr-body-orientation {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transform-origin: 50% 50%;
+}
+.rr-body-orientation svg {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 50%;
+    bottom: calc(100% + 3px);
+    transform: translateX(-50%);
+    overflow: visible;
+    fill: currentColor;
+    stroke: #101318;
+    stroke-width: 1.2;
+    stroke-linejoin: round;
+}
+
 .bot-marker-dot {
   width: 18px;
   height: 18px;

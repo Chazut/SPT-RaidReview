@@ -63,6 +63,7 @@ public record TrackingPlayerData
     public float Y { get; set; }
     public float Z { get; set; }
     public float Dir { get; set; }
+    public float? BodyYaw { get; set; }
     public float Health { get; set; }
     public float MaxHealth { get; set; }
     public string? RaidId { get; set; }
@@ -96,6 +97,7 @@ public record PositionalDataEntry
     public float Y { get; set; }
     public float Z { get; set; }
     public float Dir { get; set; }
+    public float? BodyYaw { get; set; }
     public string? RaidId { get; set; }
     public float? Health { get; set; }
     public float? MaxHealth { get; set; }

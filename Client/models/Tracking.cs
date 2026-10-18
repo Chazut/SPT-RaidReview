@@ -93,6 +93,10 @@ namespace RAID_REVIEW
         public float? hearingMinimumDistance { get; set; }
         public string hearingState { get; set; }
 
+        // Keep the column even when unavailable: the position stream has one CSV header.
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Include)]
+        public float? bodyYaw { get; set; }
+
         public TrackingPlayerData(
             string sessionId,
             string profileId,

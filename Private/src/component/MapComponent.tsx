@@ -11,7 +11,7 @@ import L from 'leaflet';
 
 import api from '../api/api.js';
 import { msToHMS, intl, stripUnityRichText } from '../helpers/index.js';
-import { calculateNewPosition, findInsertIndex } from '../modules/utils.js'
+import { findInsertIndex } from '../modules/utils.js'
 import { useMapImages } from '../modules/maps-index.js';
 import { TrackingPositionalData, TrackingLooseLootItem, TrackingPlayerInventoryItem } from '../types/api_types.js';
 import { PlayerSlider } from './MapPlayerSlider.js';
@@ -19,6 +19,7 @@ import { SwitchOverlay } from './SwitchOverlay';
 import { AirdropOverlay } from './AirdropOverlay';
 import { GhostHearingOverlay } from './GhostHearingOverlay';
 import { playerEndTimes } from '../helpers/playerPresence';
+import { bodyOrientationAngle, updateBodyOrientation } from '../helpers/bodyOrientation';
 import { createFloorFilter, hasFloors, floorSegments, positionAt, objectivePoint, mainPoint, floorHeatmap } from '../helpers/floorFilter';
 
 import { getMarkerLabel, getPlayerColor, getLegendIcon, PMC_COLORS, buildPmcIndexMap, getFactionRole, resolveBotType, isRaiderHunter } from '../helpers/players'
@@ -321,6 +322,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [hideSettings, setHideSettings] = useState(true)
     const [hidePlayers, setHidePlayers] = useState(false)
     const [showBehavior, setShowBehavior] = useState(!!raidData?.detectedMods?.match(/SAIN/gi))
+    const [showOrientation, setShowOrientation] = useState(() => localStorage.getItem('rr_showOrientation') !== 'false')
     const [hideEvents, setHideEvents] = useState(false)
     const [hideBallistics, setHideBallistics] = useState(false)
     const [hideNerdStats, setHideNerdStats] = useState(true)
@@ -526,6 +528,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const floorActive = floorOnly && floorAvailable
     const onFloor = useMemo(() => createFloorFilter(mapData, selectedLayer, floorOnly), [mapData, selectedLayer, floorOnly])
     useEffect(() => { localStorage.setItem('rr_floorOnly', String(floorOnly)) }, [floorOnly])
+    useEffect(() => { localStorage.setItem('rr_showOrientation', String(showOrientation)) }, [showOrientation])
     useEffect(() => {
         if (selectedLayer && !mapData?.layers?.some(layer => layer.name === selectedLayer)) setSelectedLayer('')
     }, [mapData, selectedLayer])
@@ -917,7 +920,6 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const playerPositions = positions[playerId]
             const trailSamples = []
             const currentSample = positionAt(playerPositions, timeEndLimit)
-            let currentDirection = 0
 
             const isPlayerDead = events.find((e) => e.killedId === playerId && e.time < timeEndLimit)
             const isPlayerGone = (presenceEnds[playerId] ?? Infinity) < timeEndLimit
@@ -934,9 +936,6 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     }
                 }
 
-                if (playerPositions.length - 1 === j) {
-                    currentDirection = playerPosition.dir
-                }
             }
 
             const cleanPositions = floorSegments(trailSamples, onFloor).map(segment => segment.map(p => [p.z, p.x]))
@@ -1104,6 +1103,10 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         marker._rr_isDead = false
                         marker._rr_normalOpacity = currentGhost ? 0.35 : 1
                     }
+                    const orientation = showOrientation && !isBTR && !currentGhost
+                        ? bodyOrientationAngle(currentSample, (x, z) => MAP.project(L.latLng(z, x), MAP.getZoom()))
+                        : null
+                    updateBodyOrientation(marker.getElement(), orientation, pickedColor, markerOpacity)
                     renderedPlayerIds.add(playerId)
                     // Keep the objective line's bot-end pinned to the live marker (see objectiveLineRef).
                     const objLine = objectiveLineRef.current.get(playerId)
@@ -1153,7 +1156,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             setTimeEndLimit(times[times.length - 1])
             setTimeCurrentIndex(times.length - 1)
         }
-    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, showBehavior, presenceEnds, onFloor])
+    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, showBehavior, showOrientation, presenceEnds, onFloor])
 
     // Focus overlay: adjusts layer opacity + kill visualization without full re-render
     useEffect(() => {
@@ -3958,7 +3961,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         </span>
                         <span>{msToHMS(sliderTimes.length > 0 ? sliderTimes[sliderTimes.length - 1] : 0)}</span>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                         <button className={`text-sm p-2 py-1 text-sm ${playing ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => playPositions()}>
                             {playing ? '⏸️' : '▶️'}
                         </button>
@@ -3983,7 +3986,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         <button className={`text-sm p-2 py-1 text-sm ${!hideSettings ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setHideSettings(!hideSettings)}>
                             ⚙️
                         </button>
-                        <div className={`border border-eft p-1 flex gap-1 ${hideSettings ? 'invisible' : ''}`}>
+                        <div className={`w-full border border-eft p-1 flex flex-wrap gap-1 ${hideSettings ? 'invisible' : ''}`}>
                             <button className={`text-xs p-1 text-sm cursor-pointer ${hidePlayers ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setHidePlayers(!hidePlayers)}>
                                 Hide Players
                             </button>
@@ -4002,6 +4005,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             </button>
                             <button className={`text-xs p-1 text-sm cursor-pointer ${showBehavior ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setShowBehavior(!showBehavior)}>
                                 Behavior
+                            </button>
+                            <button aria-pressed={showOrientation} title="Show which way characters and bots are facing" className={`text-xs p-1 text-sm cursor-pointer ${showOrientation ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setShowOrientation(!showOrientation)}>
+                                Orientation arrows
                             </button>
                         </div>
                     </div>
