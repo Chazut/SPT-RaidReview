@@ -1,6 +1,7 @@
 import { Link, Outlet, useLoaderData } from "react-router-dom";
 
 import api from "../../api/api";
+import ExportRaidButton from "../../component/ExportRaidButton";
 
 import './Raid.css'
 
@@ -27,7 +28,7 @@ export default function Raid() {
               <Link to={`/raid/${raidId}/behavior`} className='py-1 px-4 bg-eft text-black hover:opacity-75'>Behavior</Link>
           </div>
           <div className="flex gap-2">
-              {/* <button className='py-1 px-4 bg-eft text-black hover:opacity-75'>Export</button> */}
+              <ExportRaidButton raidId={raidId} finished={!!raid?.exitStatus} />
               <Link to={`/raid/${raidId}/settings`} className='py-1 px-4 bg-eft text-black hover:opacity-75'>Settings</Link>
           </div>
       </div>

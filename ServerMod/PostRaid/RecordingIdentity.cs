@@ -6,6 +6,12 @@ internal static class RecordingIdentity
 {
     internal static void Apply(Dictionary<string, object?> raid, string? username, IEnumerable<Dictionary<string, object?>> players)
     {
+        if (!string.IsNullOrEmpty(raid.GetValueOrDefault("importedAt")?.ToString()))
+        {
+            raid["profileName"] = raid.GetValueOrDefault("importedProfileName")?.ToString() ?? "";
+            raid["isHeadless"] = Convert.ToInt64(raid.GetValueOrDefault("importedIsHeadless") ?? 0) != 0;
+            return;
+        }
         var headless = Regex.IsMatch(username ?? "", "^Headless_[0-9a-f]{24}$", RegexOptions.IgnoreCase);
         var humans = players.Where(p => p.GetValueOrDefault("type")?.ToString() == "HUMAN").ToArray();
         var names = humans.Select(p => p.GetValueOrDefault("name")?.ToString())

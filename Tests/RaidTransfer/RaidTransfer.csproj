@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../ServerMod/Sharing/*.cs" Link="Sharing/%(Filename)%(Extension)" />
+    <Compile Include="../../ServerMod/Http/*.cs" Link="Http/%(Filename)%(Extension)" />
+    <Compile Include="../../ServerMod/Session/*.cs" Link="Session/%(Filename)%(Extension)" />
+    <Compile Include="../../ServerMod/WebSocket/*.cs" Link="WebSocket/%(Filename)%(Extension)" />
+    <Compile Include="../../ServerMod/PostRaid/ItemResolver.cs" Link="ItemResolver.cs" />
+    <Compile Include="../../ServerMod/Database/*.cs" Link="Database/%(Filename)%(Extension)" />
+    <Compile Include="../../ServerMod/FileSystem/DataFileService.cs" Link="DataFileService.cs" />
+    <Compile Include="../../ServerMod/PostRaid/RaidPositionCompiler.cs" Link="RaidPositionCompiler.cs" />
+    <Compile Include="../../ServerMod/PostRaid/RecordingIdentity.cs" Link="RecordingIdentity.cs" />
+    <Compile Include="../../ServerMod/Models/TrackingModels.cs" Link="TrackingModels.cs" />
+    <Compile Include="../../ServerMod/Config/RaidReviewConfig.cs" Link="RaidReviewConfig.cs" />
+    <Compile Include="../../ServerMod/Logging/RaidReviewLogger.cs" Link="RaidReviewLogger.cs" />
+    <Compile Include="../../ServerMod/DataIntegrity/GarbageCollector.cs" Link="GarbageCollector.cs" />
+    <Content Include="../../ServerMod/bin/Release/RaidReview/lib/sqlite/*.dll" Link="lib/sqlite/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../ServerMod/bin/Release/RaidReview/runtimes/**/*" Link="runtimes/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../ServerMod/public/**/*">
+      <LogicalName>frontend/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

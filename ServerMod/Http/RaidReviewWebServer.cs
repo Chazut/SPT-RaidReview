@@ -11,6 +11,7 @@ using RaidReview.Config;
 using RaidReview.Database;
 using RaidReview.FileSystem;
 using RaidReview.PostRaid;
+using RaidReview.Sharing;
 using RaidReview.WebSocket;
 
 namespace RaidReview.Http;
@@ -260,6 +261,14 @@ public class RaidReviewWebServer
 
     private void RegisterApiRoutes(WebApplication app)
     {
+        var archives = new RaidArchiveService(_db, _fileService, _compiler, _logger, Path.Combine(_modFolder, "data"));
+        app.MapRaidArchives(archives, async raidId =>
+        {
+            var rows = await _db.QueryAsync("SELECT * FROM raid WHERE raidId = $id", ("$id", raidId));
+            await ApplyRecordingIdentities(rows);
+            return rows.FirstOrDefault() ?? new Dictionary<string, object?>();
+        }, _logger);
+
         // Build a one-shot zoneId → quest title map from the SPT
         // quests.json + locale. Used by the raid-review map to resolve
         // friendly quest names on Phobos Quest POI tooltips (the

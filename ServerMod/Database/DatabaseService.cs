@@ -14,8 +14,8 @@ public class DatabaseService : IDisposable
     // transaction per statement shape, collapsing dozens of per-row commits into one. Order within a
     // table is preserved (single reader). Bounded staleness: rows are visible at most ~250ms late,
     // which nothing reads that fast mid-raid.
-    private readonly Channel<(string sql, (string name, object? value)[] parameters)> _writeBehind =
-        Channel.CreateUnbounded<(string, (string, object?)[])>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly Channel<(string sql, (string name, object? value)[] parameters, TaskCompletionSource? barrier)> _writeBehind =
+        Channel.CreateUnbounded<(string, (string, object?)[], TaskCompletionSource?)>(new UnboundedChannelOptions { SingleReader = true });
     private Task? _writeBehindDrainTask;
     private readonly CancellationTokenSource _writeBehindCts = new();
 
@@ -62,11 +62,20 @@ public class DatabaseService : IDisposable
     /// needs the row visible immediately (raid lifecycle, dedup-sensitive writes).
     /// </summary>
     public void QueueWrite(string sql, params (string name, object? value)[] parameters)
-        => _writeBehind.Writer.TryWrite((sql, parameters));
+        => _writeBehind.Writer.TryWrite((sql, parameters, null));
+
+    // Export must include the last queued events even immediately after END.
+    internal async Task FlushWritesAsync(CancellationToken ct)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!_writeBehind.Writer.TryWrite(("", [], completion)))
+            throw new InvalidOperationException("Recording queue is closed.");
+        await completion.Task.WaitAsync(ct);
+    }
 
     private async Task DrainWriteBehindAsync(CancellationToken ct)
     {
-        var pending = new List<(string sql, (string name, object? value)[] parameters)>(256);
+        var pending = new List<(string sql, (string name, object? value)[] parameters, TaskCompletionSource? barrier)>(256);
         while (true)
         {
             try
@@ -77,21 +86,24 @@ public class DatabaseService : IDisposable
                 await Task.Delay(250, ct);
                 while (_writeBehind.Reader.TryRead(out var item)) pending.Add(item);
 
-                foreach (var group in pending.GroupBy(p => p.sql))
+                foreach (var group in pending.Where(p => p.barrier == null).GroupBy(p => p.sql))
                     await ExecuteBatchAsync(group.Key, group.Select(g => g.parameters));
+                foreach (var item in pending) item.barrier?.TrySetResult();
                 pending.Clear();
             }
             catch (OperationCanceledException)
             {
                 // Shutdown: push whatever is still queued before letting go.
                 while (_writeBehind.Reader.TryRead(out var item)) pending.Add(item);
-                foreach (var group in pending.GroupBy(p => p.sql))
+                foreach (var group in pending.Where(p => p.barrier == null).GroupBy(p => p.sql))
                     try { await ExecuteBatchAsync(group.Key, group.Select(g => g.parameters)); } catch { /* best effort on shutdown */ }
+                foreach (var item in pending) item.barrier?.TrySetCanceled();
                 return;
             }
             catch (Exception ex)
             {
                 _log?.Invoke($"[DB] write-behind drain error ({pending.Count} rows dropped): {ex.Message}");
+                foreach (var item in pending) item.barrier?.TrySetException(ex);
                 pending.Clear();
             }
         }
@@ -583,6 +595,11 @@ public class DatabaseService : IDisposable
             ("add_loose_loot_container_template", @"
                 ALTER TABLE loose_loot ADD COLUMN ""containerTemplateId"" TEXT NOT NULL DEFAULT '';
             "),
+            ("add_raid_import_origin", @"
+                ALTER TABLE raid ADD COLUMN ""importedAt"" TEXT NOT NULL DEFAULT '';
+                ALTER TABLE raid ADD COLUMN ""importedProfileName"" TEXT NOT NULL DEFAULT '';
+                ALTER TABLE raid ADD COLUMN ""importedIsHeadless"" INTEGER NOT NULL DEFAULT 0;
+            "),
         };
 
         foreach (var (name, sql) in migrations)
@@ -612,6 +629,15 @@ public class DatabaseService : IDisposable
             AddParameter(markCmd, "$name", name);
             await markCmd.ExecuteNonQueryAsync();
         }
+    }
+
+    // Private page caches let archive snapshots use WAL without taking shared-cache
+    // table locks against the live recording connections.
+    internal async Task<DbConnection> OpenTransferConnectionAsync(CancellationToken ct)
+    {
+        var conn = SqliteRuntime.CreateConnection($"Data Source={_dbPath};Pooling=True;Cache=Private");
+        try { await conn.OpenAsync(ct); return conn; }
+        catch { await conn.DisposeAsync(); throw; }
     }
 
     public async Task ExecuteAsync(string sql, params (string name, object? value)[] parameters)

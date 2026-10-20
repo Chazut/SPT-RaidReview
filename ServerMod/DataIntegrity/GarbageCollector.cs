@@ -33,7 +33,7 @@ public class GarbageCollector
         _logger.Log($"Garbage collector deleting old raids, only keeping data for the last '{_config.AutoDeleteLimit}' raids.");
 
         var oldRaids = await _db.QueryAsync(
-            $"SELECT * FROM raid WHERE timeInRaid > 10 ORDER BY created_at DESC LIMIT 1000000 OFFSET {_config.AutoDeleteLimit}");
+            $"SELECT * FROM raid WHERE timeInRaid > 10 AND importedAt = '' ORDER BY created_at DESC LIMIT 1000000 OFFSET {_config.AutoDeleteLimit}");
 
         if (oldRaids.Count == 0)
         {
@@ -64,7 +64,7 @@ public class GarbageCollector
 
         // Unfinished raids have an empty exitStatus (END packet never arrived to update it)
         var unfinishedRaids = await _db.QueryAsync(
-            "SELECT raidId FROM raid WHERE exitStatus = '' OR exitStatus IS NULL");
+            "SELECT raidId FROM raid WHERE importedAt = '' AND (exitStatus = '' OR exitStatus IS NULL)");
 
         var raidCounts = unfinishedRaids
             .Select(r => r["raidId"]?.ToString() ?? "")

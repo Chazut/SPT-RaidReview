@@ -74,6 +74,7 @@ export interface TrackingOrbitGhostHearing {
 }
 
 export interface TrackingRaidData {
+  importedAt?: string;
   profileName?: string;
   isHeadless?: boolean;
   detectedMods: any;

@@ -57,6 +57,16 @@ its actual SQLite dependencies live in `lib/sqlite/`, isolated from other mods.
 
 ---
 
+### Share a raid
+
+Open a completed raid and click **Export raid** to download a ZIP. In another Raid Review installation, click **Import raid** on the Recent Raids page and select that ZIP.
+
+The archive contains the recorded events, replay positions, map variant and available ORBIT data. It includes recorded player/bot names, but no SPT profile save, server configuration or credentials. Both installations need a version with raid sharing support.
+
+Imported raids are labelled **Imported** and remain until you delete them from their Settings page. They do not count toward automatic raid cleanup. Importing the same raid again opens the existing recording without replacing it. If the original recording has no positions, RR reports that the movement replay is unavailable.
+
+Transfers support ZIPs up to 512 MB, with up to 2 GB of uncompressed data. Use ZIPs created by **Export raid**; an ORBIT debug ZIP is a different format.
+
 ### Project Structure
 
 | Component | Path | Tech | Purpose |

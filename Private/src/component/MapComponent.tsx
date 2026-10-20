@@ -157,8 +157,11 @@ function buildPlayerIcon(color: string, player: any, proportionalScale: number, 
     return { icon: L.divIcon({ className: 'special-bot-marker', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }), html }
 }
 
+// Imported recordings can contain arbitrary names and labels. Escape text before building Leaflet HTML.
+const htmlText = (value: unknown) => escapeMainText(String(value ?? ''))
+
 function createPlayerMarker(latlng: any, color: string, player: any, proportionalScale: number, opacity: number = 1, pmcIndex?: number, tooltipText?: string, behaviorColor?: string | null, hpPercent?: number): L.Marker {
-    const displayName = tooltipText || getDisplayName(player)
+    const displayName = tooltipText || htmlText(getDisplayName(player))
     const tooltipOpts: L.TooltipOptions = { direction: 'top', offset: [0, -10], className: 'player-tooltip player-tooltip-html' }
     const { icon, html } = buildPlayerIcon(color, player, proportionalScale, opacity, pmcIndex, behaviorColor, hpPercent)
     const marker = L.marker(latlng, { icon, interactive: true }).bindTooltip(displayName, tooltipOpts) as L.Marker
@@ -180,7 +183,7 @@ function updatePlayerMarker(marker: L.Marker, latlng: any, color: string, player
         marker.setIcon(icon)
         ;(marker as any)._rr_iconHtml = html
     }
-    const displayName = tooltipText || getDisplayName(player)
+    const displayName = tooltipText || htmlText(getDisplayName(player))
     // Stash the latest base text so the focus overlay can enrich from it; only
     // write the live tooltip for non-focused markers (the focus overlay owns the
     // focused one and avoids per-frame open/close churn).
@@ -556,7 +559,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             interactive: false,
         })
         ring.bindTooltip(
-            `<span style="color:${color}">${isC ? '\u25A0' : '\u25C6'}</span> ${stripUnityRichText(item.itemName)}${item.qty > 1 ? ' x' + item.qty : ''} \u2014 \u20BD${tp.toLocaleString()}`,
+            `<span style="color:${color}">${isC ? '\u25A0' : '\u25C6'}</span> ${htmlText(stripUnityRichText(item.itemName))}${item.qty > 1 ? ' x' + item.qty : ''} \u2014 \u20BD${tp.toLocaleString()}`,
             { direction: 'top', offset: [0, -14], className: 'player-tooltip player-tooltip-html', permanent: true }
         )
         ring.addTo(MAP)
@@ -1016,7 +1019,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     if (currentGhost) markerOpacity = Math.min(markerOpacity, 0.35)
                     if (showBehavior && !isBTR) {
                         behaviorCat = getBehaviorCategory(currentDecision)
-                        const decisionLabel = currentDecision ? formatDecisionLabel(currentDecision) : ''
+                        const decisionLabel = currentDecision ? htmlText(formatDecisionLabel(currentDecision)) : ''
                         // Source mod as a white head, decision suffix in the category colour. ORBIT patrol is the
                         // exception: just the coloured category word, no suffix.
                         const behaviorHead = behaviorCat.key === 'orbit' ? behaviorCat.label : (getDecisionSource(currentDecision) || behaviorCat.label)
@@ -1041,7 +1044,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             const top3 = [...playerLoot].sort((a, b) => (b.price || 0) * Number(b.qty || 1) - (a.price || 0) * Number(a.qty || 1)).slice(0, 3)
                             const itemList = top3.map(l => {
                                 const p = (l.price || 0) * Number(l.qty || 1)
-                                return `${l.itemName || l.name}${p > 0 ? ' \u20BD' + p.toLocaleString() : ''}`
+                                return `${htmlText(l.itemName || l.name)}${p > 0 ? ' \u20BD' + p.toLocaleString() : ''}`
                             }).join(', ')
                             lootLine = `<br/><span style="color:#FACC15">\u{1F4E6} ${playerLoot.length} items</span> (\u20BD${totalValue.toLocaleString()})<br/><span style="font-size:10px;opacity:0.7">${itemList}${playerLoot.length > 3 ? '...' : ''}</span>`
                         }
@@ -1064,11 +1067,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             const reason = latestObj.extractReason && String(latestObj.extractReason).trim().length > 0
                                 ? String(latestObj.extractReason).trim()
                                 : 'extract requested'
-                            extractLine = `<br/><span style="color:#60A5FA">\u{1F6AA} Extracting: ${reason}</span>`
+                            extractLine = `<br/><span style="color:#60A5FA">\u{1F6AA} Extracting: ${htmlText(reason)}</span>`
                         }
                     }
                     const ghostLine = currentGhost ? '<br/><span style="color:#94A3B8">\u{1F47B} Ghost (AI limiter)</span>' : ''
-                    const tip = `${getDisplayName(player)} (${getPlayerDifficultyAndBrain(player)})${healthLine}${behaviorLine}${ghostLine}${extractLine}${lootLine}`
+                    const tip = `${htmlText(getDisplayName(player))} (${htmlText(getPlayerDifficultyAndBrain(player))})${healthLine}${behaviorLine}${ghostLine}${extractLine}${lootLine}`
                     const ringColor = behaviorCat && behaviorCat.key !== 'idle' && behaviorCat.key !== 'patrol' ? behaviorCat.color : undefined
                     const hpPct = (currentHealth != null && maxHealth != null && maxHealth > 0) ? Math.round((currentHealth / maxHealth) * 100) : undefined
                     const isFocused = playerFocusRef.current === playerId
@@ -1264,13 +1267,13 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         const victim = raidData.players.find(p => p.profileId === k.killedId)
                         const victimIdx = victim ? raidData.players.indexOf(victim) : 0
                         const victimIcon = victim ? getTooltipIconHtml(victim, getPlayerColor(victim, victimIdx), pmcIndexMap[k.killedId]) : ''
-                        html += `<div>\u2620 ${victimIcon}${k.killedNickname} (${intl([k.weapon.replace('Name', 'ShortName')], intl_dir)}, ${k.distance.toFixed(0)}m${k.bodyPart ? ', ' + k.bodyPart : ''})</div>`
+                        html += `<div>\u2620 ${victimIcon}${htmlText(k.killedNickname)} (${htmlText(intl([k.weapon.replace('Name', 'ShortName')], intl_dir))}, ${k.distance.toFixed(0)}m${k.bodyPart ? ', ' + htmlText(k.bodyPart) : ''})</div>`
                     }
                     if (death) {
                         const killer = raidData.players.find(p => p.profileId === death.profileId)
                         const killerIdx = killer ? raidData.players.indexOf(killer) : 0
                         const killerIcon = killer ? getTooltipIconHtml(killer, getPlayerColor(killer, killerIdx), pmcIndexMap[death.profileId]) : ''
-                        html += `<div style="color:#EF4444;">\u{1F480} ${killerIcon}${death.profileNickname} (${intl([death.weapon.replace('Name', 'ShortName')], intl_dir)}, ${death.distance.toFixed(0)}m${death.bodyPart ? ', ' + death.bodyPart : ''})</div>`
+                        html += `<div style="color:#EF4444;">\u{1F480} ${killerIcon}${htmlText(death.profileNickname)} (${htmlText(intl([death.weapon.replace('Name', 'ShortName')], intl_dir))}, ${death.distance.toFixed(0)}m${death.bodyPart ? ', ' + htmlText(death.bodyPart) : ''})</div>`
                     }
                     html += '</div>'
                 }
@@ -1300,7 +1303,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 const player = raidData.players.find(p => p.profileId === playerFocus)
                 const playerIdx = player ? raidData.players.indexOf(player) : 0
                 const color = player ? getPlayerColor(player, playerIdx) : '#999'
-                const displayName = player ? `${getDisplayName(player)} (${getPlayerDifficultyAndBrain(player)})` : 'Unknown'
+                const displayName = player ? `${htmlText(getDisplayName(player))} (${htmlText(getPlayerDifficultyAndBrain(player))})` : 'Unknown'
                 const tmpMarker = L.circleMarker([death.target.z, death.target.x], {
                     radius: 6, color, fillColor: color, fillOpacity: 0.8, weight: 1, interactive: false
                 }).addTo(MAP)
@@ -1325,7 +1328,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 if (!onFloor(kill.source)) MAP.removeLayer(line)
                 line._rr_focusViz = true
                 focusLayersRef.current.push(line)
-                const skullHtml = `<img src="/skull.png" /><span class="tooltiptext event event-map text-sm"><strong>${kill.killedNickname}</strong><br/>${intl([kill.weapon.replace('Name', 'ShortName')], intl_dir)}, ${kill.distance.toFixed(0)}m${kill.bodyPart ? ', ' + kill.bodyPart : ''}</span>`
+                const skullHtml = `<img src="/skull.png" /><span class="tooltiptext event event-map text-sm"><strong>${htmlText(kill.killedNickname)}</strong><br/>${htmlText(intl([kill.weapon.replace('Name', 'ShortName')], intl_dir))}, ${kill.distance.toFixed(0)}m${kill.bodyPart ? ', ' + htmlText(kill.bodyPart) : ''}</span>`
                 const skullIcon = L.divIcon({ className: 'death-icon tooltip event follow-kill-marker', html: skullHtml })
                 const marker = L.marker([kill.target.z, kill.target.x], { icon: skullIcon, interactive: false, zIndexOffset: -1000 }).addTo(MAP)
                 marker._rr_focusViz = true
@@ -1409,7 +1412,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     
             // Death marker
             var deathHtml = `<img src="/skull.png" /><span class="tooltiptext event event-map text-sm">${
-                e.profileId === e.killedId ? `<strong>${e.profileNickname}</strong><br/>died` : `<strong>${e.profileNickname}</strong><br/>killed<br/><strong>${e.killedNickname}</strong>`
+                e.profileId === e.killedId ? `<strong>${htmlText(e.profileNickname)}</strong><br/>died` : `<strong>${htmlText(e.profileNickname)}</strong><br/>killed<br/><strong>${htmlText(e.killedNickname)}</strong>`
             }</span>`;
             var deathIcon = L.divIcon({ className: 'death-icon tooltip event', html: deathHtml });
             var deathMarker = L.marker([e.target.z, e.target.x], { icon: deathIcon });
@@ -1571,7 +1574,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const player = raidData?.players?.find(p => p.profileId === ge.profileId)
             const throwerName = displayPlayerName(player?.name, ge.profileId.slice(0, 8))
             explosionCircle.bindTooltip(
-                `\u{1F4A5} <strong>${throwerName}</strong> — ${ge.weaponName || 'Grenade'}`,
+                `\u{1F4A5} <strong>${htmlText(throwerName)}</strong> — ${htmlText(ge.weaponName || 'Grenade')}`,
                 { direction: 'top', offset: [0, -8], className: 'player-tooltip player-tooltip-html' }
             )
             explosionCircle._rr_grenade = true
@@ -1835,7 +1838,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 interactive: true,
             })
             marker.bindTooltip(
-                `<span style="color:${color}">\u25C6</span> ${stripUnityRichText(item.itemName)}${item.qty > 1 ? ' x' + item.qty : ''} \u2014 \u20BD${totalPrice.toLocaleString()}`,
+                `<span style="color:${color}">\u25C6</span> ${htmlText(stripUnityRichText(item.itemName))}${item.qty > 1 ? ' x' + item.qty : ''} \u2014 \u20BD${totalPrice.toLocaleString()}`,
                 { direction: 'top', offset: [0, -8], className: 'player-tooltip player-tooltip-html' }
             )
             marker._rr_looseLoot = true
@@ -1849,10 +1852,10 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const first = items[0]
             const cName = first.containerName || 'Container'
 
-            let tooltipHtml = `<span style="color:${color}">\u25A0</span> <strong>${cName}</strong> (${items.length}) \u2014 \u20BD${containerTotal.toLocaleString()}<div style="margin-top:3px;border-top:1px solid rgba(255,255,255,0.2);padding-top:3px;">`
+            let tooltipHtml = `<span style="color:${color}">\u25A0</span> <strong>${htmlText(cName)}</strong> (${items.length}) \u2014 \u20BD${containerTotal.toLocaleString()}<div style="margin-top:3px;border-top:1px solid rgba(255,255,255,0.2);padding-top:3px;">`
             for (const item of items.sort((a, b) => (b.price * b.qty) - (a.price * a.qty))) {
                 const tp = item.price * item.qty
-                tooltipHtml += `<div style="font-size:10px;"><span style="color:${getLootPriceColor(tp)}">${stripUnityRichText(item.itemName)}</span>${item.qty > 1 ? ' x' + item.qty : ''} \u20BD${tp.toLocaleString()}</div>`
+                tooltipHtml += `<div style="font-size:10px;"><span style="color:${getLootPriceColor(tp)}">${htmlText(stripUnityRichText(item.itemName))}</span>${item.qty > 1 ? ' x' + item.qty : ''} \u20BD${tp.toLocaleString()}</div>`
             }
             tooltipHtml += '</div>'
 
@@ -1904,7 +1907,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     dashArray: '3 2',
                 })
                 marker.bindTooltip(
-                    `<span style="color:${color}">\u2B25</span> ${loot.itemName || loot.name}${Number(loot.qty) > 1 ? ' x' + loot.qty : ''} \u2014 \u20BD${tp.toLocaleString()} <span style="opacity:0.5">(dropped)</span>`,
+                    `<span style="color:${color}">\u2B25</span> ${htmlText(loot.itemName || loot.name)}${Number(loot.qty) > 1 ? ' x' + Number(loot.qty) : ''} \u2014 \u20BD${tp.toLocaleString()} <span style="opacity:0.5">(dropped)</span>`,
                     { direction: 'top', offset: [0, -8], className: 'player-tooltip player-tooltip-html' }
                 )
                 marker._rr_looseLoot = true
@@ -2002,7 +2005,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             })
 
             marker.bindTooltip(
-                `${icon} <strong>${botName}</strong><br/>${q.questName}<br/><em>${q.actionType}</em> (${q.status})${isEFT ? '<br/><span style="color:#FBCFE8">EFT Quest</span>' : ''}`,
+                `${icon} <strong>${htmlText(botName)}</strong><br/>${htmlText(q.questName)}<br/><em>${htmlText(q.actionType)}</em> (${htmlText(q.status)})${isEFT ? '<br/><span style="color:#FBCFE8">EFT Quest</span>' : ''}`,
                 { direction: 'top', offset: [0, -8], className: 'player-tooltip player-tooltip-html' }
             )
             marker._rr_quest = true
@@ -2176,7 +2179,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 interactive: true,
             })
             marker.bindTooltip(
-                `${style.icon} <strong>${botName}</strong>${isLeader ? ' ★' : ''}<br/><em>${formatDecisionLabel('Orbit:' + (o.category || 'Objective'))}</em>`,
+                `${style.icon} <strong>${htmlText(botName)}</strong>${isLeader ? ' ★' : ''}<br/><em>${htmlText(formatDecisionLabel('Orbit:' + (o.category || 'Objective')))}</em>`,
                 { direction: 'top', offset: [0, -8], className: 'player-tooltip player-tooltip-html' }
             )
             marker._rr_objective = true
@@ -2498,7 +2501,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             let tipHtml = `<strong>${escapeMainText(mainLabel(m))}</strong>`
             if (m.type === 'Quest') {
                 const friendly = resolveQuestName(m.questTriggerId || m.questTitle, questNameMap)
-                tipHtml += `<br/><span style="opacity:0.85">${friendly || m.questTitle || m.questTriggerId || ''}</span>`
+                tipHtml += `<br/><span style="opacity:0.85">${htmlText(friendly || m.questTitle || m.questTriggerId || '')}</span>`
             }
             if (m.type === 'Airdrop') tipHtml += `<br/>${escapeMainText(airdropDetail(m))}`
             if ((m.type === 'MultiStep' || m.type === 'Rush')) {
@@ -2602,7 +2605,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
             const icon = L.divIcon({
                 className: '',
-                html: `<div class="loot-float-label" style="color:${color}">+${loot.itemName || loot.name}${priceStr}</div>`,
+                html: `<div class="loot-float-label" style="color:${color}">+${htmlText(loot.itemName || loot.name)}${priceStr}</div>`,
                 iconSize: [200, 20],
                 iconAnchor: [100, 20 + yOffset],
             })
