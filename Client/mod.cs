@@ -997,6 +997,12 @@ namespace RAID_REVIEW
 
                                     // Bot behavior state
                                     string decision = "";
+                                    string activeLayer = null;
+                                    if (player.IsAI)
+                                    {
+                                        try { activeLayer = player.AIData?.BotOwner?.Brain?.ActiveLayerName(); }
+                                        catch { }
+                                    }
                                     if (player.IsAI)
                                     {
                                         try
@@ -1009,7 +1015,7 @@ namespace RAID_REVIEW
                                             }
                                             else
                                             {
-                                                // Vanilla fallback — always send, even BigBrain IDs (frontend maps 9000+)
+                                                // Preserve the raw decision when no named decision is available.
                                                 var botOwner = player.AIData?.BotOwner;
                                                 if (botOwner?.Brain != null)
                                                 {
@@ -1027,8 +1033,7 @@ namespace RAID_REVIEW
                                     {
                                         try
                                         {
-                                            var botOwner = player.AIData?.BotOwner;
-                                            var layerName = botOwner?.Brain != null ? botOwner.Brain.ActiveLayerName() : null;
+                                            var layerName = activeLayer;
                                             if (!string.IsNullOrEmpty(layerName))
                                             {
                                                 // Log unique layer names for debugging
@@ -1065,7 +1070,7 @@ namespace RAID_REVIEW
                                         catch { }
                                     }
 
-                                    // Override idle/patrol decisions with ORBIT objective info.
+                                    // Resolve ORBIT objectives from the active layer, including bots without SAIN.
                                     // Legacy Phobos uses an independent integration class — when
                                     // both happen to be (mis-)installed ORBIT wins since it
                                     // carries the richer state surface.
@@ -1074,20 +1079,13 @@ namespace RAID_REVIEW
                                         try
                                         {
                                             var od = orbitObjective;
-                                            if (od != null && IsIdleOrPatrolDecision(decision))
+                                            var resolved = OrbitBehaviorDecision.Resolve(decision, activeLayer, od?.status, od?.category);
+                                            if (resolved != decision && int.TryParse(decision, out _)
+                                                && _seenLayerNames.Add("ORBIT behavior:" + decision))
                                             {
-                                                // Finished means the bot reached the objective and is guarding it.
-                                                if (od.category == "SearchingAmbushExtract" || od.category == "ApproachingAmbushExtract")
-                                                    decision = "Orbit:" + od.category;
-                                                else if (od.category?.StartsWith("Ambush", StringComparison.Ordinal) == true)
-                                                    decision = "Orbit:" + (od.status == "Finished" ? "Camping" : "Approaching") + od.category;
-                                                else if (od.status == "Moving" || od.status == "Looting")
-                                                    decision = "Orbit:" + od.category;
-                                                else if (od.status == "Finished" && od.category == "SquadCover")
-                                                    decision = "Orbit:SquadCover";
-                                                else if (od.status == "Finished")
-                                                    decision = "Orbit:Guarding";
+                                                Logger.LogInfo($"RAID_REVIEW :::: ORBIT_BEHAVIOR :::: Resolved BigBrain action {decision} using active layer {activeLayer}.");
                                             }
+                                            decision = resolved;
                                         }
                                         catch { }
                                     }

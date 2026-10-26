@@ -84,12 +84,8 @@ const DECISION_TO_CATEGORY: Record<string, string> = {
     Combat: 'combat', Squad: 'combat', Extract: 'extract',
     Run: 'flee', Peace: 'patrol', AvoidThreat: 'flee',
 
-    // ── BigBrain numeric layer IDs (fallback if SAIN reflection fails) ──
-    '9000': 'idle',         // SAIN DebugLayer (default/inactive)
-    '9001': 'flee',         // SAIN AvoidThreatLayer
-    '9002': 'extract',      // SAIN ExtractLayer
-    '9003': 'combat',       // SAIN CombatSquadLayer
-    '9004': 'combat',       // SAIN CombatSoloLayer
+    // BigBrain numeric action IDs vary with mod registration order and cannot
+    // identify a behavior or its owner in older recordings.
 }
 
 // Recorded operation names distinguish extraction prerequisites from loot-only runs,
@@ -159,6 +155,7 @@ function formatObjectiveCategory(cat: string): string {
 
 export function formatDecisionLabel(decision: string | undefined | null): string {
     if (!decision || decision === '') return ''
+    if (/^\d+$/.test(decision)) return `Unidentified action (${decision})`
     if (decision.startsWith('QB:')) return decision.substring(3)
     if (decision.startsWith('LootingBots:')) return decision.substring(12)
     if (decision.startsWith('BL:')) return decision.substring(3).replace(/^Bot/, '').replace(/Layer$/, '')
@@ -181,12 +178,12 @@ const SAIN_DECISIONS = new Set<string>([
     'PushSuppressedEnemy', 'GroupSearch', 'Suppress', 'Help', 'Regroup',
     'Reload', 'FirstAid', 'Surgery', 'Stims',
     'Combat', 'Squad', 'Extract', 'Run', 'Peace', 'AvoidThreat',
-    '9000', '9001', '9002', '9003', '9004', // BigBrain numeric SAIN layer ids
 ])
 
 // The mod driving this decision, shown as the tooltip head since the colour already conveys the category.
 export function getDecisionSource(decision: string | undefined | null): string {
     if (!decision) return ''
+    if (/^\d+$/.test(decision)) return 'Unknown'
     if (decision.startsWith('Orbit:')) return 'ORBIT'
     if (decision.startsWith('Phobos:')) return 'Phobos'
     if (decision.startsWith('SAIN:')) return 'SAIN'
