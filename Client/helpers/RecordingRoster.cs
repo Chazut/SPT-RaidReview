@@ -15,8 +15,9 @@ namespace RAID_REVIEW
         private static readonly List<Player> snapshot = new List<Player>(64);
         private static readonly Dictionary<string, PlayerStatus> confirmed = new Dictionary<string, PlayerStatus>();
         private static readonly List<string> gone = new List<string>();
+        internal static bool IsEnding { get; private set; }
 
-        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); confirmed.Clear(); snapshot.Clear(); }
+        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); confirmed.Clear(); snapshot.Clear(); IsEnding = false; }
         internal static void Seed(GameWorld world)
         {
             Reset();
@@ -25,7 +26,7 @@ namespace RAID_REVIEW
         }
         internal static void Add(Player player)
         {
-            if (player == null) return;
+            if (IsEnding || player == null) return;
             active[player.ProfileId] = player;
             departed.Remove(player.ProfileId);
         }
@@ -35,13 +36,16 @@ namespace RAID_REVIEW
         }
         internal static void Confirm(string profileId, PlayerStatus status)
         {
-            if (string.IsNullOrEmpty(profileId) || (status != PlayerStatus.Dead && status != PlayerStatus.Extracted)) return;
+            if (IsEnding || string.IsNullOrEmpty(profileId) || (status != PlayerStatus.Dead && status != PlayerStatus.Extracted)) return;
             if (confirmed.TryGetValue(profileId, out var previous) && previous == PlayerStatus.Dead) return;
             confirmed[profileId] = status;
+            // A network confirmation can arrive after UnregisterPlayer was observed.
+            // Correct that recorded removal even if its Player has already been disposed.
+            if (!active.ContainsKey(profileId) && statuses.ContainsKey(profileId)) Record(profileId, status);
         }
         internal static void Depart(Player player)
         {
-            if (player == null) return;
+            if (IsEnding || player == null) return;
             if (active.TryGetValue(player.ProfileId, out var current) && !ReferenceEquals(current, player)) return;
             // Keep the last reference until capture records metadata and the terminal status.
             Add(player);
@@ -50,6 +54,7 @@ namespace RAID_REVIEW
         internal static List<Player> Snapshot()
         {
             snapshot.Clear(); gone.Clear();
+            if (IsEnding) return snapshot;
             foreach (var entry in active)
             {
                 if (entry.Value == null) { Record(entry.Key, confirmed.TryGetValue(entry.Key, out var terminal) ? terminal : PlayerStatus.Unspawned); gone.Add(entry.Key); }
@@ -60,6 +65,7 @@ namespace RAID_REVIEW
         }
         internal static bool Observe(Player player)
         {
+            if (IsEnding) return false;
             var id = player.ProfileId;
             PlayerStatus state;
             if (!confirmed.TryGetValue(id, out state))
@@ -102,6 +108,14 @@ namespace RAID_REVIEW
                 // A missing final status must not prevent END and lose the entire raid.
                 try { Observe(player); } catch { }
             }
+        }
+        internal static void BeginTeardown()
+        {
+            if (IsEnding) return;
+            // Sample while the world is still intact, then ignore disposal callbacks.
+            // Fika stops bots before OnGameSessionEnd, sometimes across several capture ticks.
+            try { Finish(); }
+            finally { IsEnding = true; active.Clear(); departed.Clear(); snapshot.Clear(); }
         }
     }
 

@@ -8,6 +8,11 @@ namespace EFT
     public class Player : IPlayer
     {
         public string ProfileId, KillerId;
+        public bool IsAI;
+        public string Location = "bigmap";
+        public UnityEngine.Vector3 Position = new(1,2,3);
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public virtual void OnItemAddedOrRemoved(InventoryLogic.Item item, InventoryLogic.ItemAddress location, bool added) { }
         public bool Destroyed;
         public Health HealthController = new();
         public void OnDead(EDamageType damage) { HealthController.IsAlive=false; }
@@ -35,11 +40,11 @@ public class LeaveBase { protected EFT.BotOwner bot; public LeaveBase(EFT.BotOwn
 public class BotLeaveData : LeaveBase { public bool LeaveComplete; public BotLeaveData(EFT.BotOwner bot):base(bot) { } public void RemoveFromMap() { LeaveComplete=true; } }
 namespace EFT.HealthSystem { public class Unused { } }
 namespace BepInEx { public class Unused { } }
-namespace Comfort.Common { public class Unused { } }
+namespace Comfort.Common { public static class Singleton<T> { public static T Instance { get; set; } } }
 namespace UnityEngine { public struct Vector3 { public float x, y, z; public Vector3(float x, float y, float z) { this.x=x; this.y=y; this.z=z; } } }
 namespace SPT.Reflection.Patching
 {
-    public abstract class ModulePatch { protected abstract System.Reflection.MethodBase GetTargetMethod(); }
+    public abstract class ModulePatch { protected abstract System.Reflection.MethodBase GetTargetMethod(); protected static RAID_REVIEW.TestLog Logger = new(); }
     public class PatchPrefix : Attribute { }
     public class PatchPostfix : Attribute { }
 }
@@ -47,7 +52,10 @@ namespace RAID_REVIEW
 {
     public static class RAID_REVIEW
     {
-        public static bool CanCapture = true;
+        private static bool captureEnabled = true;
+        public static bool CanCapture { get => captureEnabled && !RecordingRoster.IsEnding; set => captureEnabled=value; }
+        public static Setting<bool> LootTracking = new() {Value=true};
+        public static int GetHandbookPrice(EFT.InventoryLogic.Item item) => item.Price;
         public static string sessionId = "session";
         public static System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
     }
@@ -55,6 +63,24 @@ namespace RAID_REVIEW
     {
         public static List<(string Action, object Payload)> Packets = new();
         public static bool SendSnapshot(string action, object payload) { Packets.Add((action,payload)); return true; }
+    }
+}
+namespace EFT.InventoryLogic
+{
+    public class Item { public string Id="item", TemplateId="template"; public int StackObjectsCount=1, Price=100; public bool QuestItem; public string LocalizedShortName()=>"Loot"; }
+    public class ItemAddress { public Container Container = new(); }
+    public class Container { public string ID="backpack"; }
+}
+namespace RAID_REVIEW
+{
+    public class Setting<T> { public T Value; }
+    public class TestLog { public List<string> Errors=new(); public void LogError(string text)=>Errors.Add(text); public void LogWarning(string text)=>Errors.Add(text); }
+    public static class LoggerInstance { public static TestLog Log=new(); }
+    internal static class RecordingPerformance
+    {
+        internal enum Stage {Loot}
+        internal struct Sample : IDisposable { public void Dispose() {} }
+        internal static Sample Measure(Stage stage)=>new();
     }
 }
 namespace RaidReview

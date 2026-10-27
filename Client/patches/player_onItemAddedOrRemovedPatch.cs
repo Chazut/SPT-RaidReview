@@ -19,13 +19,20 @@ namespace RAID_REVIEW
         [PatchPostfix]
         private static void PatchPostFix(ref Player __instance, Item item, ItemAddress location, bool added)
         {
+            // The observed override has its own hook. If it ever calls base, capture once.
+            if (FikaRecording.HandlesLoot(__instance)) return;
+            Capture(__instance, item, location, added);
+        }
+
+        internal static void Capture(Player __instance, Item item, ItemAddress location, bool added)
+        {
             if (!RAID_REVIEW.CanCapture || __instance.Location == "hideout") return;
             using (RecordingPerformance.Measure(RecordingPerformance.Stage.Loot))
             {
 
                 try
                 {
-                    bool isPackingMagazine = location.Container.ID == "cartridges";
+                    bool isPackingMagazine = location?.Container?.ID == "cartridges";
                     if (RAID_REVIEW.LootTracking.Value && !isPackingMagazine)
                     {
                         var pos = __instance.Position;

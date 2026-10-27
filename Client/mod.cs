@@ -27,6 +27,7 @@ namespace RAID_REVIEW
     [BepInDependency("com.danw.questingbots", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.janky.phobos", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.chazut.orbit", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("com.fika.core", BepInDependency.DependencyFlags.SoftDependency)]
     public class RAID_REVIEW : BaseUnityPlugin
     {
         // Framerate
@@ -35,7 +36,7 @@ namespace RAID_REVIEW
         // RAID_REVIEW
         public static string sessionId = null;
         public static bool inRaid = false;
-        internal static bool CanCapture => inRaid && EnableRecording.Value && !Telemetry.Faulted;
+        internal static bool CanCapture => inRaid && EnableRecording.Value && !Telemetry.Faulted && !RecordingRoster.IsEnding;
         public static ConfigEntry<bool> PerformanceLogging;
         public static bool tracking = false;
         public static bool WebSocketConnected = false;
@@ -784,6 +785,9 @@ namespace RAID_REVIEW
 
             LoggerInstance.Log = Logger;
 
+            if (Chainloader.PluginInfos.TryGetValue("com.fika.core", out var fika))
+                FikaRecording.Initialize(fika.Instance.GetType().Assembly);
+
             StartCoroutine(UpdateCoroutine());
         }
         IEnumerator UpdateCoroutine()
@@ -835,6 +839,9 @@ namespace RAID_REVIEW
                         FinishRecording(EnableRecording.Value ? "RECORDING_INCOMPLETE" : "RECORDING_DISABLED", trackingRaid.exitStatus);
                         continue;
                     }
+
+                    // Wait for the normal session-end result without inspecting disposed bots.
+                    if (RecordingRoster.IsEnding) continue;
 
                     using (RecordingPerformance.Measure(RecordingPerformance.Stage.Capture))
                     {
@@ -896,19 +903,10 @@ namespace RAID_REVIEW
                                     group = player?.AIData?.BotOwner?.BotsGroup?.Id ?? 0,
                                     spawnTime = stopwatch.ElapsedMilliseconds,
                                     type = RecordingPlayerIdentity.Type(player.IsAI, player.Side),
-                                    mod_SAIN_brain = "UNKNOWN",
+                                    mod_SAIN_brain = RecordingPlayerIdentity.Brain(player.IsAI, player.Side),
                                     mod_SAIN_difficulty = "",
                                     mod_SAIN_name = ""
                                 };
-
-                                if (player.Side == EPlayerSide.Savage)
-                                {
-                                    trackingPlayer.mod_SAIN_brain = "SCAV";
-                                }
-                                else if (player.Side == EPlayerSide.Usec || player.Side == EPlayerSide.Bear)
-                                {
-                                    trackingPlayer.mod_SAIN_brain = "PMC";
-                                }
 
                                 // Read WildSpawnType directly for bot type detection
                                 // Must run for all AI (including Savage side) to detect bosses like Partizan

@@ -26,18 +26,21 @@ function functions(file, names) {
     const found = [];
     function visit(node) {
         if (ts.isFunctionDeclaration(node) && names.includes(node.name?.text)) found.push(node.getText(source));
+        if (ts.isVariableDeclaration(node) && names.includes(node.name?.text)) found.push('const ' + node.getText(source) + ';');
         ts.forEachChild(node, visit);
     }
     visit(source);
     assert.equal(found.length, names.length);
-    const context = { ...players, getIsbDisplayName: () => '' };
+    const context = { ...players, ...load(path.join(root, 'Private/src/helpers/playerIdentity.ts')),
+        raid: { profileId: 'host' }, getIsbDisplayName: () => '' };
     vm.runInNewContext(ts.transpileModule(found.join('\n'), {
         compilerOptions: { target: ts.ScriptTarget.ES2020 }
     }).outputText, context);
     return context;
 }
 const map = functions('Private/src/component/MapComponent.tsx', ['classifyPlayer', 'getPlayerBrain', 'getPlayerDifficultyAndBrain']);
-const overview = functions('Private/src/pages/V2/RaidOverview.tsx', ['getPlayerBrain', 'getPlayerDifficultyAndBrain']);
+const overview = functions('Private/src/pages/V2/RaidOverview.tsx', ['getPlayerBrain', 'getPlayerDifficultyAndBrain',
+    'getFactionBadge', 'FACTION_COLORS', 'SIDE_COLORS', 'PMC_TEAM_COLORS']);
 const charts = functions('Private/src/pages/V2/RaidCharts.tsx', ['getFactionGroup']);
 let checks = 0;
 function equal(actual, expected) { assert.equal(actual, expected); checks++; }
@@ -82,3 +85,22 @@ if (process.argv[2]) {
     console.log(`${recorded.length} recorded hunt raiders replayed without mutating stored types`);
 }
 console.log(`${checks} hunt-raider display checks passed`);
+
+// Replay old HUMAN rows with the incorrect PMC/SCAV brain as well as new rows.
+for (const team of ['Bear', 'Usec', 'Savage']) {
+    for (const mod_SAIN_brain of ['PMC', 'SCAV', 'PLAYER', 'UNKNOWN']) {
+        const human = Object.freeze({ ...bot('HUMAN'), profileId: 'remote', team, mod_SAIN_brain });
+        equal(overview.getPlayerBrain(human), 'PLAYER');
+        equal(overview.getPlayerDifficultyAndBrain(human), 'PLAYER');
+        equal(overview.getFactionBadge(human, false).label.toUpperCase(), 'PLAYER');
+        equal(map.getPlayerBrain(human), 'PLAYER');
+        equal(map.getPlayerDifficultyAndBrain(human), 'PLAYER');
+    }
+}
+equal(overview.getFactionBadge({...bot('BOT'),team:'Bear'},false).label, 'BEAR #3');
+equal(overview.getFactionBadge({...bot('BOT'),team:'Usec'},false).label, 'USEC #3');
+equal(overview.getFactionBadge({...bot('BOT'),profileId:'host'},true).label.toUpperCase(), 'PLAYER');
+equal(overview.getPlayerDifficultyAndBrain({...bot('BOT'),profileId:'host'}), 'PLAYER');
+equal(overview.isHumanPlayer({...bot('SCAV|SCAV'),profileId:'ai'}, 'host'), false);
+equal(overview.isHumanPlayer({...bot('PLAYER_SCAV'),profileId:'ai'}, 'host'), false);
+console.log(`${checks} combined bot and Fika human display checks passed`);

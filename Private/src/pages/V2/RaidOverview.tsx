@@ -12,6 +12,7 @@ import { getLocationLabel } from '../../helpers/locations';
 import { getFactionRole, resolveBotType, isRaiderHunter } from "../../helpers/players";
 import { getIsbDisplayName } from '../../helpers/isb';
 import { displayPlayerName } from '../../helpers/playerNames';
+import { isHumanPlayer } from '../../helpers/playerIdentity';
 import { finalPlayerStatuses, peakActiveBots, playerStatusLabel } from '../../helpers/playerStatuses';
 
 const FACTION_COLORS: Record<string, { color: string, label: string }> = {
@@ -210,7 +211,7 @@ export default function RaidOverview() {
         if (groupedByType === 'TEAM') {
           const SIDE_ORDER = ['Player', 'USEC', 'BEAR', 'P. Scav', 'Boss', 'Goon', 'Follower', 'Raider', 'Rogue', 'Cultist', 'Bloodhound', 'Special', 'Infected', 'Mercenary', 'RUAF', 'UNTAR', 'Black Div', 'ISB', 'ISB WT', 'Combine', 'Sniper', 'Scav'];
           const grouped = _.groupBy(raid.players, p => {
-            if (p.profileId === raid.profileId) return 'Player';
+            if (isHumanPlayer(p, raid.profileId)) return 'Player';
             const isb = resolveBotType(p);
             if (isb === 'ISB' || isb === 'ISB_WT') return isb === 'ISB_WT' ? 'ISB WT' : 'ISB';
             const isPMC = p.team === 'Usec' || p.team === 'Bear';
@@ -291,6 +292,7 @@ export default function RaidOverview() {
 
     function getPlayerBrain(player: TrackingRaidDataPlayers): string {
         if (player) {
+          if (isHumanPlayer(player, raid.profileId)) return 'PLAYER';
 
           const botMapping = { type: resolveBotType(player) };
 
@@ -345,6 +347,7 @@ export default function RaidOverview() {
 
       function getPlayerDifficultyAndBrain(player: TrackingRaidDataPlayers): string {
         if (player) {
+          if (isHumanPlayer(player, raid.profileId)) return 'PLAYER';
           let difficulty = player.mod_SAIN_difficulty;
           let brain = isRaiderHunter(player) ? 'Raider (Hunter)' : getPlayerBrain(player);
 
@@ -389,7 +392,7 @@ export default function RaidOverview() {
       }
 
       function getFactionBadge(player: TrackingRaidDataPlayers, isMainPlayer: boolean): { color: string, label: string } {
-        if (isMainPlayer) {
+        if (isHumanPlayer(player) || isMainPlayer) {
           return { color: '#9a8866', label: 'Player' };
         }
         const brain = getPlayerBrain(player);

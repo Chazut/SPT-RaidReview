@@ -4,6 +4,9 @@ namespace RAID_REVIEW
 {
     internal static class RecordingPlayerIdentity
     {
+        internal static string Brain(bool isAI, EPlayerSide side) => !isAI ? "PLAYER"
+            : side == EPlayerSide.Savage ? "SCAV"
+            : side == EPlayerSide.Usec || side == EPlayerSide.Bear ? "PMC" : "UNKNOWN";
         internal static string Type(bool isAI, EPlayerSide side)
         {
             // Savage is a faction, not proof that the participant is a bot.

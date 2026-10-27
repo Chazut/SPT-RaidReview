@@ -29,6 +29,7 @@ import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecis
 import 'leaflet/dist/leaflet.css';
 
 import { displayPlayerName } from '../helpers/playerNames'
+import { isHumanPlayer } from '../helpers/playerIdentity'
 
 function getDisplayName(player: any): string {
     return displayPlayerName(player?.name)
@@ -2950,6 +2951,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
     function getPlayerBrain(player: TrackingRaidDataPlayers): string {
         if (player) {
+            if (isHumanPlayer(player)) return 'PLAYER'
             let brainOutput = 'Unknown'
             const botMapping = { type: resolveBotType(player) }
 
@@ -2984,6 +2986,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
     function getPlayerDifficultyAndBrain(player: TrackingRaidDataPlayers): string {
         if (player) {
+            if (isHumanPlayer(player)) return 'PLAYER'
             let difficulty = player.mod_SAIN_difficulty
             let brain = getPlayerBrain(player)
             // Faction-mod bots: show their specific role (Rifleman, Grenadier, etc.).
