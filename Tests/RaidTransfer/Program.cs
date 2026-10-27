@@ -82,6 +82,12 @@ async Task Seed(DatabaseService db, string id)
 }
 await Seed(source, raidId);
 await Seed(target, localRaidId);
+await ProfileLoadingTests.Run(root,source,sourceFiles,logger,sourceCompiler,raidId,Check);
+if (args.Contains("--profiles-only"))
+{
+    Console.WriteLine($"PASS {checks} profile loading checks");
+    return;
+}
 var identity = new Dictionary<string, object?> { ["profileName"] = "Recker (headless)", ["isHeadless"] = true, ["type"] = "SCAV" };
 sourceFiles.WriteFile("positions", "", "", raidId + "_positions",
     "profileId,time,x,y,z,dir,raid_id,health,maxHealth,decision,ghost,bodyYaw\n" +

@@ -122,24 +122,10 @@ public class RaidReviewWebServer
         _itemResolver = itemResolver;
     }
 
-    private async Task<Dictionary<string, string>> ReadProfileNames()
+    private Task<Dictionary<string, string>> ReadProfileNames()
     {
         var directory = Path.GetFullPath(Path.Combine(_modFolder, "..", "..", "..", "user", "profiles"));
-        var names = new Dictionary<string, string>();
-        if (!Directory.Exists(directory)) return names;
-        foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
-        {
-            try
-            {
-                using var profile = JsonDocument.Parse(await File.ReadAllTextAsync(path));
-                if (profile.RootElement.TryGetProperty("info", out var info)
-                    && info.TryGetProperty("id", out var id) && info.TryGetProperty("username", out var username))
-                    names[id.GetString() ?? ""] = username.GetString() ?? "";
-            }
-            catch (IOException) { }
-            catch (JsonException) { }
-        }
-        return names;
+        return ProfileNames.ReadAsync(directory);
     }
 
     private async Task ApplyRecordingIdentities(List<Dictionary<string, object?>> raids)
@@ -351,31 +337,9 @@ public class RaidReviewWebServer
         // Read SPT profile files to get usernames
         app.MapGet("/api/profile/all", async context =>
         {
-            var sptRoot = Path.GetFullPath(Path.Combine(_modFolder, "..", "..", ".."));
-            var profilesDir = Path.Combine(sptRoot, "user", "profiles");
             var result = new Dictionary<string, object>();
-
-            if (Directory.Exists(profilesDir))
-            {
-                foreach (var file in Directory.GetFiles(profilesDir, "*.json"))
-                {
-                    try
-                    {
-                        var json = await File.ReadAllTextAsync(file);
-                        using var doc = JsonDocument.Parse(json);
-                        var root = doc.RootElement;
-                        if (root.TryGetProperty("info", out var info) &&
-                            info.TryGetProperty("id", out var idEl) &&
-                            info.TryGetProperty("username", out var usernameEl))
-                        {
-                            var id = idEl.GetString() ?? "";
-                            var username = usernameEl.GetString() ?? "";
-                            result[id] = new { info = new { username } };
-                        }
-                    }
-                    catch { /* skip malformed profiles */ }
-                }
-            }
+            foreach (var (id, username) in await ReadProfileNames())
+                result[id] = new { info = new { username } };
 
             await context.Response.WriteAsJsonAsync(result);
         });
