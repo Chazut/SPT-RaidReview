@@ -8,7 +8,7 @@ import { TrackingPlayerStatus, TrackingRaidData } from '../../types/api_types';
 import _ from 'lodash';
 import { displayPlayerName } from '../../helpers/playerNames';
 import { intl, msToHMS } from '../../helpers';
-import { getLegendIcon, getPlayerColor, getPlayerFaction, buildPmcIndexMap } from '../../helpers/players';
+import { getLegendIcon, createPlayerColorResolver, getPlayerFaction, buildPmcIndexMap } from '../../helpers/players';
 
 import cyr_to_en from '../../assets/cyr_to_en.json';
 
@@ -261,6 +261,7 @@ export default function RaidCharts() {
             const playerObjMap: Record<string, any> = {};
             const playerColorMap: Record<string, string> = {};
             const pmcIndexMap = buildPmcIndexMap(raid.players);
+            const getPlayerColor = createPlayerColorResolver(raid.players, raid.profileId);
             for (let idx = 0; idx < raid.players.length; idx++) {
                 const p = raid.players[idx];
                 playerNameMap[p.profileId] = displayPlayerName(p.name);

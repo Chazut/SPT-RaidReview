@@ -1,19 +1,10 @@
 import BotMapping from '../assets/botMapping.json'
 import { resolveIsbCategory } from './isb'
 import { isHumanPlayer, playerGroupKey } from './playerIdentity'
+import { squadColor } from './groupColors'
+import { participantMarkerHtml, ParticipantKind } from './participantMarkers'
 
-export const PMC_COLORS = [
-    "#3357FF", "#FFD433", "#33FFF3", "#9370DB", "#BC8F8F",
-    "#FF5733", "#7FFFD4", "#FFFF99", "#ae85f9", "#FF9633",
-    "#3366FF", "#B87333", "#FFA533", "#33FFAF", "#5733FF",
-    "#FF33D4", "#33FFCC", "#FF5733", "#5733FF", "#FFD433",
-    "#B833FF", "#33FF57", "#33FF57", "#660000", "#3399FF",
-    "#FF33B8", "#8CFF33", "#33FFD5", "#FF6F33", "#FF3333",
-    "#FF5733", "#33D4FF", "#FF5733", "#FF3380", "#33FF57",
-    "#33FF57", "#FF33E9", "#FFD433", "#ae85f9", "#FF33D4",
-    "#8D33FF", "#33FFF3", "#FF9633", "#33FF8D", "#FF33A1",
-    "#33FF8D", "#33FFF3",
-]
+export { PMC_COLORS } from './groupColors'
 
 // Older recordings assigned hunt raiders to the faction they were hunting.
 export function isRaiderHunter(player: any): boolean {
@@ -118,11 +109,48 @@ export function getPlayerColor(player: any, index: number): string {
         case 'INFECTED': return '#7FFF00'
         default:
             if (player.type === 'PLAYER' && player.team === 'Savage') return '#33FF57'
-            return PMC_COLORS[(player.group ?? index) % PMC_COLORS.length]
+            return squadColor(Number.isFinite(Number(player.group)) ? Number(player.group) : index)
+    }
+}
+
+export function getParticipantKind(player: any): ParticipantKind {
+    if (!player) return 'other'
+    if (isHumanPlayer(player)) return 'player'
+    const type = resolveBotType(player)
+    if (type === 'SCAV' || type === 'PLAYER_SCAV' || (player.type === 'PLAYER' && player.team === 'Savage')) return 'scav'
+    if (type === 'PMC' || (type === 'UNKNOWN' && (player.type === 'PMC' || player.team === 'Usec' || player.team === 'Bear'))) return 'pmc'
+    return 'other'
+}
+
+// Always use the full recording roster, never just the visible/alive participants.
+// Sorting group keys keeps colors identical across pages, filters and reloads.
+export function createPlayerColorResolver(players: any[] = [], recordingOwnerId?: string): (player: any, index: number) => string {
+    const groups = [...new Set(players.filter(p => getParticipantKind(p) === 'pmc' && !isHumanPlayer(p, recordingOwnerId))
+        .map(p => playerGroupKey(p)))].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
+    const colors = new Map<string, string>()
+    const used = new Set(['#D9C48A', ...players.filter(p => getParticipantKind(p) !== 'pmc')
+        .map((p, i) => getPlayerColor(p, i).toUpperCase())])
+    let slot = 0
+    for (const group of groups) {
+        let color = squadColor(slot++)
+        while (used.has(color)) color = squadColor(slot++)
+        used.add(color)
+        colors.set(group, color)
+    }
+    return (player, index) => {
+        if (player && isHumanPlayer(player, recordingOwnerId)) return '#D9C48A'
+        if (getParticipantKind(player) === 'pmc') return colors.get(playerGroupKey(player)) ?? getPlayerColor(player, index)
+        return getPlayerColor(player, index)
     }
 }
 
 export function getLegendIcon(player: any, color: string, pmcIdx?: number): JSX.Element {
+    const kind = getParticipantKind(player)
+    if (kind !== 'other') {
+        const label = kind === 'scav' ? '' : String(pmcIdx ?? (kind === 'player' ? 'P' : ''))
+        return <span style={{ width: '20px', height: '20px', marginRight: '6px', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            dangerouslySetInnerHTML={{ __html: participantMarkerHtml(kind, color, label, kind === 'scav' ? 15 : 20) }} />
+    }
     const label = getMarkerLabel(player)
     if (label === 'BTR_ICON') {
         return <span style={{ width: '24px', height: '18px', marginRight: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><svg viewBox="0 0 24 18" width="24" height="18" fill="none"><rect x="2" y="3" width="20" height="8" rx="1" fill={color}/><rect x="5" y="1" width="10" height="4" rx="1" fill={color}/><line x1="15" y1="3" x2="20" y2="5" stroke={color} strokeWidth="1.2"/><circle cx="5.5" cy="13.5" r="2.5" fill={color}/><circle cx="12" cy="13.5" r="2.5" fill={color}/><circle cx="18.5" cy="13.5" r="2.5" fill={color}/><circle cx="5.5" cy="13.5" r="1" fill="#1a1a1a"/><circle cx="12" cy="13.5" r="1" fill="#1a1a1a"/><circle cx="18.5" cy="13.5" r="1" fill="#1a1a1a"/></svg></span>
@@ -195,7 +223,7 @@ export function buildPmcIndexMap(players: any[]): Record<string, number> {
     const groupCounters: Record<string, number> = {}
     for (const p of players) {
         if (resolveIsbCategory(p)) continue
-        const isPMC = p.team === 'Usec' || p.team === 'Bear'
+        const isPMC = getParticipantKind(p) === 'pmc'
         const isHuman = isHumanPlayer(p)
         if (isPMC || isHuman) {
             const group = playerGroupKey(p)

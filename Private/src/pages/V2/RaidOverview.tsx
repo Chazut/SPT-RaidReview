@@ -6,10 +6,10 @@ import { TrackingRaidData, TrackingRaidDataPlayers } from '../../types/api_types
 import './Raids.css'
 import { msToHMS } from "../../helpers";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import _ from "lodash";
 import { getLocationLabel } from '../../helpers/locations';
-import { getFactionRole, resolveBotType, isRaiderHunter } from "../../helpers/players";
+import { getFactionRole, resolveBotType, isRaiderHunter, createPlayerColorResolver } from "../../helpers/players";
 import { getIsbDisplayName } from '../../helpers/isb';
 import { displayPlayerName } from '../../helpers/playerNames';
 import { isHumanPlayer, playerGroupKey } from '../../helpers/playerIdentity';
@@ -42,13 +42,6 @@ const SIDE_COLORS: Record<string, { color: string, label: string }> = {
     'Savage': { color: '#33FF57', label: 'Scav' },
 };
 
-const PMC_TEAM_COLORS = [
-    "#3357FF", "#FFD433", "#33FFF3", "#9370DB", "#BC8F8F",
-    "#FF5733", "#7FFFD4", "#FFFF99", "#ae85f9", "#FF9633",
-    "#3366FF", "#B87333", "#FFA533", "#33FFAF", "#5733FF",
-    "#FF33D4", "#33FFCC", "#FF5733", "#5733FF",
-];
-
 function needsDarkText(hex: string): boolean {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -67,6 +60,7 @@ type SortDir = 'asc' | 'desc';
 
 export default function RaidOverview() {
     const { raid } = useOutletContext() as { raid: TrackingRaidData, intl: { [key:string] : string } };
+    const getPlayerColor = useMemo(() => createPlayerColorResolver(raid?.players, raid?.profileId), [raid?.players, raid?.profileId]);
 
 
     const [ calcStats, setCalcStats ] = useState(null as null | Map<string, { kills: number, lootings: number, lootedValue: number, spawnValue: number, accuracy: number }>);
@@ -393,7 +387,7 @@ export default function RaidOverview() {
 
       function getFactionBadge(player: TrackingRaidDataPlayers, isMainPlayer: boolean): { color: string, label: string } {
         if (isHumanPlayer(player) || isMainPlayer) {
-          return { color: '#9a8866', label: 'Player' };
+          return { color: getPlayerColor(player, 0), label: 'Player' };
         }
         const brain = getPlayerBrain(player);
         if (FACTION_COLORS[brain]) {
@@ -401,7 +395,7 @@ export default function RaidOverview() {
         }
         const side = SIDE_COLORS[player.team];
         if (side && (player.team === 'Usec' || player.team === 'Bear')) {
-          const teamColor = PMC_TEAM_COLORS[(player.group ?? 0) % PMC_TEAM_COLORS.length];
+          const teamColor = getPlayerColor(player, 0);
           return { color: teamColor, label: `${side.label} #${player.group}` };
         }
         return side || { color: '#6B7280', label: player.team };

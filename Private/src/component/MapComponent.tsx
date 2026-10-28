@@ -22,7 +22,8 @@ import { playerEndTimes } from '../helpers/playerPresence';
 import { bodyOrientationAngle, updateBodyOrientation } from '../helpers/bodyOrientation';
 import { createFloorFilter, hasFloors, floorSegments, positionAt, objectivePoint, mainPoint, floorHeatmap } from '../helpers/floorFilter';
 
-import { getMarkerLabel, getPlayerColor, getLegendIcon, PMC_COLORS, buildPmcIndexMap, getFactionRole, resolveBotType, isRaiderHunter } from '../helpers/players'
+import { getMarkerLabel, createPlayerColorResolver, getParticipantKind, getLegendIcon, buildPmcIndexMap, getFactionRole, resolveBotType, isRaiderHunter } from '../helpers/players'
+import { participantMarkerHtml } from '../helpers/participantMarkers'
 import { getIsbDisplayName } from '../helpers/isb'
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from '../helpers/botBehavior'
 
@@ -37,11 +38,10 @@ function getDisplayName(player: any): string {
 
 function classifyPlayer(player: any): string {
     if (!player) return 'SCAV'
+    if (isHumanPlayer(player)) return 'PLAYER'
     const type = resolveBotType(player)
     if (type === 'ISB' || type === 'ISB_WT') return 'FACTION'
-    const isPMC = player.team === 'Bear' || player.team === 'Usec'
-    const isHuman = player.type === 'HUMAN'
-    if (isPMC || isHuman) return 'PMC'
+    if (getParticipantKind(player) === 'pmc') return 'PMC'
 
     switch (type) {
         case 'PLAYER_SCAV': return 'PLAYER_SCAV'
@@ -68,8 +68,9 @@ function classifyPlayer(player: any): string {
 }
 
 const LEGEND_GROUPS = [
+    { key: 'PLAYER', label: 'Players' },
     { key: 'PMC', label: 'PMC' },
-    { key: 'PLAYER_SCAV', label: 'Player Scav' },
+    { key: 'PLAYER_SCAV', label: 'Player Scav (AI)' },
     { key: 'BOSS', label: 'Boss' },
     { key: 'GOON', label: 'Goons' },
     { key: 'FOLLOWER', label: 'Followers' },
@@ -79,6 +80,8 @@ const LEGEND_GROUPS = [
 ] as const
 
 function getTooltipIconHtml(player: any, color: string, pmcIdx?: number): string {
+    const kind = getParticipantKind(player)
+    if (kind !== 'other') return participantMarkerHtml(kind, color, kind === 'scav' ? '' : String(pmcIdx ?? (kind === 'player' ? 'P' : '')), 15)
     const label = getMarkerLabel(player)
     if (label && label !== 'BTR_ICON') {
         return `<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${color};text-align:center;font-size:7px;font-weight:bold;color:#fff;line-height:12px;vertical-align:middle;margin-right:3px;">${label}</span>`
@@ -131,6 +134,13 @@ function resolveQuestName(triggerName: string, map: Record<string, string>): str
 // avoid a needless setIcon (which swaps the DOM element and disrupts an open
 // tooltip — see issue #24).
 function buildPlayerIcon(color: string, player: any, proportionalScale: number, opacity: number, pmcIndex?: number, behaviorColor?: string | null, hpPercent?: number): { icon: L.DivIcon, html: string } {
+    const kind = getParticipantKind(player)
+    if (kind !== 'other') {
+        const size = kind === 'player' ? 24 : kind === 'pmc' ? 22 : Math.max(15, proportionalScale * 2)
+        const label = kind === 'scav' ? '' : String(pmcIndex ?? (kind === 'player' ? 'P' : ''))
+        const html = participantMarkerHtml(kind, color, label, size, hpPercent, behaviorColor, opacity)
+        return { icon: L.divIcon({ className: 'special-bot-marker', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }), html }
+    }
     const ringStyle = behaviorColor ? `box-shadow: 0 0 0 3px ${behaviorColor}, 0 0 6px 1px ${behaviorColor}55;` : ''
     // HP fill: gradient from bottom (color) to top (dark) based on HP percentage
     const hp = hpPercent != null ? Math.max(0, Math.min(100, hpPercent)) : 100
@@ -307,7 +317,6 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [floorOnly, setFloorOnly] = useState(() => localStorage.getItem('rr_floorOnly') === 'true')
     const [followPlayer, setFollowPlayer] = useState(null)
     const [followPlayerZoomed, setFollowPlayerZoomed] = useState(false)
-    const [calculatedPlayerInfo, setCalculatedPlayerInfo] = useState({})
     const [calculatedLayerInfo, setCalculatedLayerInfo] = useState({})
     const [playerFocus, setPlayerFocus] = useState<string | null>(null)
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(['SCAV']))
@@ -446,6 +455,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
     // Pre-compute PMC index within each team group (for numbered markers in legend + map)
     const pmcIndexMap = useMemo(() => buildPmcIndexMap(raidData.players), [raidData.players])
+    const getPlayerColor = useMemo(() => createPlayerColorResolver(raidData.players, raidData.profileId), [raidData.players, raidData.profileId])
+    const calculatedPlayerInfo = useMemo(() => Object.fromEntries(raidData.players.map((player, index) =>
+        [player.profileId, { player, index, pickedColor: getPlayerColor(player, index) }])), [raidData.players, getPlayerColor])
 
     const focusItem = useRef(searchParams.get('q') ? searchParams.get('q').split(',') : [])
     const focusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -943,14 +955,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             }
 
             const cleanPositions = floorSegments(trailSamples, onFloor).map(segment => segment.map(p => [p.z, p.x]))
-            const index = calculatedPlayerInfo[playerId]?.index || raidData.players.findIndex((p) => p.profileId === playerId)
+            const index = calculatedPlayerInfo[playerId]?.index ?? raidData.players.findIndex((p) => p.profileId === playerId)
             const player = calculatedPlayerInfo[playerId]?.player || raidData.players[index]
             const pickedColor = calculatedPlayerInfo[playerId]?.pickedColor || getPlayerColor(player, index)
-            if (calculatedPlayerInfo[playerId] === undefined) {
-                let newAddition = { ...calculatedPlayerInfo }
-                newAddition[playerId] = { player, index, pickedColor }
-                setCalculatedPlayerInfo(newAddition)
-            }
 
             // Hide player movement if enabled
             if (MAP && !hidePlayers && (cleanPositions.length > 0 || (currentSample && onFloor(currentSample)))) {
@@ -1160,7 +1167,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             setTimeEndLimit(times[times.length - 1])
             setTimeCurrentIndex(times.length - 1)
         }
-    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, showBehavior, showOrientation, presenceEnds, onFloor])
+    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, getPlayerColor, showBehavior, showOrientation, presenceEnds, onFloor])
 
     // Focus overlay: adjusts layer opacity + kill visualization without full re-render
     useEffect(() => {
@@ -3059,6 +3066,15 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 <aside className="sidebar border border-eft mr-3 p-3 overflow-x-auto">
                     <div className="playerfeed text-eft">
                         <strong>Legend</strong>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs py-2" aria-label="Participant marker key">
+                            {([['player', 'Players', '#D9C48A'], ['pmc', 'PMCs', '#4E9BFF'], ['scav', 'Scavs', '#33FF57']] as const).map(([kind, label, color]) => (
+                                <span key={kind} className="inline-flex items-center gap-1">
+                                    <span dangerouslySetInnerHTML={{ __html: participantMarkerHtml(kind, color, kind === 'scav' ? '' : '1', 18) }} />
+                                    {label}
+                                </span>
+                            ))}
+                            <span className="w-full opacity-70">PMC color = squad · Number = member</span>
+                        </div>
                         {(() => {
                             const visiblePlayers = raidData.players.filter((p) => p.spawnTime < timeEndLimit && (!floorActive || currentFloorPlayers.has(p.profileId)))
                             const grouped: Record<string, { player: any, originalIndex: number }[]> = {}
@@ -3082,8 +3098,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                 const items = grouped[group.key]
                                 const isCollapsed = collapsedGroups.has(group.key)
 
-                                // PMC sub-grouping by team
-                                if (group.key === 'PMC') {
+                                // Keep human co-op participants separate from AI squads.
+                                if (group.key === 'PMC' || group.key === 'PLAYER') {
                                     const teams: Record<string, { player: any, originalIndex: number }[]> = {}
                                     items.forEach(item => {
                                         const g = playerGroupKey(item.player, raidData.profileId)
@@ -3108,9 +3124,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                 const teamColor = getPlayerColor(teamPlayers[0].player, teamPlayers[0].originalIndex)
                                                 return (
                                                     <div key={teamKey}>
-                                                        <div className="text-xs pl-2 pt-1" style={{ color: teamColor, opacity: 0.8 }}>
-                                                            {teamKey === 'players' ? 'Players' : `Team ${teamKey.slice(5)}`}
-                                                        </div>
+                                                        {teamKey !== 'players' && <div className="text-xs pl-2 pt-1" style={{ color: teamColor, opacity: 0.8 }}>
+                                                            {`Team ${teamKey.slice(5)}`}
+                                                        </div>}
                                                         <ul>
                                                             {teamPlayers.map(({ player, originalIndex }) => (
                                                                 <li

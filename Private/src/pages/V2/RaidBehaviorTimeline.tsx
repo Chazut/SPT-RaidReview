@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/api";
 import { TrackingPositionalData, TrackingRaidData } from "../../types/api_types";
 import { msToHMS } from "../../helpers";
-import { getPlayerColor, getLegendIcon, buildPmcIndexMap } from "../../helpers/players";
+import { createPlayerColorResolver, getLegendIcon, buildPmcIndexMap } from "../../helpers/players";
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from "../../helpers/botBehavior";
 import { displayPlayerName } from '../../helpers/playerNames';
 
@@ -90,6 +90,7 @@ export default function RaidBehaviorTimeline() {
     const { positions } = useLoaderData() as { positions: Record<string, TrackingPositionalData[]> };
     const { raid } = useOutletContext() as { raid: TrackingRaidData, intl: { [key: string]: string } };
     const pmcIndexMap = useMemo(() => raid?.players ? buildPmcIndexMap(raid.players) : {}, [raid?.players]);
+    const getPlayerColor = useMemo(() => createPlayerColorResolver(raid?.players, raid?.profileId), [raid?.players, raid?.profileId]);
 
     const [hoveredSegment, setHoveredSegment] = useState<{ seg: BehaviorSegment, playerName: string, x: number, y: number } | null>(null);
 
@@ -169,7 +170,7 @@ export default function RaidBehaviorTimeline() {
         })
 
         return { players: playerRows, raidStart, raidEnd }
-    }, [positions, raid, pmcIndexMap, deathTimes])
+    }, [positions, raid, pmcIndexMap, getPlayerColor, deathTimes])
 
     const { players: playerRows, raidStart, raidEnd } = data
 

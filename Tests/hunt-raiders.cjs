@@ -40,7 +40,7 @@ function functions(file, names) {
 }
 const map = functions('Private/src/component/MapComponent.tsx', ['classifyPlayer', 'getPlayerBrain', 'getPlayerDifficultyAndBrain']);
 const overview = functions('Private/src/pages/V2/RaidOverview.tsx', ['getPlayerBrain', 'getPlayerDifficultyAndBrain',
-    'getFactionBadge', 'FACTION_COLORS', 'SIDE_COLORS', 'PMC_TEAM_COLORS']);
+    'getFactionBadge', 'FACTION_COLORS', 'SIDE_COLORS']);
 const charts = functions('Private/src/pages/V2/RaidCharts.tsx', ['getFactionGroup']);
 let checks = 0;
 function equal(actual, expected) { assert.equal(actual, expected); checks++; }

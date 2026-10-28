@@ -4,7 +4,7 @@ import { displayPlayerName } from '../../helpers/playerNames';
 import { bodypart, intl, msToHMS } from "../../helpers";
 import { useEffect, useMemo, useState } from "react";
 import _ from "lodash";
-import { getLegendIcon, getPlayerColor, buildPmcIndexMap } from "../../helpers/players";
+import { getLegendIcon, createPlayerColorResolver, buildPmcIndexMap } from "../../helpers/players";
 
 import cyr_to_en from '../../assets/cyr_to_en.json';
 
@@ -22,6 +22,7 @@ export default function RaidTimeline() {
 
   const intl_dir : Record<string, string> = {...intl_dir_ot, ...cyr_to_en};
   const pmcIndexMap = useMemo(() => raid?.players ? buildPmcIndexMap(raid.players) : {}, [raid?.players]);
+  const getPlayerColor = useMemo(() => createPlayerColorResolver(raid?.players, raid?.profileId), [raid?.players, raid?.profileId]);
 
   useEffect(() => {
 
