@@ -1,3 +1,21 @@
+# Raid Review 1.9.1
+
+For SPT 4.1.x.
+
+- Fix an empty raid list and server error when the profiles folder contains unexpected JSON files.
+- Show other Fika players as **PLAYER** in the overview and map details.
+- Record remote Fika players' loot and confirmed extractions, including confirmations received after their character is removed.
+- Preserve surviving bots' last state during Fika raid cleanup instead of marking them **Removed**. Real deaths, extractions and mid-raid removals remain recorded.
+- Fix the remote extraction hook failing on Unity Mono with Fika's struct packets.
+- Keep recording Fika players while downed and after revival. A temporary **Downed** state no longer becomes a permanent **KIA** or ends their replay.
+- Capture starting equipment for the host and other human players, filling the **SV** column.
+- Separate the human team from AI squad 0 in the map legend, marker numbering and grouped overview.
+- Give PMC squads more distinct colors, without repeating the old palette. Colors stay consistent across the map, overview, charts and timelines.
+- Distinguish human players with diamond markers, PMCs with numbered circles and Scavs with triangles. Keep health fills and behavior outlines.
+- Add a marker key and a dedicated **Players** section to the map legend, including Fika teammates.
+
+Update both the server mod and client plugin, including the Fika host/headless recorder. Existing raids and settings are preserved. Missing loot and extraction events in older recordings cannot be reconstructed; the recording fixes apply to new raids.
+
 # Raid Review 1.9.0
 
 For SPT 4.1.x. Cumulative changes since Raid Review 1.8.0, including the 1.9 release candidates.
