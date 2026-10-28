@@ -19,7 +19,7 @@ internal static class FikaRecordingTests
             postfix:new HarmonyMethod(typeof(RAID_REVIEW_Player_OnItemAddedOrRemovedPatch), "PatchPostFix"));
         FikaRecording.Initialize(typeof(ObservedPlayer).Assembly);
         check(LoggerInstance.Log.Errors.Count==0, "Fika hooks installed successfully");
-        foreach(var side in Enum.GetValues<EPlayerSide>())
+        foreach(EPlayerSide side in Enum.GetValues(typeof(EPlayerSide)))
             check(RecordingPlayerIdentity.Brain(false, side)=="PLAYER", "all human factions use PLAYER brain");
         check(RecordingPlayerIdentity.Brain(true,EPlayerSide.Bear)=="PMC", "bot PMC brain unchanged");
         check(RecordingPlayerIdentity.Brain(true,EPlayerSide.Savage)=="SCAV", "bot Scav brain unchanged");
@@ -106,7 +106,52 @@ internal static class FikaRecordingTests
         check(LoggerInstance.Log.Errors.Count==0,"missing network context is harmless");
         RecordingRoster.Reset();Telemetry.Packets.Clear();RAID_REVIEW.RAID_REVIEW.sessionId="session";
         TeardownTests(check);
+        ReviveTests(check);
     }
+
+    private static void ReviveTests(Action<bool,string> check)
+    {
+        foreach (var player in new FikaPlayer[] { new FikaPlayer {ProfileId="host"}, new ObservedPlayer {ProfileId="remote"} })
+        {
+            RecordingRoster.Reset(); Telemetry.Packets.Clear();
+            RecordingRoster.Add(player); RecordingRoster.Observe(player);
+            for (int i=0; i<2; i++)
+            {
+                player.ToggleDowned(true);
+                check(LastStatus()==PlayerStatus.Downed,"Fika downing is distinct from death");
+                check(RecordingRoster.Observe(player) && RecordingRoster.Snapshot().Contains(player),"downed player stays in position capture");
+                player.ToggleDowned(false);
+                check(LastStatus()==PlayerStatus.Alive && RecordingRoster.Observe(player),"revived player resumes Alive");
+            }
+            RecordingRoster.Confirm(player,PlayerStatus.Extracted); RecordingRoster.Observe(player);
+            check(LastStatus()==PlayerStatus.Extracted,"extraction after revival wins over temporary downing");
+            check(!Telemetry.Packets.Select(p=>p.Payload).OfType<TrackingPlayerDeadOrUnspawned>().Any(s=>s.status==PlayerStatus.Dead),"revival never records KIA");
+
+            RecordingRoster.Reset(); Telemetry.Packets.Clear(); RecordingRoster.Add(player);
+            player.ToggleDowned(true);
+            // Real OnDead (bleed-out, a headshot, etc.) stays authoritative even if
+            // Fika has not reset the Downed flag yet.
+            RecordingRoster.Confirm(player,PlayerStatus.Dead); RecordingRoster.Observe(player);
+            player.ToggleDowned(false);
+            check(LastStatus()==PlayerStatus.Dead && !RecordingRoster.Observe(player),"actual death cannot be undone by revive callbacks");
+
+            RecordingRoster.Reset(); Telemetry.Packets.Clear(); RecordingRoster.Add(player);
+            player.ToggleDowned(true); RecordingRoster.Depart(player); RecordingRoster.Observe(player);
+            check(LastStatus()==PlayerStatus.Unspawned,"disconnect while downed remains Removed");
+            RecordingRoster.Reset(); Telemetry.Packets.Clear();
+            RAID_REVIEW.RAID_REVIEW.CanCapture=false; player.ToggleDowned(false);
+            check(Telemetry.Packets.Count==0,"revive hook respects recording OFF");
+            RAID_REVIEW.RAID_REVIEW.CanCapture=true;
+        }
+        var bot=new ObservedPlayer {ProfileId="bot",IsAI=true};
+        bot.ToggleDowned(true);
+        check(!FikaRecording.IsDowned(bot),"AI deaths do not become human revive states");
+        check(!FikaRecording.IsDowned(new Player()),"solo player needs no Fika fields");
+        RecordingRoster.Reset(); Telemetry.Packets.Clear();
+    }
+
+    private static PlayerStatus LastStatus() => Telemetry.Packets.Select(p=>p.Payload)
+        .OfType<TrackingPlayerDeadOrUnspawned>().Last().status;
 
     private static void TeardownTests(Action<bool,string> check)
     {
@@ -169,9 +214,18 @@ internal static class FikaRecordingTests
 // Fika runtime doubles: keep the real struct, virtual override and disposal order.
 namespace Fika.Core.Main.Players
 {
-    public class ObservedPlayer : Player
+    public class FikaPlayer : Player
+    {
+        public bool Downed {get;private set;}
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public virtual void ToggleDowned(bool downed) { Downed=downed; HealthController.IsAlive=!downed; }
+        protected void SetDowned(bool downed) { Downed=downed; }
+    }
+    public class ObservedPlayer : FikaPlayer
     {
         public bool CallBase;
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public override void ToggleDowned(bool downed) { SetDowned(downed); HealthController.IsAlive=!downed; }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         public override void OnItemAddedOrRemoved(Item item, ItemAddress location, bool added)
         { if(CallBase) base.OnItemAddedOrRemoved(item,location,added); }
@@ -213,7 +267,8 @@ namespace Fika.Core.Networking.Packets.Generic.SubPackets
         public void Execute()
         {
             var handler=Singleton<IFikaNetworkManager>.Instance?.CoopHandler;
-            if(handler==null || !handler.Players.Remove(NetId,out var player)) return;
+            if(handler==null || !handler.Players.TryGetValue(NetId,out var player)) return;
+            handler.Players.Remove(NetId);
             if(handler.Fail) throw new InvalidOperationException("native operation failed");
             if(handler.Complete) handler.ExtractedPlayers.Add(NetId);
             if(handler.DieDuringExtract) RecordingRoster.Confirm(player,PlayerStatus.Dead);

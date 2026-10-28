@@ -1,12 +1,12 @@
 type StatusSample = { profileId: string, time: number | string, status: string | number }
-type PlayerStatus = 'Alive' | 'Dead' | 'Unspawned' | 'Unknown' | 'Extracted'
+type PlayerStatus = 'Alive' | 'Dead' | 'Unspawned' | 'Unknown' | 'Extracted' | 'Downed'
 
 // Status packets report transitions, not heartbeats. An old Alive packet remains
 // valid until another state is recorded, regardless of activity from other bots.
 export function finalPlayerStatuses(samples: StatusSample[] = [], headlessEndTime?: number): Map<string, PlayerStatus> {
     const latest = new Map<string, { time: number, status: PlayerStatus }>()
     const dead = new Set<string>()
-    const names: PlayerStatus[] = ['Alive', 'Dead', 'Unspawned', 'Unknown', 'Extracted']
+    const names: PlayerStatus[] = ['Alive', 'Dead', 'Unspawned', 'Unknown', 'Extracted', 'Downed']
     const previouslyAlive = new Set(samples.filter(sample => ['Alive', '0'].includes(String(sample.status))
         && Number(sample.time) < (headlessEndTime ?? -Infinity)).map(sample => sample.profileId))
     for (const sample of samples) {
@@ -46,5 +46,5 @@ export function peakActiveBots(samples: StatusSample[] = [], humanIds: string[] 
 // Missing/removal evidence must never be presented as a successful extraction.
 export function playerStatusLabel(status?: PlayerStatus): string {
     return status === 'Dead' ? 'KIA' : status === 'Extracted' ? 'Extracted'
-        : status === 'Unspawned' ? 'Removed' : status === 'Alive' ? 'Alive' : 'Unknown'
+        : status === 'Unspawned' ? 'Removed' : status === 'Downed' ? 'Downed' : status === 'Alive' ? 'Alive' : 'Unknown'
 }

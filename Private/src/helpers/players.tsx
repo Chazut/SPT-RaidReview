@@ -1,5 +1,6 @@
 import BotMapping from '../assets/botMapping.json'
 import { resolveIsbCategory } from './isb'
+import { isHumanPlayer, playerGroupKey } from './playerIdentity'
 
 export const PMC_COLORS = [
     "#3357FF", "#FFD433", "#33FFF3", "#9370DB", "#BC8F8F",
@@ -93,6 +94,7 @@ export function resolveBotType(player: any): string {
 
 export function getPlayerColor(player: any, index: number): string {
     if (player === undefined) return '#999'
+    if (isHumanPlayer(player)) return '#D9C48A'
 
     switch (resolveBotType(player)) {
         case 'SCAV': return '#33FF57'
@@ -190,13 +192,13 @@ export function getPlayerFaction(player: any): string {
 
 export function buildPmcIndexMap(players: any[]): Record<string, number> {
     const map: Record<string, number> = {}
-    const groupCounters: Record<number, number> = {}
+    const groupCounters: Record<string, number> = {}
     for (const p of players) {
         if (resolveIsbCategory(p)) continue
         const isPMC = p.team === 'Usec' || p.team === 'Bear'
-        const isHuman = p.type === 'HUMAN'
+        const isHuman = isHumanPlayer(p)
         if (isPMC || isHuman) {
-            const group = p.group ?? 0
+            const group = playerGroupKey(p)
             if (groupCounters[group] === undefined) groupCounters[group] = 0
             groupCounters[group]++
             map[p.profileId] = groupCounters[group]

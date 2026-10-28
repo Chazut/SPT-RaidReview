@@ -23,6 +23,7 @@ class Program
     static async Task Main()
     {
         FikaRecordingTests.Run(Check);
+        InventoryTests.Run(Check);
         foreach (var (x,z,yaw) in new[] { (0f,1f,0f), (1f,0f,90f), (0f,-1f,180f), (-1f,0f,270f), (1f,1f,45f), (-1f,1f,315f) })
         {
             Check(Math.Abs(BodyOrientation.FromForward(x,z,false)!.Value-yaw)<0.001f, "body forward has a signed full-circle yaw");

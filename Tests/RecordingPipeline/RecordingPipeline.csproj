@@ -4,6 +4,7 @@
     <PackageReference Include="HarmonyX" Version="2.16.0" />
     <Compile Include="../../Client/helpers/OrderedPacketSender.cs" Link="OrderedPacketSender.cs" />
     <Compile Include="../../Client/helpers/RecordingRoster.cs" Link="RecordingRoster.cs" />
+    <Compile Include="../../Client/helpers/RecordingInventory.cs" Link="RecordingInventory.cs" />
     <Compile Include="../../Client/integrations/FikaRecording.cs" Link="FikaRecording.cs" />
     <Compile Include="../../Client/patches/player_onItemAddedOrRemovedPatch.cs" Link="LootCapture.cs" />
     <Compile Include="../../Client/helpers/RecordingPlayerIdentity.cs" Link="RecordingPlayerIdentity.cs" />

@@ -22,7 +22,7 @@ using EFT.Interactive;
 
 namespace RAID_REVIEW
 {
-    [BepInPlugin("ekky.raidreview", "Raid Review", "1.9.0")]
+    [BepInPlugin("ekky.raidreview", "Raid Review", "1.9.1")]
     [BepInDependency("me.sol.sain", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.danw.questingbots", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.janky.phobos", BepInDependency.DependencyFlags.SoftDependency)]
@@ -928,40 +928,9 @@ namespace RAID_REVIEW
                                 trackingPlayers[trackingPlayer.profileId] = trackingPlayer;
                                 _ = Telemetry.SendSnapshot("PLAYER", trackingPlayer.Snapshot());
 
-                                // Capture bot inventory at spawn
-                                if (player.IsAI)
-                                {
-                                    try
-                                    {
-                                        var invItems = new List<TrackingInventoryItem>();
-                                        foreach (var item in player.Inventory.GetPlayerItems(EPlayerItems.Equipment))
-                                        {
-                                            if (item == null) continue;
-                                            invItems.Add(new TrackingInventoryItem
-                                            {
-                                                templateId = item.TemplateId.ToString(),
-                                                itemName = item.LocalizedShortName(),
-                                                price = GetHandbookPrice(item),
-                                                qty = item.StackObjectsCount,
-                                                slot = item.Parent?.Container?.ID ?? "unknown"
-                                            });
-                                        }
-                                        if (invItems.Count > 0)
-                                        {
-                                            var invPayload = new TrackingPlayerInventory
-                                            {
-                                                sessionId = sessionId,
-                                                profileId = player.ProfileId,
-                                                time = stopwatch.ElapsedMilliseconds,
-                                                items = invItems
-                                            };
-                                            _ = Telemetry.SendSnapshot("PLAYER_INVENTORY", invPayload);
-                                        }
-                                    }
-                                    catch { }
-                                }
-
                             }
+
+                            RecordingInventory.Capture(player);
 
                             // Checks if a player / bot has died since the last check...
                             if (RecordingRoster.Observe(player))

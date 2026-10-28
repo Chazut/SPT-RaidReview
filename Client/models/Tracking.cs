@@ -192,7 +192,8 @@ namespace RAID_REVIEW
         Dead,
         Unspawned,
         Unknown,
-        Extracted
+        Extracted,
+        Downed
     }
 
     public class TrackingBallistic {

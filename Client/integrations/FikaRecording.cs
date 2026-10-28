@@ -12,11 +12,15 @@ namespace RAID_REVIEW
     internal static class FikaRecording
     {
         private static Type observedType;
-        private static FieldInfo netId;
+        private static Type fikaPlayerType;
+        private static PropertyInfo downed;
         private static PropertyInfo networkInstance, coopHandler, players, extractedPlayers;
         private static bool warned;
 
         internal static bool HandlesLoot(Player player) => observedType?.IsInstanceOfType(player) == true;
+
+        internal static bool IsDowned(Player player) => player != null && !player.IsAI
+            && fikaPlayerType?.IsInstanceOfType(player) == true && downed?.GetValue(player) is true;
 
         internal static void Initialize(Assembly fika)
         {
@@ -36,6 +40,26 @@ namespace RAID_REVIEW
 
             try
             {
+                // Older Fika releases have no revive system. Observe after ToggleDowned
+                // finishes: the property event itself fires before health is updated.
+                var type = fika.GetType("Fika.Core.Main.Players.FikaPlayer");
+                var property = type?.GetProperty("Downed");
+                if (property?.PropertyType == typeof(bool))
+                {
+                    fikaPlayerType = type;
+                    downed = property;
+                    foreach (var playerType in new[] { type, observedType })
+                    {
+                        var method = playerType?.GetMethod("ToggleDowned", BindingFlags.Instance | BindingFlags.Public
+                            | BindingFlags.DeclaredOnly, null, new[] { typeof(bool) }, null);
+                        if (method != null) harmony.Patch(method, postfix: Hook(nameof(DownedPostfix)));
+                    }
+                }
+            }
+            catch (Exception ex) { Warn("revive hook unavailable", ex); }
+
+            try
+            {
                 // 2.4.5 uses a struct packet; earlier 2.4 releases use a pooled class.
                 var packet = fika.GetType("Fika.Core.Networking.Packets.Generic.SubPackets.ClientExtractPacket")
                     ?? fika.GetType("Fika.Core.Networking.Packets.Generic.SubPackets.ClientExtract", true);
@@ -44,9 +68,9 @@ namespace RAID_REVIEW
                 coopHandler = manager.GetProperty("CoopHandler");
                 players = coopHandler?.PropertyType.GetProperty("Players");
                 extractedPlayers = coopHandler?.PropertyType.GetProperty("ExtractedPlayers");
-                netId = packet.GetField("NetId");
+                var netId = packet.GetField("NetId");
                 var execute = packet.GetMethod("Execute", BindingFlags.Instance | BindingFlags.Public);
-                if (networkInstance == null || players == null || extractedPlayers == null || netId == null || execute == null)
+                if (networkInstance == null || players == null || extractedPlayers == null || netId?.FieldType != typeof(int) || execute == null)
                     throw new MissingMemberException("Fika extraction packet / roster contract");
                 harmony.Patch(execute, prefix: Hook(nameof(ExtractPrefix)), postfix: Hook(nameof(ExtractPostfix)));
             }
@@ -82,6 +106,17 @@ namespace RAID_REVIEW
         private static void LootPostfix(Player __instance, Item item, ItemAddress location, bool added) =>
             RAID_REVIEW_Player_OnItemAddedOrRemovedPatch.Capture(__instance, item, location, added);
 
+        private static void DownedPostfix(Player __instance)
+        {
+            if (!RAID_REVIEW.CanCapture || __instance == null || __instance.IsAI) return;
+            try
+            {
+                RecordingRoster.Add(__instance);
+                RecordingRoster.Observe(__instance);
+            }
+            catch (Exception ex) { Warn("revive capture failed", ex); }
+        }
+
         private sealed class Extraction
         {
             internal string ProfileId, SessionId;
@@ -89,7 +124,9 @@ namespace RAID_REVIEW
             internal IList Confirmed;
         }
 
-        private static void ExtractPrefix(object __instance, out Extraction __state)
+        // Inject the field, not a boxed __instance: Harmony 2.9 on Unity Mono emits
+        // invalid IL for object __instance on Fika's readonly struct packet.
+        private static void ExtractPrefix(int ___NetId, out Extraction __state)
         {
             __state = null;
             if (!RAID_REVIEW.CanCapture) return;
@@ -98,7 +135,7 @@ namespace RAID_REVIEW
                 var manager = networkInstance.GetValue(null);
                 var handler = manager == null ? null : coopHandler.GetValue(manager);
                 if (handler == null) return;
-                int id = (int)netId.GetValue(__instance);
+                int id = ___NetId;
                 var roster = players.GetValue(handler) as IDictionary;
                 var confirmed = extractedPlayers.GetValue(handler) as IList;
                 var player = roster?[id] as Player;

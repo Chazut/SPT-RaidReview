@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion><ImplicitUsings>enable</ImplicitUsings>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GamePath Condition="'$(GamePath)' == ''">C:/Games/SPT-4.1</GamePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony"><HintPath>$(GamePath)/BepInEx/core/0Harmony.dll</HintPath></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>../../Client/dependencies/4.1.X/Newtonsoft.Json.dll</HintPath></Reference>
+    <Compile Include="../../Client/integrations/FikaRecording.cs" Link="FikaRecording.cs" />
+    <Compile Include="../../Client/helpers/RecordingRoster.cs" Link="RecordingRoster.cs" />
+    <Compile Include="../../Client/helpers/RecordingInventory.cs" Link="RecordingInventory.cs" />
+    <Compile Include="../../Client/helpers/RecordingPlayerIdentity.cs" Link="RecordingPlayerIdentity.cs" />
+    <Compile Include="../../Client/patches/player_onItemAddedOrRemovedPatch.cs" Link="LootCapture.cs" />
+    <Compile Include="../../Client/models/Tracking.cs" Link="Tracking.cs" />
+    <Compile Include="../../Client/models/JsonPosition.cs" Link="JsonPosition.cs" />
+    <Compile Include="../RecordingPipeline/GameStubs.cs" Link="GameStubs.cs" />
+    <Compile Include="../RecordingPipeline/FikaRecordingTests.cs" Link="FikaRecordingTests.cs" />
+    <Compile Include="../RecordingPipeline/InventoryTests.cs" Link="InventoryTests.cs" />
+    <Compile Include="../RecordingPipeline/TerminalStatusTests.cs" Link="TerminalStatusTests.cs" />
+    <None Include="$(GamePath)/BepInEx/core/MonoMod*.dll;$(GamePath)/BepInEx/core/Mono.Cecil*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

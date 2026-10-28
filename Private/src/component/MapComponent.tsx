@@ -29,7 +29,7 @@ import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecis
 import 'leaflet/dist/leaflet.css';
 
 import { displayPlayerName } from '../helpers/playerNames'
-import { isHumanPlayer } from '../helpers/playerIdentity'
+import { isHumanPlayer, playerGroupKey } from '../helpers/playerIdentity'
 
 function getDisplayName(player: any): string {
     return displayPlayerName(player?.name)
@@ -3084,13 +3084,14 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
                                 // PMC sub-grouping by team
                                 if (group.key === 'PMC') {
-                                    const teams: Record<number, { player: any, originalIndex: number }[]> = {}
+                                    const teams: Record<string, { player: any, originalIndex: number }[]> = {}
                                     items.forEach(item => {
-                                        const g = item.player.group ?? 0
+                                        const g = playerGroupKey(item.player, raidData.profileId)
                                         if (!teams[g]) teams[g] = []
                                         teams[g].push(item)
                                     })
-                                    const teamKeys = Object.keys(teams).map(Number).sort((a, b) => a - b)
+                                    const teamKeys = Object.keys(teams).sort((a, b) => a === b ? 0 : a === 'players' ? -1
+                                        : b === 'players' ? 1 : Number(a.slice(5)) - Number(b.slice(5)))
 
                                     return (
                                         <div key={group.key}>
@@ -3108,7 +3109,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                 return (
                                                     <div key={teamKey}>
                                                         <div className="text-xs pl-2 pt-1" style={{ color: teamColor, opacity: 0.8 }}>
-                                                            Team {teamKey}
+                                                            {teamKey === 'players' ? 'Players' : `Team ${teamKey.slice(5)}`}
                                                         </div>
                                                         <ul>
                                                             {teamPlayers.map(({ player, originalIndex }) => (

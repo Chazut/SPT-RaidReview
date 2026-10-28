@@ -6,3 +6,8 @@ export function isHumanPlayer(player: Participant, recordingOwnerId?: string): b
     return player.type === 'HUMAN' || player.mod_SAIN_brain === 'PLAYER'
         || (!!recordingOwnerId && player.profileId === recordingOwnerId)
 }
+
+// Human group 0 is a placeholder, not EFT's AI squad 0.
+export function playerGroupKey(player: Participant & { group?: number | string | null }, recordingOwnerId?: string): string {
+    return isHumanPlayer(player, recordingOwnerId) ? 'players' : `bots:${player.group ?? 0}`
+}

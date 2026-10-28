@@ -12,7 +12,7 @@ import { getLocationLabel } from '../../helpers/locations';
 import { getFactionRole, resolveBotType, isRaiderHunter } from "../../helpers/players";
 import { getIsbDisplayName } from '../../helpers/isb';
 import { displayPlayerName } from '../../helpers/playerNames';
-import { isHumanPlayer } from '../../helpers/playerIdentity';
+import { isHumanPlayer, playerGroupKey } from '../../helpers/playerIdentity';
 import { finalPlayerStatuses, peakActiveBots, playerStatusLabel } from '../../helpers/playerStatuses';
 
 const FACTION_COLORS: Record<string, { color: string, label: string }> = {
@@ -204,7 +204,7 @@ export default function RaidOverview() {
         }
 
         if (groupedByType === 'GROUP') {
-          const newGrouped = _.chain(raid.players).groupBy('group').valuesIn().value();
+          const newGrouped = _.chain(raid.players).groupBy(p => playerGroupKey(p, raid.profileId)).valuesIn().value();
           setGroupedBy([...newGrouped])
         }
 
@@ -482,7 +482,7 @@ export default function RaidOverview() {
                     ? <span className="text-red-500 font-semibold">KIA</span>
                     : isExtracted
                       ? <span className="text-blue-400 font-semibold">Extracted</span>
-                      : <span className={`${lastStatus === 'Alive' || isMainPlayer ? 'text-green-500' : 'text-gray-400'} font-semibold`}>{isMainPlayer ? 'Alive' : playerStatusLabel(lastStatus)}</span>
+                      : <span className={`${lastStatus === 'Downed' ? 'text-yellow-400' : lastStatus === 'Alive' || isMainPlayer ? 'text-green-500' : 'text-gray-400'} font-semibold`}>{isMainPlayer && lastStatus !== 'Downed' ? 'Alive' : playerStatusLabel(lastStatus)}</span>
                   }
                 </td>
                 <td className="text-right p-2 capitalize">{raid.detectedMods?.match(/SAIN/gi) ? SAIN : ''}</td>

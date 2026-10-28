@@ -17,7 +17,7 @@ namespace RAID_REVIEW
         private static readonly List<string> gone = new List<string>();
         internal static bool IsEnding { get; private set; }
 
-        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); confirmed.Clear(); snapshot.Clear(); IsEnding = false; }
+        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); confirmed.Clear(); snapshot.Clear(); RecordingInventory.Reset(); IsEnding = false; }
         internal static void Seed(GameWorld world)
         {
             Reset();
@@ -75,7 +75,9 @@ namespace RAID_REVIEW
                 try
                 {
                     var health = player.HealthController;
-                    state = health != null && !health.IsAlive ? PlayerStatus.Dead
+                    state = FikaRecording.IsDowned(player)
+                        ? (departed.Contains(id) ? PlayerStatus.Unspawned : PlayerStatus.Downed)
+                        : health != null && !health.IsAlive ? PlayerStatus.Dead
                         : departed.Contains(id) ? PlayerStatus.Unspawned
                         : health == null ? PlayerStatus.Unknown : PlayerStatus.Alive;
                 }
@@ -83,7 +85,7 @@ namespace RAID_REVIEW
                 if (state == PlayerStatus.Dead) confirmed[id] = state;
             }
             Record(id, state);
-            if (state == PlayerStatus.Alive) return true;
+            if (state == PlayerStatus.Alive || state == PlayerStatus.Downed) return true;
             active.Remove(id); departed.Remove(id);
             return false;
         }
