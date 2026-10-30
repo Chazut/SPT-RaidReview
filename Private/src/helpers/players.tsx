@@ -3,6 +3,7 @@ import { resolveIsbCategory } from './isb'
 import { isHumanPlayer, playerGroupKey } from './playerIdentity'
 import { squadColor } from './groupColors'
 import { participantMarkerHtml, ParticipantKind } from './participantMarkers'
+import { DEFAULT_PLAYER_COLOR, readPlayerColor } from './playerColor'
 
 export { PMC_COLORS } from './groupColors'
 
@@ -85,9 +86,9 @@ export function resolveBotType(player: any): string {
     return botMapping?.type ?? 'UNKNOWN'
 }
 
-export function getPlayerColor(player: any, index: number): string {
+export function getPlayerColor(player: any, index: number, playerColor = DEFAULT_PLAYER_COLOR): string {
     if (player === undefined) return '#999'
-    if (isHumanPlayer(player)) return '#D9C48A'
+    if (isHumanPlayer(player)) return playerColor
 
     switch (resolveBotType(player)) {
         case 'SCAV': return '#33FF57'
@@ -128,12 +129,12 @@ export function getParticipantKind(player: any): ParticipantKind {
 
 // Always use the full recording roster, never just the visible/alive participants.
 // Sorting group keys keeps colors identical across pages, filters and reloads.
-export function createPlayerColorResolver(players: any[] = [], recordingOwnerId?: string): (player: any, index: number) => string {
+export function createPlayerColorResolver(players: any[] = [], recordingOwnerId?: string, playerColor = readPlayerColor()): (player: any, index: number) => string {
     const groups = [...new Set(players.filter(p => getParticipantKind(p) === 'pmc' && !isHumanPlayer(p, recordingOwnerId))
         .map(p => playerGroupKey(p)))].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
     const colors = new Map<string, string>()
-    const used = new Set(['#D9C48A', ...players.filter(p => getParticipantKind(p) !== 'pmc')
-        .map((p, i) => getPlayerColor(p, i).toUpperCase())])
+    const used = new Set([playerColor.toUpperCase(), ...players.filter(p => getParticipantKind(p) !== 'pmc')
+        .map((p, i) => getPlayerColor(p, i, playerColor).toUpperCase())])
     let slot = 0
     for (const group of groups) {
         let color = squadColor(slot++)
@@ -142,9 +143,9 @@ export function createPlayerColorResolver(players: any[] = [], recordingOwnerId?
         colors.set(group, color)
     }
     return (player, index) => {
-        if (player && isHumanPlayer(player, recordingOwnerId)) return '#D9C48A'
-        if (getParticipantKind(player) === 'pmc') return colors.get(playerGroupKey(player)) ?? getPlayerColor(player, index)
-        return getPlayerColor(player, index)
+        if (player && isHumanPlayer(player, recordingOwnerId)) return playerColor
+        if (getParticipantKind(player) === 'pmc') return colors.get(playerGroupKey(player)) ?? getPlayerColor(player, index, playerColor)
+        return getPlayerColor(player, index, playerColor)
     }
 }
 

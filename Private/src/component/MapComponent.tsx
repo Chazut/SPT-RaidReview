@@ -24,6 +24,7 @@ import { createFloorFilter, hasFloors, floorSegments, positionAt, objectivePoint
 
 import { getParticipantMarkerHtml, createPlayerColorResolver, getParticipantKind, getLegendIcon, buildPmcIndexMap, getFactionRole, resolveBotType, isRaiderHunter } from '../helpers/players'
 import { participantMarkerHtml } from '../helpers/participantMarkers'
+import { DEFAULT_PLAYER_COLOR, readPlayerColor, savePlayerColor } from '../helpers/playerColor'
 import { getIsbDisplayName } from '../helpers/isb'
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from '../helpers/botBehavior'
 
@@ -303,6 +304,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [hidePlayers, setHidePlayers] = useState(false)
     const [showBehavior, setShowBehavior] = useState(!!raidData?.detectedMods?.match(/SAIN/gi))
     const [showOrientation, setShowOrientation] = useState(() => localStorage.getItem('rr_showOrientation') !== 'false')
+    const [playerColor, setPlayerColor] = useState(readPlayerColor)
+    const changePlayerColor = (color: string) => {
+        savePlayerColor(color)
+        setPlayerColor(color.toUpperCase())
+    }
     const [hideEvents, setHideEvents] = useState(false)
     const [hideBallistics, setHideBallistics] = useState(false)
     const [hideNerdStats, setHideNerdStats] = useState(true)
@@ -422,7 +428,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
     // Pre-compute PMC index within each team group (for numbered markers in legend + map)
     const pmcIndexMap = useMemo(() => buildPmcIndexMap(raidData.players), [raidData.players])
-    const getPlayerColor = useMemo(() => createPlayerColorResolver(raidData.players, raidData.profileId), [raidData.players, raidData.profileId])
+    const getPlayerColor = useMemo(() => createPlayerColorResolver(raidData.players, raidData.profileId, playerColor), [raidData.players, raidData.profileId, playerColor])
     const calculatedPlayerInfo = useMemo(() => Object.fromEntries(raidData.players.map((player, index) =>
         [player.profileId, { player, index, pickedColor: getPlayerColor(player, index) }])), [raidData.players, getPlayerColor])
 
@@ -1149,7 +1155,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         // them down + rebuild when the focus or relevant kill-set actually changes,
         // otherwise the skull icons strobe while hovering the killer during play.
         const killVizSig = playerFocus
-            ? `${floorActive}:${selectedLayer}|${playerFocus}|${events.filter(e => (e.killedId === playerFocus || (e.profileId === playerFocus && e.profileId !== e.killedId)) && e.time < timeEndLimit).length}`
+            ? `${floorActive}:${selectedLayer}|${playerColor}|${playerFocus}|${events.filter(e => (e.killedId === playerFocus || (e.profileId === playerFocus && e.profileId !== e.killedId)) && e.time < timeEndLimit).length}`
             : ''
         const killVizChanged = killVizSig !== killVizSigRef.current
         if (killVizChanged) {
@@ -1328,7 +1334,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 focusLayersRef.current.push(marker)
             }
         }
-    }, [playerFocus, MAP, mapIsReady, events, timeEndLimit, intl_dir, onFloor])
+    }, [playerFocus, MAP, mapIsReady, events, timeEndLimit, intl_dir, onFloor, playerColor, getPlayerColor])
 
     // Issue #24: persistent player markers live across frames; when the map
     // instance is torn down/rebuilt, drop them so the ref never holds dead layers.
@@ -3035,7 +3041,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     <div className="playerfeed text-eft">
                         <strong>Legend</strong>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs py-2" aria-label="Participant marker key">
-                            {([['player', 'Players', '#D9C48A'], ['pmc', 'PMCs', '#4E9BFF'], ['scav', 'Scavs', '#33FF57'], ['other', 'Other bots', '#FF7B00']] as const).map(([kind, label, color]) => (
+                            {([['player', 'Players', playerColor], ['pmc', 'PMCs', '#4E9BFF'], ['scav', 'Scavs', '#33FF57'], ['other', 'Other bots', '#FF7B00']] as const).map(([kind, label, color]) => (
                                 <span key={kind} className="inline-flex items-center gap-1">
                                     <span dangerouslySetInnerHTML={{ __html: participantMarkerHtml(kind, color, kind === 'scav' ? '' : kind === 'other' ? 'Rd' : '1', 18) }} />
                                     {label}
@@ -4003,6 +4009,16 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             </button>
                             <button aria-pressed={showOrientation} title="Show which way characters and bots are facing" className={`text-xs p-1 text-sm cursor-pointer ${showOrientation ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setShowOrientation(!showOrientation)}>
                                 Orientation arrows
+                            </button>
+                            <label className="inline-flex items-center gap-2 border border-eft px-2 text-xs cursor-pointer" title="Saved in this browser for all raids">
+                                Player color
+                                <input type="color" value={playerColor} onInput={e => changePlayerColor(e.currentTarget.value)}
+                                    className="w-7 h-6 cursor-pointer bg-transparent border-0 p-0" />
+                            </label>
+                            <button type="button" onClick={() => changePlayerColor(DEFAULT_PLAYER_COLOR)}
+                                disabled={playerColor === DEFAULT_PLAYER_COLOR} title="Restore the default player color"
+                                className="text-xs p-1 cursor-pointer border border-eft disabled:opacity-40 disabled:cursor-default">
+                                Reset player color
                             </button>
                         </div>
                     </div>
