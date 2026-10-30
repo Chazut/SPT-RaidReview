@@ -1,3 +1,32 @@
+# Raid Review 1.10.0
+
+For SPT 4.1.x. Cumulative changes since 1.9.0, including the fixes shared in the 1.9.1 test builds.
+
+## Clearer replay markers
+
+- Give PMC squads a larger, stable color palette. Squad colors stay consistent across the map, overview, charts and timelines.
+- Distinguish human players with diamonds, PMCs with numbered circles and Scavs with triangles. Bosses and other bot roles use matching badges, while the BTR keeps a vehicle icon.
+- Use the same marker style in the map, legend and tooltips, with health fills and behavior outlines preserved.
+- Add a marker key and a dedicated Players section, including Fika teammates. Keep the human party separate from AI squad 0.
+- Fix recorded `PMC|USEC` and `PMC|BEAR` bots appearing under Scavs with tiny, unnumbered markers.
+- Make Ghost markers easier to see: raise their normal opacity to 75%, remove duplicate opacity application and add a dashed outline. Focused markers remain fully visible.
+
+## Fika recording fixes
+
+- Identify other human players as PLAYER in the overview and map details.
+- Record remote players' loot and confirmed extractions, including confirmations received after their character disappears.
+- Fix the extraction hook on Unity Mono with Fika's struct packets.
+- Preserve surviving bots' last state during raid cleanup instead of marking them Removed. Real deaths, extractions and mid-raid removals remain recorded.
+- Keep tracking downed players and continue after revival. Being downed no longer causes a permanent KIA status or cuts off the rest of the replay.
+- Capture starting equipment for the host and other players, filling the SV column.
+
+## Loading and updating
+
+- Fix an empty raid list and a server exception when the SPT profiles folder contains unexpected JSON files, including arrays where an object was expected.
+- Update both the server mod and client plugin. With Fika, update the host/headless recorder and all playing clients.
+- Existing raids and settings are preserved. Display fixes also apply to older recordings where the required data exists; missing loot, revival or extraction events cannot be recovered retroactively.
+- Refresh the browser after updating, using Ctrl+Shift+R if it still shows the old interface.
+
 # Raid Review 1.9.1
 
 For SPT 4.1.x.

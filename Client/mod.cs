@@ -22,7 +22,7 @@ using EFT.Interactive;
 
 namespace RAID_REVIEW
 {
-    [BepInPlugin("ekky.raidreview", "Raid Review", "1.9.1")]
+    [BepInPlugin("ekky.raidreview", "Raid Review", "1.10.0")]
     [BepInDependency("me.sol.sain", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.danw.questingbots", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.janky.phobos", BepInDependency.DependencyFlags.SoftDependency)]
