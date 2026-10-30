@@ -21,7 +21,7 @@ const { participantMarkerHtml } = load('../Private/src/helpers/participantMarker
 const { PMC_COLORS } = load('../Private/src/helpers/groupColors.ts');
 let checks = 0;
 function check(name, body) { body(); checks++; }
-const pmc = (id, group) => ({ profileId: id, group, type: 'PMC', team: 'Usec' });
+const pmc = (id, group) => ({ profileId: id, group, type: 'PMC|USEC', team: 'Usec' });
 const human = { ...pmc('host', 0), type: 'HUMAN' };
 const remote = { ...pmc('remote', 0), mod_SAIN_brain: 'PLAYER' };
 const scav = { profileId: 'scav', type: 'SCAV|SCAV', team: 'Savage', group: 0 };
@@ -76,3 +76,49 @@ check('SVG cannot inject markup via labels or color strings', () => {
     assert.ok(!html.includes('<script>')); assert.ok(!html.includes('onload')); assert.ok(html.includes('&lt;script&gt;'));
 });
 console.log(`${checks} participant presentation checks passed`);
+
+check('Recorded PMC sides and legacy bare PMC receive numbered markers', () => {
+    const variants = ['PMC|USEC','PMC|BEAR','PMC'];
+    const rows = variants.map((type,i)=>({...pmc('variant-'+i,11),type,team:i===1?'Bear':'Usec'}));
+    const indexes = buildPmcIndexMap(rows);
+    rows.forEach((p,i)=>{
+        assert.equal(getParticipantKind(p),'pmc');
+        assert.equal(indexes[p.profileId],i+1);
+        const html=getLegendIcon(p,'#4E9BFF',indexes[p.profileId]).props.dangerouslySetInnerHTML.__html;
+        assert.ok(html.includes('rr-marker-pmc'));
+        assert.ok(html.includes(`aria-label="PMC ${i+1}"`));
+    });
+});
+check('Special roles retain their type despite USEC or BEAR sides', () => {
+    for(const type of ['KNIGHT|GOON','TAGILLA|BOSS','RAIDER|FOLLOWER','UNTAR GUARD|UNTAR','INFECTED PMC|INFECTED'])
+    for(const team of ['Bear','Usec']) {
+        const p={...pmc(type+team,0),type,team};
+        assert.equal(getParticipantKind(p),'other');
+        assert.equal(buildPmcIndexMap([p])[p.profileId],undefined);
+    }
+});
+if(process.argv[2]) {
+    const recorded=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+    const serialized=JSON.stringify(recorded);
+    const indexes=buildPmcIndexMap(recorded), pick=createPlayerColorResolver(recorded);
+    const pmcs=recorded.filter(p=>p.type==='PMC|BEAR'||p.type==='PMC|USEC');
+    assert.equal(pmcs.length,7);
+    for(const p of pmcs) check(`Recorded ${p.name} has a PMC marker and squad number`,()=>{
+        assert.equal(getParticipantKind(p),'pmc'); assert.ok(indexes[p.profileId]>=1);
+        const html=getLegendIcon(p,pick(p,0),indexes[p.profileId]).props.dangerouslySetInnerHTML.__html;
+        assert.ok(html.includes('rr-marker-pmc'));
+    });
+    check('Recorded squad members share color but have different numbers',()=>{
+        const group=pmcs.filter(p=>p.group===6);
+        assert.equal(group.length,3);
+        assert.equal(new Set(group.map(p=>pick(p,0))).size,1);
+        assert.equal(new Set(group.map(p=>indexes[p.profileId])).size,3);
+    });
+    check('Recorded human, boss and actual scavs keep their roles',()=>{
+        assert.equal(getParticipantKind(recorded.find(p=>p.type==='HUMAN')),'player');
+        assert.equal(getParticipantKind(recorded.find(p=>p.type==='TAGILLA|BOSS')),'other');
+        recorded.filter(p=>p.type==='SCAV|SCAV'||p.type==='PLAYER_SCAV|SCAV').forEach(p=>assert.equal(getParticipantKind(p),'scav'));
+    });
+    check('Recorded rows are not modified to repair presentation',()=>assert.equal(JSON.stringify(recorded),serialized));
+}
+console.log(`${checks} participant checks including recorded PMC formats passed`);

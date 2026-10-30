@@ -60,7 +60,9 @@ export function getMarkerLabel(player: any): string | null {
         if (rawName.length === 1) return rawName.toUpperCase()
     }
 
-    return null
+    const roleLabels: Record<string, string> = { BOSS: 'B', FOLLOWER: 'Gd', GOON: 'G', RAIDER: 'Rd',
+        ROGUE: 'Rg', CULT: 'Cu', BLOODHOUND: 'Bh', SNIPER: 'Sn', INFECTED: 'If' }
+    return roleLabels[resolveBotType(player)] ?? null
 }
 
 // Resolve ISB's display-only subgroup, then botMapping.json and the "NAME|CATEGORY" fallback.
@@ -118,7 +120,9 @@ export function getParticipantKind(player: any): ParticipantKind {
     if (isHumanPlayer(player)) return 'player'
     const type = resolveBotType(player)
     if (type === 'SCAV' || type === 'PLAYER_SCAV' || (player.type === 'PLAYER' && player.team === 'Savage')) return 'scav'
-    if (type === 'PMC' || (type === 'UNKNOWN' && (player.type === 'PMC' || player.team === 'Usec' || player.team === 'Bear'))) return 'pmc'
+    // Recorded PMCs use PMC|USEC or PMC|BEAR: the resolved suffix is their side.
+    if (type === 'PMC' || type === 'USEC' || type === 'BEAR'
+        || (type === 'UNKNOWN' && (player.type === 'PMC' || player.team === 'Usec' || player.team === 'Bear'))) return 'pmc'
     return 'other'
 }
 
@@ -144,24 +148,17 @@ export function createPlayerColorResolver(players: any[] = [], recordingOwnerId?
     }
 }
 
-export function getLegendIcon(player: any, color: string, pmcIdx?: number): JSX.Element {
+export function getParticipantMarkerHtml(player: any, color: string, memberIndex?: number,
+    size = 20, hpPercent = 100, behaviorColor?: string | null, opacity = 1): string {
     const kind = getParticipantKind(player)
-    if (kind !== 'other') {
-        const label = kind === 'scav' ? '' : String(pmcIdx ?? (kind === 'player' ? 'P' : ''))
-        return <span style={{ width: '20px', height: '20px', marginRight: '6px', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-            dangerouslySetInnerHTML={{ __html: participantMarkerHtml(kind, color, label, kind === 'scav' ? 15 : 20) }} />
-    }
-    const label = getMarkerLabel(player)
-    if (label === 'BTR_ICON') {
-        return <span style={{ width: '24px', height: '18px', marginRight: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><svg viewBox="0 0 24 18" width="24" height="18" fill="none"><rect x="2" y="3" width="20" height="8" rx="1" fill={color}/><rect x="5" y="1" width="10" height="4" rx="1" fill={color}/><line x1="15" y1="3" x2="20" y2="5" stroke={color} strokeWidth="1.2"/><circle cx="5.5" cy="13.5" r="2.5" fill={color}/><circle cx="12" cy="13.5" r="2.5" fill={color}/><circle cx="18.5" cy="13.5" r="2.5" fill={color}/><circle cx="5.5" cy="13.5" r="1" fill="#1a1a1a"/><circle cx="12" cy="13.5" r="1" fill="#1a1a1a"/><circle cx="18.5" cy="13.5" r="1" fill="#1a1a1a"/></svg></span>
-    }
-    if (label) {
-        return <span style={{ width: '18px', height: '18px', borderRadius: '2px', marginRight: '6px', background: color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', color: '#fff', textShadow: '0 0 2px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.6)', flexShrink: 0, lineHeight: 1 }}>{label}</span>
-    }
-    if (pmcIdx !== undefined) {
-        return <span style={{ width: '18px', height: '18px', borderRadius: '50%', marginRight: '6px', background: color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 'bold', color: '#fff', textShadow: '0 0 2px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.6)', flexShrink: 0, lineHeight: 1 }}>{pmcIdx}</span>
-    }
-    return <span style={{ width: '10px', height: '10px', minWidth: '10px', minHeight: '10px', borderRadius: '50%', marginRight: '6px', background: color, border: '1px solid rgba(255,255,255,0.4)', flexShrink: 0, display: 'inline-block' }}></span>
+    const label = kind === 'other' ? getMarkerLabel(player) ?? '?'
+        : kind === 'scav' ? '' : String(memberIndex ?? (kind === 'player' ? 'P' : ''))
+    return participantMarkerHtml(kind, color, label, size, hpPercent, behaviorColor, opacity)
+}
+
+export function getLegendIcon(player: any, color: string, pmcIdx?: number): JSX.Element {
+    return <span style={{ width: '20px', height: '20px', marginRight: '6px', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+        dangerouslySetInnerHTML={{ __html: getParticipantMarkerHtml(player, color, pmcIdx) }} />
 }
 
 /**

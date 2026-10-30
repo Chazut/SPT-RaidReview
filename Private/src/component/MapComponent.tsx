@@ -22,7 +22,7 @@ import { playerEndTimes } from '../helpers/playerPresence';
 import { bodyOrientationAngle, updateBodyOrientation } from '../helpers/bodyOrientation';
 import { createFloorFilter, hasFloors, floorSegments, positionAt, objectivePoint, mainPoint, floorHeatmap } from '../helpers/floorFilter';
 
-import { getMarkerLabel, createPlayerColorResolver, getParticipantKind, getLegendIcon, buildPmcIndexMap, getFactionRole, resolveBotType, isRaiderHunter } from '../helpers/players'
+import { getParticipantMarkerHtml, createPlayerColorResolver, getParticipantKind, getLegendIcon, buildPmcIndexMap, getFactionRole, resolveBotType, isRaiderHunter } from '../helpers/players'
 import { participantMarkerHtml } from '../helpers/participantMarkers'
 import { getIsbDisplayName } from '../helpers/isb'
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from '../helpers/botBehavior'
@@ -80,16 +80,7 @@ const LEGEND_GROUPS = [
 ] as const
 
 function getTooltipIconHtml(player: any, color: string, pmcIdx?: number): string {
-    const kind = getParticipantKind(player)
-    if (kind !== 'other') return participantMarkerHtml(kind, color, kind === 'scav' ? '' : String(pmcIdx ?? (kind === 'player' ? 'P' : '')), 15)
-    const label = getMarkerLabel(player)
-    if (label && label !== 'BTR_ICON') {
-        return `<span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${color};text-align:center;font-size:7px;font-weight:bold;color:#fff;line-height:12px;vertical-align:middle;margin-right:3px;">${label}</span>`
-    }
-    if (pmcIdx !== undefined) {
-        return `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};text-align:center;font-size:7px;font-weight:bold;color:#fff;line-height:12px;vertical-align:middle;margin-right:3px;border:1px solid rgba(255,255,255,0.6);">${pmcIdx}</span>`
-    }
-    return `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};vertical-align:middle;margin-right:3px;"></span>`
+    return getParticipantMarkerHtml(player, color, pmcIdx, 18)
 }
 
 function formatCompactNumber(value: number): string {
@@ -133,38 +124,13 @@ function resolveQuestName(triggerName: string, map: Record<string, string>): str
 // callers can cheaply detect when the icon actually changed between frames and
 // avoid a needless setIcon (which swaps the DOM element and disrupts an open
 // tooltip — see issue #24).
-function buildPlayerIcon(color: string, player: any, proportionalScale: number, opacity: number, pmcIndex?: number, behaviorColor?: string | null, hpPercent?: number): { icon: L.DivIcon, html: string } {
+const GHOST_MARKER_OPACITY = 0.75
+
+function buildPlayerIcon(color: string, player: any, proportionalScale: number, pmcIndex?: number, behaviorColor?: string | null, hpPercent?: number): { icon: L.DivIcon, html: string } {
     const kind = getParticipantKind(player)
-    if (kind !== 'other') {
-        const size = kind === 'player' ? 24 : kind === 'pmc' ? 22 : Math.max(15, proportionalScale * 2)
-        const label = kind === 'scav' ? '' : String(pmcIndex ?? (kind === 'player' ? 'P' : ''))
-        const html = participantMarkerHtml(kind, color, label, size, hpPercent, behaviorColor, opacity)
-        return { icon: L.divIcon({ className: 'special-bot-marker', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }), html }
-    }
-    const ringStyle = behaviorColor ? `box-shadow: 0 0 0 3px ${behaviorColor}, 0 0 6px 1px ${behaviorColor}55;` : ''
-    // HP fill: gradient from bottom (color) to top (dark) based on HP percentage
-    const hp = hpPercent != null ? Math.max(0, Math.min(100, hpPercent)) : 100
-    const bgStyle = hp < 100
-        ? `background: linear-gradient(to top, ${color} ${hp}%, rgba(30,30,30,0.8) ${hp}%);`
-        : `background-color: ${color};`
-    const label = getMarkerLabel(player)
-    if (label === 'BTR_ICON') {
-        const btrSvg = `<svg viewBox="0 0 24 18" width="24" height="18" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="20" height="8" rx="1" fill="${color}" opacity="${opacity}"/><rect x="5" y="1" width="10" height="4" rx="1" fill="${color}" opacity="${opacity}"/><line x1="15" y1="3" x2="20" y2="5" stroke="${color}" stroke-width="1.2" opacity="${opacity}"/><circle cx="5.5" cy="13.5" r="2.5" fill="${color}" opacity="${opacity}"/><circle cx="12" cy="13.5" r="2.5" fill="${color}" opacity="${opacity}"/><circle cx="18.5" cy="13.5" r="2.5" fill="${color}" opacity="${opacity}"/><circle cx="5.5" cy="13.5" r="1" fill="#1a1a1a"/><circle cx="12" cy="13.5" r="1" fill="#1a1a1a"/><circle cx="18.5" cy="13.5" r="1" fill="#1a1a1a"/></svg>`
-        const html = `<div style="display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 2px rgba(0,0,0,0.9));${ringStyle}">${btrSvg}</div>`
-        return { icon: L.divIcon({ className: 'special-bot-marker', html, iconSize: [24, 20], iconAnchor: [12, 10] }), html }
-    }
-    if (label) {
-        const html = `<div class="bot-marker-dot" style="${bgStyle} opacity: ${opacity}; ${ringStyle}">${label}</div>`
-        return { icon: L.divIcon({ className: 'special-bot-marker', html, iconSize: [18, 18], iconAnchor: [9, 9] }), html }
-    }
-    // PMCs and player scavs get white border + number label
-    if (pmcIndex !== undefined) {
-        const html = `<div class="bot-marker-dot bot-marker-round" style="${bgStyle} opacity: ${opacity}; ${ringStyle}">${pmcIndex}</div>`
-        return { icon: L.divIcon({ className: 'special-bot-marker', html, iconSize: [18, 18], iconAnchor: [9, 9] }), html }
-    }
-    // Scavs: plain circle — always use divIcon for HP fill + behavior ring support
-    const size = Math.max(10, proportionalScale * 2)
-    const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;${bgStyle}opacity:${opacity};${ringStyle}"></div>`
+    const size = kind === 'player' ? 24 : kind === 'scav' ? Math.max(20, proportionalScale * 2) : 22
+    // Leaflet owns opacity so focus and Ghost fading are applied only once.
+    const html = getParticipantMarkerHtml(player, color, pmcIndex, size, hpPercent, behaviorColor)
     return { icon: L.divIcon({ className: 'special-bot-marker', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }), html }
 }
 
@@ -174,8 +140,8 @@ const htmlText = (value: unknown) => escapeMainText(String(value ?? ''))
 function createPlayerMarker(latlng: any, color: string, player: any, proportionalScale: number, opacity: number = 1, pmcIndex?: number, tooltipText?: string, behaviorColor?: string | null, hpPercent?: number): L.Marker {
     const displayName = tooltipText || htmlText(getDisplayName(player))
     const tooltipOpts: L.TooltipOptions = { direction: 'top', offset: [0, -10], className: 'player-tooltip player-tooltip-html' }
-    const { icon, html } = buildPlayerIcon(color, player, proportionalScale, opacity, pmcIndex, behaviorColor, hpPercent)
-    const marker = L.marker(latlng, { icon, interactive: true }).bindTooltip(displayName, tooltipOpts) as L.Marker
+    const { icon, html } = buildPlayerIcon(color, player, proportionalScale, pmcIndex, behaviorColor, hpPercent)
+    const marker = L.marker(latlng, { icon, interactive: true, opacity }).bindTooltip(displayName, tooltipOpts) as L.Marker
     ;(marker as any)._rr_iconHtml = html
     ;(marker as any)._rr_baseTooltip = displayName
     return marker
@@ -186,7 +152,8 @@ function createPlayerMarker(latlng: any, color: string, player: any, proportiona
 // layer + tooltip identity so the hovered/followed tooltip never flickers.
 function updatePlayerMarker(marker: L.Marker, latlng: any, color: string, player: any, proportionalScale: number, opacity: number, pmcIndex: number | undefined, tooltipText: string, behaviorColor: string | null | undefined, hpPercent: number | undefined, isFocused: boolean): void {
     marker.setLatLng(latlng)
-    const { icon, html } = buildPlayerIcon(color, player, proportionalScale, opacity, pmcIndex, behaviorColor, hpPercent)
+    marker.setOpacity(opacity)
+    const { icon, html } = buildPlayerIcon(color, player, proportionalScale, pmcIndex, behaviorColor, hpPercent)
     // Only swap the icon element when the visuals actually changed, and never
     // while this is the focused/hovered marker — setIcon recreates the DOM node
     // and would interrupt the open tooltip.
@@ -1023,8 +990,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             }
                         }
                     }
-                    // ORBIT AI limiter: fade the dot of a sleeping bot so ghost vs awake reads at a glance.
-                    if (currentGhost) markerOpacity = Math.min(markerOpacity, 0.35)
+                    // Keep sleeping bots readable; their dashed outline carries the Ghost state.
+                    if (currentGhost) markerOpacity = Math.min(markerOpacity, GHOST_MARKER_OPACITY)
                     if (showBehavior && !isBTR) {
                         behaviorCat = getBehaviorCategory(currentDecision)
                         const decisionLabel = currentDecision ? htmlText(formatDecisionLabel(currentDecision)) : ''
@@ -1089,7 +1056,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         marker = createPlayerMarker(endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct)
                         marker._rr_playerId = playerId
                         marker._rr_isDead = false
-                        marker._rr_normalOpacity = currentGhost ? 0.35 : 1
+                        marker._rr_normalOpacity = currentGhost ? GHOST_MARKER_OPACITY : 1
                         marker._rr_persistentPlayer = true
                         marker.addTo(MAP)
                         marker.on('mouseover', () => {
@@ -1112,12 +1079,13 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         // Subsequent frames: mutate in place — no teardown/rebind.
                         updatePlayerMarker(marker, endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct, isFocused)
                         marker._rr_isDead = false
-                        marker._rr_normalOpacity = currentGhost ? 0.35 : 1
+                        marker._rr_normalOpacity = currentGhost ? GHOST_MARKER_OPACITY : 1
                     }
+                    marker.getElement()?.classList.toggle('rr-ghost', currentGhost)
                     const orientation = showOrientation && !isBTR && !currentGhost
                         ? bodyOrientationAngle(currentSample, (x, z) => MAP.project(L.latLng(z, x), MAP.getZoom()))
                         : null
-                    updateBodyOrientation(marker.getElement(), orientation, pickedColor, markerOpacity)
+                    updateBodyOrientation(marker.getElement(), orientation, pickedColor, 1)
                     renderedPlayerIds.add(playerId)
                     // Keep the objective line's bot-end pinned to the live marker (see objectiveLineRef).
                     const objLine = objectiveLineRef.current.get(playerId)
@@ -3067,12 +3035,16 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     <div className="playerfeed text-eft">
                         <strong>Legend</strong>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs py-2" aria-label="Participant marker key">
-                            {([['player', 'Players', '#D9C48A'], ['pmc', 'PMCs', '#4E9BFF'], ['scav', 'Scavs', '#33FF57']] as const).map(([kind, label, color]) => (
+                            {([['player', 'Players', '#D9C48A'], ['pmc', 'PMCs', '#4E9BFF'], ['scav', 'Scavs', '#33FF57'], ['other', 'Other bots', '#FF7B00']] as const).map(([kind, label, color]) => (
                                 <span key={kind} className="inline-flex items-center gap-1">
-                                    <span dangerouslySetInnerHTML={{ __html: participantMarkerHtml(kind, color, kind === 'scav' ? '' : '1', 18) }} />
+                                    <span dangerouslySetInnerHTML={{ __html: participantMarkerHtml(kind, color, kind === 'scav' ? '' : kind === 'other' ? 'Rd' : '1', 18) }} />
                                     {label}
                                 </span>
                             ))}
+                            <span className="inline-flex items-center gap-1">
+                                <span className="rr-ghost" dangerouslySetInnerHTML={{ __html: participantMarkerHtml('pmc', '#4E9BFF', '1', 18, 100, undefined, GHOST_MARKER_OPACITY) }} />
+                                Ghost (dashed outline)
+                            </span>
                             <span className="w-full opacity-70">PMC color = squad · Number = member</span>
                         </div>
                         {(() => {

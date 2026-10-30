@@ -362,6 +362,10 @@ aside {
   background-image: url('/positional.png');
   background-size: contain;
 }
+.rr-ghost .rr-marker-outline {
+  stroke-dasharray: 3 2;
+}
+
 /* Hit flash animation */
 @keyframes hitFlash {
   0%   { opacity: 1; transform: scale(1); }
