@@ -67,15 +67,12 @@ namespace RAID_REVIEW
 
             try
             {
-                if (json.Length > 32768) throw new InvalidOperationException("COMET event exceeds 32 KiB");
-                var data = JObject.Parse(json);
-                if ((int?)data["schema"] != 1) throw new InvalidOperationException("Unsupported COMET event schema");
-                double realtime = (double?)data["realtime"] ?? double.NaN;
-                if (double.IsNaN(realtime) || double.IsInfinity(realtime)) throw new InvalidOperationException("Invalid COMET event clock");
+                var data = CometEventHeader.Read(json);
+                double realtime = data.Realtime;
                 string target=RAID_REVIEW.sessionId;
                 long time=0;
-                bool ending=(string)data["feature"]=="C13" && (string)data["stage"]=="cleanup";
-                string comet=(string)data["session"];
+                bool ending=data.Feature=="C13" && data.Stage=="cleanup";
+                string comet=data.Session;
                 if(ending && cleanup.Take(comet,out var ended)) { target=ended.Session;time=ended.Time; }
                 else {
                     if(!RAID_REVIEW.CanCapture || target==null || !RAID_REVIEW.stopwatch.IsRunning)return;
@@ -86,10 +83,10 @@ namespace RAID_REVIEW
                 summaryCapture.Remember(comet,target,time);
                 _ = Telemetry.SendSnapshot("COMET_DECISION", new {
                     sessionId = target, time,
-                    cometSession = (string)data["session"], sequence = (long?)data["sequence"] ?? 0,
-                    profileId = (string)data["profileId"], name = (string)data["name"],
-                    feature = (string)data["feature"], decision = (string)data["decision"],
-                    stage = (string)data["stage"], reason = (string)data["reason"], detail = json
+                    cometSession = data.Session, sequence = data.Sequence,
+                    profileId = data.ProfileId, name = data.Name,
+                    feature = data.Feature, decision = data.Decision,
+                    stage = data.Stage, reason = data.Reason, detail = json
                 });
             }
             catch (Exception ex)

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Client/CometEventHeader.cs" Link="CometEventHeader.cs" />
+    <Reference Include="Newtonsoft.Json"><HintPath>../../Client/dependencies/4.1.X/Newtonsoft.Json.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>
