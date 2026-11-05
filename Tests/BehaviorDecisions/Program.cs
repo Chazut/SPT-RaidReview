@@ -8,6 +8,10 @@ void Check(string expected, string raw, string layer, string status, string cate
     checks++;
 }
 
+// Raid 387: extraction countdowns must retain their objective while ORBIT owns the bot.
+Check("Orbit:Exfil", "9000", "OrbitBrainLayer", "Extracting", "Exfil", "SS-Speer car countdown");
+Check("Orbit:Exfil", "9000", "OrbitBrainLayer", "Extracting", null, "Extraction status with missing category");
+Check("SAIN:Shoot", "SAIN:Shoot", "SAIN : Combat Layer", "Extracting", "Exfil", "Old extraction telemetry cannot override combat");
 // Raid 330: Gosdep's recorded action was 9000 while OrbitBrainLayer owned
 // his movement and loot. His vanilla combat phases must retain their labels.
 Check("Orbit:ContainerLoot", "9000", "OrbitBrainLayer", "Moving", "ContainerLoot", "Gosdep 00:05");

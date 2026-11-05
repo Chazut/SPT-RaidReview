@@ -13,6 +13,7 @@ namespace RAID_REVIEW
 
             if (status == null) return "Orbit:ActionUnavailable";
             if (status == "None" || status == "Failed") return "Orbit:ChoosingObjective";
+            if (status == "Extracting") return "Orbit:Exfil";
 
             if (category == "SearchingAmbushExtract" || category == "ApproachingAmbushExtract")
                 return "Orbit:" + category;
