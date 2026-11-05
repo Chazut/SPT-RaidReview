@@ -65,6 +65,7 @@ namespace RAID_REVIEW
         public static ConfigEntry<string> ServerHttpPort;
         public static ConfigEntry<bool> EnableRecording;
         public static ConfigEntry<bool> ServerTLS;
+        public static ConfigEntry<int> WsKeepAliveInterval;
 
         // Opt-out toggles for unsupported legacy mod integrations. Default ON
         // so users with these mods still get telemetry, but they're behind a
@@ -737,6 +738,7 @@ namespace RAID_REVIEW
             ServerHttpPort = Config.Bind<string>("Server", "3. Server HTTP Port", "7829", "Listen port of the raid review http server.");
             ServerTLS = Config.Bind<bool>("Server", "4. TLS", false, "Enable if you are using an SSL Certificate infront of your http server.");
             EnableRecording = Config.Bind<bool>("Server", "5. Enable Recording", true, "Stops collection immediately when disabled; the current recording is finalized at the next capture tick. Enabling takes effect next raid.");
+            WsKeepAliveInterval = Config.Bind<int>("Server", "6. WebSocket Keepalive", 0, "Seconds between keepalive pings. Set to e.g. 30 if you connect through a proxy such as Cloudflare that closes idle connections. 0 disables. Requires restart.");
 
             PerformanceLogging = Config.Bind("Main", "Performance logging", false,
                 "Logs capture cost, allocations, GC collections and sender backlog every 10 seconds. GC and heap totals include the whole game; capture allocations cover RR on the game thread only.");

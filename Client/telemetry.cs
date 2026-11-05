@@ -13,6 +13,7 @@ namespace RAID_REVIEW
         private static WebSocket ws;
         private static OrderedPacketSender sender;
         private static string notification;
+        private static System.Threading.Timer keepAlive;
         private static readonly ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource("Telemetry");
         internal static bool Faulted => sender == null || sender.Faulted;
         internal static OrderedPacketSender.Counters Counters => sender?.Snapshot() ?? default;
@@ -42,16 +43,36 @@ namespace RAID_REVIEW
                 RAID_REVIEW.WebSocketConnected = true;
                 Logger.LogInfo("[RAID-REVIEW] WebSocket connected.");
                 Interlocked.Exchange(ref notification, "Raid Review Server Connected");
+                StartKeepAlive(socket);
             };
             socket.OnError += (s, e) => queue.Abort("WebSocket error: " + e.Message);
             socket.OnClose += (s, e) =>
             {
-                if (ws == socket) RAID_REVIEW.WebSocketConnected = false;
+                if (ws == socket) { RAID_REVIEW.WebSocketConnected = false; StopKeepAlive(); }
                 queue.Abort("WebSocket closed");
             };
             // One connection task; packets use the single ordered worker.
             Task.Run(() => { try { socket.Connect(); } catch (Exception ex) { queue.Abort(ex.Message); } });
         }
+
+        private static void StartKeepAlive(WebSocket socket)
+        {
+            StopKeepAlive();
+            var seconds = RAID_REVIEW.WsKeepAliveInterval.Value;
+            if (seconds <= 0) return;
+            keepAlive = new System.Threading.Timer(_ =>
+            {
+                if (ws != socket || socket.ReadyState != WebSocketState.Open) return;
+                try { if (!socket.Ping()) Logger.LogWarning("[RAID-REVIEW] Keepalive ping was not answered."); }
+                catch (Exception ex) { Logger.LogWarning("[RAID-REVIEW] Keepalive ping failed: " + ex.Message); }
+            }, null, seconds * 1000, seconds * 1000);
+        }
+
+        private static void StopKeepAlive()
+        {
+            Interlocked.Exchange(ref keepAlive, null)?.Dispose();
+        }
+
         internal static void PumpNotification()
         {
             var message = Interlocked.Exchange(ref notification, null);
@@ -71,6 +92,7 @@ namespace RAID_REVIEW
         }
         internal static void Shutdown()
         {
+            StopKeepAlive();
             sender?.Dispose(); sender = null;
             var old = ws; ws = null;
             RAID_REVIEW.WebSocketConnected = false;
