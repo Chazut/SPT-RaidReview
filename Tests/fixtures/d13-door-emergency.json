@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "botInstance": "instance",
+  "doorEmergency": {
+    "attempt": "one",
+    "door": "door",
+    "plan": "D05",
+    "phase": "drawing",
+    "target": "known",
+    "evidence": "personal-vision",
+    "state": "observed",
+    "reason": "visible-danger-weapon-unavailable",
+    "choice": "retreat",
+    "hands": "GrenadeHandsController",
+    "evidenceAge": 0.1,
+    "distance": 6,
+    "remaining": 2,
+    "pathLength": 3,
+    "x": 1,
+    "y": 0,
+    "z": -3,
+    "confirmed": true,
+    "weaponReady": false,
+    "nativeAccepted": true,
+    "actionObserved": true,
+    "moveAccepted": true,
+    "movementObserved": true,
+    "arrived": false,
+    "safePosition": true,
+    "alternatives": [
+      "Stay: exposed",
+      "Local cover 1: route-obstacle",
+      "Local cover 2: verified"
+    ],
+    "validFor": 1.5
+  },
+  "doorEmergencyConfig": {
+    "enabled": true,
+    "visibleDistance": 10,
+    "soundAge": 1.2,
+    "soundDoorDistance": 7,
+    "maxPath": 5,
+    "duration": 3,
+    "stabilization": 0.5
+  }
+}

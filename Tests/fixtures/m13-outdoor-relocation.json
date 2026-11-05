@@ -1,0 +1,53 @@
+{
+  "botInstance": "instance",
+  "outdoorRelocation": {
+    "state": "moving",
+    "reason": "relocate-native-cover-move",
+    "target": "known-contact",
+    "source": "personal-vision",
+    "destination": "west-cover",
+    "grenadeOutcome": "release-observed",
+    "action": "SeekCover",
+    "episode": 1,
+    "candidates": 1,
+    "rejected": 0,
+    "protection": 3,
+    "originalProtection": 3,
+    "validFor": 0.3,
+    "chance": 70.0,
+    "roll": 10.0,
+    "elapsed": 0.8000000000000007,
+    "contactAge": 2.0,
+    "sightAge": 2.0,
+    "pathLength": 11.0,
+    "angle": 30.0,
+    "exposure": 0.1,
+    "score": 1.36,
+    "speed": 3.0,
+    "distanceMoved": 1.0,
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0,
+    "knownX": 0.0,
+    "knownY": 0.0,
+    "knownZ": 30.0,
+    "destinationX": 10.0,
+    "destinationY": 0.0,
+    "destinationZ": 0.0,
+    "requested": true,
+    "accepted": true,
+    "moveRequested": true,
+    "movementObserved": true,
+    "arrived": false,
+    "throwAccepted": true,
+    "projectileObserved": true,
+    "alternatives": [
+      "west-cover: safe alternative; score 1.36"
+    ]
+  },
+  "outdoorRelocationConfig": {
+    "chance": 70,
+    "minDistance": 5,
+    "maxDistance": 17
+  }
+}

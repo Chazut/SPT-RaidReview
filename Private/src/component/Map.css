@@ -230,6 +230,34 @@
 .player-tooltip.leaflet-tooltip-top::before {
   border-top-color: rgba(154, 136, 102, 0.6);
 }
+.player-tooltip.leaflet-tooltip-bottom::before { border-bottom-color: rgba(154, 136, 102, 0.6); }
+
+.rr-comet-badge, .rr-comet-marker-badge {
+  background: #e6dcc5;
+  color: #191710;
+  border: 1px solid #191710;
+  border-radius: 3px;
+  font: bold 9px/13px Arial, sans-serif;
+  padding: 0 4px;
+  letter-spacing: .4px;
+}
+.rr-comet-marker-badge {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  transform: translateX(-50%);
+  font-size: 7px;
+  line-height: 10px;
+  padding: 0 2px;
+  pointer-events: none;
+}
+.rr-comet-context { width: 330px; max-width: 65vw; white-space: normal; line-height: 1.5; margin: 5px 0; padding-top: 5px; border-top: 1px solid #514a3b; }
+.rr-comet-context > div { margin-top: 5px; }
+.player-tooltip:has(.rr-comet-context) { background: #18170f; font-size: 12px; }
+.rr-comet-muted { color: #b9af99; font-size: 10px; }
+.rr-comet-alternatives ul { list-style: none; margin: 3px 0 6px; padding: 0; }
+.rr-comet-alternatives li { display: flex; justify-content: space-between; gap: 12px; }
+.rr-comet-alternatives li span:last-child { text-align: right; color: #d4c9a8; }
 
 /* Icons */
 .killer-icon,

@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "session": "l01-harness",
+  "sequence": 1,
+  "feature": "L02",
+  "stage": "evaluated",
+  "decision": "TacticalDevices",
+  "reason": "devices-confirmed",
+  "realtime": 10.0,
+  "utc": "2026-11-03T17:43:45.8842514Z",
+  "configRevision": 1,
+  "profileId": "aa3d12b4-6b97-4463-9730-542603da6527",
+  "name": "Test PMC",
+  "botInstance": "light-instance",
+  "tacticalDevices": {
+    "state": "confirmed",
+    "reason": "devices-confirmed",
+    "action": "Freeze",
+    "weapon": "96c5ec16-462a-4993-b593-18c0b7407a60",
+    "source": "SAIN",
+    "execution": "Native request; target state observed",
+    "target": true,
+    "requested": true,
+    "accepted": true,
+    "observed": true,
+    "devices": 2,
+    "activeDevices": 2,
+    "validFor": 1.0,
+    "accessories": [
+      {
+        "id": "910a87d5-b496-475c-883f-958fd1540fd7",
+        "name": "SureFire X400",
+        "state": "confirmed",
+        "active": true,
+        "requested": true,
+        "confirmed": true,
+        "mode": 2,
+        "failures": 0,
+        "rounds": 0,
+        "retryIn": 0.0
+      },
+      {
+        "id": "23ab7519-9dfe-4486-b70f-b5359f015e01",
+        "name": "AN/PEQ-15",
+        "state": "confirmed",
+        "active": true,
+        "requested": true,
+        "confirmed": true,
+        "mode": 3,
+        "failures": 0,
+        "rounds": 0,
+        "retryIn": 0.0
+      }
+    ],
+    "alternatives": [
+      "Keep already correct accessories unchanged",
+      "Wait for ready hands",
+      "Retry only failed accessories after a bounded pause",
+      "Yield to ambush concealment or external changes"
+    ]
+  },
+  "tacticalDevicesConfig": {
+    "enabled": true,
+    "commandInterval": 0.25,
+    "confirmationTimeout": 0.8,
+    "attemptsBeforePause": 2,
+    "initialPause": 5.0,
+    "maximumPause": 60.0
+  }
+}

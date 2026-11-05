@@ -1,0 +1,9 @@
+{
+  "adsTravel": {
+    "state": "suppressing", "reason": "ads-release-for-SeekCover", "action": "SeekCover", "target": "known-enemy",
+    "validFor": 0.2, "sinceShot": 0.6, "speed": 1.2, "retryIn": 0,
+    "nativeADS": true, "requestedOff": true, "observedADS": false,
+    "moving": true, "firing": false, "preparing": false, "sprinting": false,
+    "alternatives": ["Keep ADS: firing has priority", "Return to SAIN: current native wish on exit"]
+  }
+}

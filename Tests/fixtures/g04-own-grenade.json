@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "session": "g04-harness",
+  "sequence": 3,
+  "feature": "G04",
+  "stage": "evaluated",
+  "decision": "OwnGrenadeSafety",
+  "reason": "own-grenade-native-escape",
+  "realtime": 0.1,
+  "utc": "2026-11-02T21:20:52.9595638Z",
+  "configRevision": 1,
+  "profileId": "ally",
+  "name": "ally",
+  "botInstance": "ally-instance",
+  "ownGrenadeSafety": {
+    "state": "fleeing",
+    "reason": "own-grenade-native-escape",
+    "owner": "owner",
+    "item": "item",
+    "source": "observed-squad-throw",
+    "outcome": "live",
+    "projectile": -1,
+    "active": 1,
+    "x": 2.0,
+    "y": 0.0,
+    "z": 0.0,
+    "radius": 7.0,
+    "distance": 1.0,
+    "age": 0.10000000149011612,
+    "validFor": 0.5,
+    "routeBlocked": false,
+    "escape": true,
+    "alternatives": [
+      "assault: blocked while route exposed",
+      "escape: native SAIN, increasing separation",
+      "entry: D07 still requires confirmed blast"
+    ]
+  },
+  "ownGrenadeSafetyConfig": {
+    "enabled": true,
+    "dangerMargin": 1.0,
+    "exitPadding": 4.0,
+    "departureGrace": 0.35,
+    "refresh": 0.1
+  }
+}

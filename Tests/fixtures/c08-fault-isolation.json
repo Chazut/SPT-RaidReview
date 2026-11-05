@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "session": "c08-test",
+  "sequence": 1,
+  "feature": "C08",
+  "stage": "evaluated",
+  "decision": "FaultIsolation",
+  "reason": "fault-retry-delay",
+  "realtime": 1.0,
+  "utc": "2026-11-04T08:28:21.2061846Z",
+  "configRevision": 1,
+  "profileId": "65613c5926d6451bbc89e243ba6db6df",
+  "name": "Test PMC",
+  "botInstance": "65613c5926d6451bbc89e243ba6db6df",
+  "faultIsolation": {
+    "module": "Sample",
+    "entry": "Sample",
+    "state": "suspended",
+    "reason": "fault-retry-delay",
+    "error": "InvalidOperationException: injected sample failure",
+    "count": 1,
+    "total": 1,
+    "retryIn": 5.0,
+    "cleanupFailed": false,
+    "first": true,
+    "validFor": 2.0
+  },
+  "faultIsolationConfig": {
+    "retrySeconds": 5.0,
+    "errorLimit": 3,
+    "windowSeconds": 60.0
+  }
+}

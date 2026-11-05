@@ -1,0 +1,39 @@
+{
+  "retreatWeave": {
+    "state": "evading",
+    "reason": "weave-running-from-known-threat",
+    "action": "Retreat",
+    "target": "known-contact",
+    "context": "cover-A",
+    "source": "personal-vision",
+    "jump": "",
+    "jumpOutcome": "landing-observed",
+    "validFor": 0.2,
+    "yaw": 30,
+    "pitch": 55,
+    "speed": 5,
+    "observedYaw": 25,
+    "observedPitch": 52,
+    "contactAge": 0.5,
+    "goalDistance": 12,
+    "knownX": -20,
+    "knownY": 0,
+    "knownZ": 0,
+    "x": 40,
+    "y": 0,
+    "z": 0,
+    "switches": 2,
+    "jumpRequests": 1,
+    "acceptedJumps": 1,
+    "takeoffs": 1,
+    "landings": 1,
+    "moveRequested": true,
+    "gazeRequested": true,
+    "grounded": true,
+    "landingRollSpent": false,
+    "alternatives": [
+      "Straight sprint: blocked lane",
+      "Native SAIN: firing or no progress"
+    ]
+  }
+}

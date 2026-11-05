@@ -549,6 +549,19 @@ public class DatabaseService : IDisposable
                 );
                 CREATE INDEX IF NOT EXISTS idx_orbit_ghost_wake_raid_time ON orbit_ghost_wake(""raidId"", ""time"");
             "),
+            ("add_comet_decision_table", @"
+                CREATE TABLE IF NOT EXISTS comet_decision (
+                    ""id"" INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ""raidId"" TEXT NOT NULL, ""time"" INTEGER NOT NULL,
+                    ""cometSession"" TEXT NOT NULL, ""sequence"" INTEGER NOT NULL,
+                    ""profileId"" TEXT NOT NULL, ""name"" TEXT NOT NULL,
+                    ""feature"" TEXT NOT NULL, ""decision"" TEXT NOT NULL,
+                    ""stage"" TEXT NOT NULL, ""reason"" TEXT NOT NULL, ""detail"" TEXT NOT NULL,
+                    UNIQUE(""raidId"", ""cometSession"", ""sequence""),
+                    FOREIGN KEY (""raidId"") REFERENCES raid(""raidId"")
+                );
+                CREATE INDEX IF NOT EXISTS idx_comet_decision_raid_time ON comet_decision(""raidId"", ""time"");
+            "),
             ("add_switch_state_table", @"
                 CREATE TABLE IF NOT EXISTS switch_state (
                     ""id"" INTEGER PRIMARY KEY AUTOINCREMENT,

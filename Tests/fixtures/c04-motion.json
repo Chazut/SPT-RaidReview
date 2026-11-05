@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "session": "c02-harness",
+  "sequence": 1,
+  "feature": "C04",
+  "stage": "evaluated",
+  "decision": "DoorMotion",
+  "reason": "motion-push-away-requested",
+  "realtime": 0.0,
+  "utc": "2026-11-03T21:52:06.1491804Z",
+  "configRevision": 1,
+  "doorMotionConfig": {
+    "enabled": true,
+    "pushAway": true,
+    "stuckDelay": 1.5,
+    "leafDistance": 1.2,
+    "swingDuration": 0.5,
+    "humanClearance": 2.5
+  },
+  "profileId": "pmc",
+  "name": "PMC",
+  "botInstance": "native-pmc",
+  "doorMotion": {
+    "state": "requested",
+    "reason": "motion-push-away-requested",
+    "door": "door",
+    "doorState": "Shut",
+    "action": "push-away",
+    "angle": 0.0,
+    "targetAngle": -90.0,
+    "validFor": 0.35,
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  }
+}

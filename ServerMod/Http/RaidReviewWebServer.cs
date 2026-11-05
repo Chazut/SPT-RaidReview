@@ -576,6 +576,21 @@ public class RaidReviewWebServer
             }
         });
 
+        app.MapGet("/api/raids/{raidId}/comet_decisions", async (HttpContext context, string raidId, int? offset, int? limit, string? search, string? profileId, bool? compact, string? stage) =>
+        {
+            try
+            {
+                int take = Math.Clamp(limit ?? 50, 1, 200), skip = Math.Max(0, offset ?? 0);
+                string query = "%" + (search ?? "").Trim() + "%";
+                const string where = " WHERE raidId = $id AND ($stage = '' OR stage = $stage) AND ($profile = '' OR profileId = $profile) AND (name LIKE $query OR profileId LIKE $query OR feature LIKE $query OR decision LIKE $query OR stage LIKE $query OR reason LIKE $query OR ($query = '%A08%' COLLATE NOCASE AND CASE WHEN json_valid(detail) THEN json_type(detail, '$.loadout') = 'object' ELSE 0 END) OR ($query = '%A09%' COLLATE NOCASE AND CASE WHEN json_valid(detail) THEN json_type(detail, '$.opponent') = 'object' ELSE 0 END) OR ($query = '%P03%' COLLATE NOCASE AND CASE WHEN json_valid(detail) THEN json_type(detail, '$.gunfire') = 'object' ELSE 0 END) OR ($query = '%P02%' COLLATE NOCASE AND CASE WHEN json_valid(detail) THEN json_type(detail, '$.quiet') = 'object' ELSE 0 END) OR ($query = '%P01%' COLLATE NOCASE AND CASE WHEN json_valid(detail) THEN json_type(detail, '$.hearing') = 'object' ELSE 0 END) OR ($query = '%A12%' COLLATE NOCASE AND CASE WHEN json_valid(detail) THEN json_type(detail, '$.progress') = 'object' ELSE 0 END) OR ($query = '%A11%' COLLATE NOCASE AND CASE WHEN json_valid(detail) THEN json_type(detail, '$.coverResponse') = 'object' ELSE 0 END) OR ($query = '%A10%' COLLATE NOCASE AND CASE WHEN json_valid(detail) THEN json_type(detail, '$.opportunity') = 'object' ELSE 0 END))";
+                var count = await _db.QueryAsync("SELECT COUNT(*) AS total FROM comet_decision" + where, ("$id", raidId), ("$query", query), ("$profile", profileId ?? ""), ("$stage", stage ?? ""));
+                var events = await _db.QueryAsync("SELECT * FROM comet_decision" + where + " ORDER BY time ASC, id ASC LIMIT $take OFFSET $skip",
+                    ("$id", raidId), ("$query", query), ("$profile", profileId ?? ""), ("$stage", stage ?? ""), ("$take", take), ("$skip", skip));
+                await context.Response.WriteAsJsonAsync(new { events = compact == true ? events.Select(CometMapEvent.Project).ToList() : events, total = count[0]["total"] });
+            }
+            catch (Exception ex) { _logger.Error("[API:COMET_DECISIONS]", ex); context.Response.StatusCode = 500; }
+        });
+
         app.MapGet("/api/raids/{raidId}/orbit_ghost_wake", async (HttpContext context, string raidId) =>
         {
             try
@@ -675,7 +690,7 @@ public class RaidReviewWebServer
             foreach (var raidId in raidIds)
             {
                 // Delete child tables first, then raid (parent) last — FK constraints require this order
-                foreach (var table in new[] { "kills", "looting", "player", "player_status", "ballistic", "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field", "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight", "orbit_ghost_hearing", "orbit_ghost_wake", "airdrop_landing", "airdrop_flight", "switch_state", "raid" })
+                foreach (var table in new[] { "kills", "looting", "player", "player_status", "ballistic", "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field", "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight", "orbit_ghost_hearing", "orbit_ghost_wake", "airdrop_landing", "airdrop_flight", "switch_state", "comet_decision", "raid" })
                     await _db.ExecuteAsync($"DELETE FROM {table} WHERE raidId = $id", ("$id", raidId));
 
                 _fileService.DeleteFile("positions", "", "", $"{raidId}_positions");

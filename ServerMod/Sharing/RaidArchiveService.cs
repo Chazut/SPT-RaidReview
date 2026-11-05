@@ -20,7 +20,7 @@ internal sealed class RaidArchiveService(
         "raid", "player", "kills", "looting", "player_status", "ballistic",
         "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field",
         "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight",
-        "orbit_ghost_hearing", "orbit_ghost_wake", "airdrop_landing", "airdrop_flight", "switch_state"
+        "orbit_ghost_hearing", "orbit_ghost_wake", "airdrop_landing", "airdrop_flight", "switch_state", "comet_decision"
     ];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private readonly SemaphoreSlim gate = new(1, 1);

@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "session": "c02-harness",
+  "sequence": 5,
+  "feature": "C02",
+  "stage": "evaluated",
+  "decision": "DoorRecovery",
+  "reason": "recovery-correction-requested",
+  "realtime": 1.5,
+  "utc": "2026-11-03T20:42:58.9329213Z",
+  "configRevision": 1,
+  "doorRecoveryConfig": {
+    "enabled": true,
+    "suspicionDelay": 1.5,
+    "stableDuration": 0.5,
+    "sampleInterval": 0.25,
+    "uncertaintyLimit": 5.0
+  },
+  "profileId": "pmc",
+  "name": "PMC",
+  "botInstance": "native-pmc",
+  "doorRecovery": {
+    "state": "verifying",
+    "reason": "recovery-correction-requested",
+    "door": "door",
+    "doorState": "Interacting",
+    "target": "Open",
+    "repair": "finalize-state",
+    "network": "solo",
+    "age": 1.5,
+    "stable": 1.25,
+    "angle": 90.0,
+    "targetAngle": 90.0,
+    "validFor": 0.6,
+    "requested": true,
+    "confirmed": false,
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  }
+}

@@ -235,6 +235,34 @@ const api = {
         return parseAirdrops(await response.json());
     },
 
+    getCometJournal: async function(raidId: string, feature: string, signal?: AbortSignal) {
+        const response = await fetch(hostname + `/api/raids/${encodeURIComponent(raidId)}/comet_decisions?limit=200&search=${encodeURIComponent(feature)}&stage=summary`, { signal });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error("Could not load COMET report");
+        return response.json();
+    },
+
+    getCometCounters: async function(raidId: string, signal?: AbortSignal) {
+        const response = await fetch(hostname + `/api/raids/${encodeURIComponent(raidId)}/comet_decisions?limit=200&search=T02`, { signal });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Could not load COMET counters');
+        return response.json();
+    },
+
+    getCometDecisions: async function(raidId: string, page: number, search: string, signal?: AbortSignal) {
+        const response = await fetch(hostname + `/api/raids/${encodeURIComponent(raidId)}/comet_decisions?offset=${page * 50}&limit=50&search=${encodeURIComponent(search)}`, { signal });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Could not load COMET decisions');
+        return response.json();
+    },
+
+    getCometMapDecisions: async function(raidId: string, profileId: string, offset: number, signal?: AbortSignal) {
+        const response = await fetch(hostname + `/api/raids/${encodeURIComponent(raidId)}/comet_decisions?profileId=${encodeURIComponent(profileId)}&compact=true&offset=${offset}&limit=200`, { signal });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error('Could not load COMET map details');
+        return response.json();
+    },
+
     getRaidOrbitGhostWakes: async function(raidId: string, signal?: AbortSignal): Promise<import('../helpers/ghostWakes').GhostWake[] | null> {
         const response = await fetch(hostname + `/api/raids/${raidId}/orbit_ghost_wake`, { signal });
         if (response.status === 404) return null;

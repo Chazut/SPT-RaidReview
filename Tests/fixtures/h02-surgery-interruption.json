@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "session": "h01-harness",
+  "sequence": 5,
+  "feature": "H02",
+  "stage": "evaluated",
+  "decision": "SurgeryInterruption",
+  "reason": "surgery-visible-threat",
+  "realtime": 10.0,
+  "utc": "2026-11-03T08:47:24.5956791Z",
+  "configRevision": 1,
+  "profileId": "pmc",
+  "name": "Medic",
+  "botInstance": "instance",
+  "surgeryInterruption": {
+    "state": "cancel-requested",
+    "reason": "surgery-visible-threat",
+    "item": "surgery-kit",
+    "part": "LeftLeg",
+    "requested": true,
+    "nativeCancelled": true,
+    "handsReleased": false,
+    "weaponReady": false,
+    "completed": false,
+    "applied": true,
+    "validFor": 1.0,
+    "retryRemaining": 8.0,
+    "evidence": {
+      "kind": "visible",
+      "contact": "enemy",
+      "age": 0.0,
+      "distance": 35.0,
+      "x": 35.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "alternatives": [
+      "interrupt: personal danger or native cancellation",
+      "continue: unsafe",
+      "restart surgery: wait, then recheck H01 safety"
+    ]
+  },
+  "surgeryInterruptionConfig": {
+    "enabled": true,
+    "interval": 0.1,
+    "visibleDistance": 40.0,
+    "knownDistance": 20.0,
+    "knownAge": 3.0,
+    "footstepDistance": 15.0,
+    "footstepAge": 2.0,
+    "retryDelay": 8.0
+  }
+}

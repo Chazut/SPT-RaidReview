@@ -1,0 +1,39 @@
+{
+  "cornerChase": {
+    "state": "moving",
+    "reason": "chase-route-requested",
+    "target": "enemy",
+    "action": "RushEnemy",
+    "source": "personal-vision",
+    "style": "jump",
+    "episode": 1,
+    "observationEpisode": 1,
+    "requests": 1,
+    "jumps": 1,
+    "side": 1,
+    "chance": 75,
+    "roll": 0,
+    "remaining": 3.8000000000000007,
+    "validFor": 0.2,
+    "contactAge": 0.6999999999999993,
+    "knownX": 4,
+    "knownY": 0,
+    "knownZ": 4,
+    "goalX": 2,
+    "goalY": 0,
+    "goalZ": 2,
+    "pathLength": 8,
+    "travel": 0.6,
+    "speed": 3,
+    "selected": true,
+    "requested": true,
+    "movementObserved": true,
+    "jumpRequested": true,
+    "jumpAccepted": true,
+    "takeoffObserved": true,
+    "landingObserved": true,
+    "alternatives": [
+      "Recent personal movement suggests retreat; direct angle preferred"
+    ]
+  }
+}

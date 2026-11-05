@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "session": "g10-harness",
+  "sequence": 2,
+  "feature": "G10",
+  "stage": "evaluated",
+  "decision": "ExplosionAwareness",
+  "reason": "explosion-nearby-attention",
+  "realtime": 12.0,
+  "utc": "2026-11-03T07:36:58.2392249Z",
+  "configRevision": 1,
+  "profileId": "pmc",
+  "name": "Test PMC",
+  "botInstance": "instance",
+  "explosionAwareness": {
+    "state": "look",
+    "reason": "explosion-nearby-attention",
+    "signal": "1",
+    "kind": "blast",
+    "evidence": "seen-throw",
+    "target": "source",
+    "evidenceAge": 2.1000003814697266,
+    "x": 10.0,
+    "y": 0.0,
+    "z": 0.0,
+    "contactX": 5.0,
+    "contactY": 1.0,
+    "contactZ": 2.0,
+    "distance": 10.0,
+    "audible": true,
+    "applied": true,
+    "remaining": 3.0,
+    "validFor": 1.0,
+    "alternatives": [
+      "Explosion location is not the thrower's location",
+      "Keep existing contact age; do not create an enemy",
+      "Urgent combat and grenade escape take priority"
+    ]
+  },
+  "explosionAwarenessConfig": {
+    "enabled": true,
+    "nearDistance": 25.0,
+    "lookDuration": 3.0,
+    "lookInterval": 8.0
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "session": "c09-test",
+  "sequence": 1,
+  "feature": "C09",
+  "stage": "evaluated",
+  "decision": "Lifecycle",
+  "reason": "lifecycle-dead-bot-ended",
+  "realtime": 1.0,
+  "utc": "2026-11-04T09:16:00.8924141Z",
+  "configRevision": 1,
+  "profileId": "fe9af2397fda4b14a39eac83ed0ae2c5",
+  "name": "Test PMC",
+  "botInstance": "5b7e0a150e8c410cb4f20ceeb91c8d7c",
+  "lifecycle": {
+    "state": "dead",
+    "reason": "lifecycle-dead-bot-ended",
+    "previousAction": "COMET:Test",
+    "previousInstance": "",
+    "generation": 1,
+    "cleanupSteps": 72,
+    "failedSteps": 0,
+    "failures": [],
+    "freshState": false,
+    "validFor": 2.0
+  }
+}

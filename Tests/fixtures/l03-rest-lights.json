@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "session": "l01-harness",
+  "sequence": 3,
+  "feature": "L03",
+  "stage": "evaluated",
+  "decision": "RestLights",
+  "reason": "rest-switch-off-confirmed",
+  "realtime": 12.25,
+  "utc": "2026-11-03T18:19:05.7180871Z",
+  "configRevision": 1,
+  "profileId": "65391507-3d7e-4190-b270-6f75e0ee9aeb",
+  "name": "Test PMC",
+  "botInstance": "light-instance",
+  "restLights": {
+    "state": "dark",
+    "reason": "rest-switch-off-confirmed",
+    "owner": "ORBIT",
+    "behavior": "Orbit:Guarding",
+    "layer": "OrbitBrainLayer",
+    "weapon": "5dc4c4f8-70d1-481a-9275-c85017d831a9",
+    "execution": "OFF observed after native request",
+    "episode": 1,
+    "devices": 2,
+    "activeDevices": 0,
+    "speed": 0.0,
+    "stillFor": 2.25,
+    "waitRemaining": 0.0,
+    "cooldownRemaining": 10.0,
+    "validFor": 0.75,
+    "requested": true,
+    "accepted": true,
+    "observedOff": true,
+    "accessories": [
+      {
+        "id": "c20c8ab7-320a-4826-8e12-50496d796992",
+        "name": "SureFire X400",
+        "mode": 2,
+        "active": false
+      },
+      {
+        "id": "2e40cf53-ff1f-4aa9-9a3b-66d977ba4bf0",
+        "name": "AN/PEQ-15",
+        "mode": 3,
+        "active": false
+      }
+    ],
+    "alternatives": [
+      "Keep the current light state",
+      "Wait for a stable pause and ready hands",
+      "Yield to combat or another light owner"
+    ]
+  },
+  "restLightsConfig": {
+    "enabled": true,
+    "holdDelay": 2.0,
+    "maxSpeed": 0.5,
+    "episodeInterval": 10.0
+  }
+}

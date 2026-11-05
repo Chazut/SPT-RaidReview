@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "session": "c02-harness",
+  "sequence": 2,
+  "feature": "C05",
+  "stage": "evaluated",
+  "decision": "DoorClosing",
+  "reason": "closing-interaction-started",
+  "realtime": 20.0,
+  "utc": "2026-11-03T22:22:15.4561882Z",
+  "configRevision": 1,
+  "doorClosingConfig": {
+    "enabled": true,
+    "openGrace": 6.0,
+    "occupiedRadius": 1.5,
+    "failedRetry": 10.0
+  },
+  "profileId": "pmc",
+  "name": "PMC",
+  "botInstance": "native-pmc",
+  "doorClosing": {
+    "state": "requested",
+    "reason": "closing-interaction-started",
+    "door": "door",
+    "doorState": "Interacting",
+    "graceRemaining": 0.0,
+    "retryRemaining": 0.0,
+    "occupiedRadius": 1.5,
+    "validFor": 0.35,
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0
+  }
+}

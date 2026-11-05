@@ -21,6 +21,10 @@ public class WsPacketHandler
     private readonly ItemResolver _itemResolver;
     private Action<string>? _startPostProcessing;
     private Action? _stopPostProcessing;
+    // String-only leases, bounded across sessions; late C13 reports never follow a
+    // reused player profile into the next raid. Registered before END is queued.
+    private readonly Dictionary<(string Profile,string Comet),string> _cometCleanupRaids=new();
+    private readonly object _cometCleanupLock=new();
 
     public WsPacketHandler(DatabaseService db, SessionManager sessionManager, DataFileService fileService, RaidReviewLogger logger, ItemResolver itemResolver)
     {
@@ -89,6 +93,29 @@ public class WsPacketHandler
             }
 
             var raidId = sessionManagerProfile.RaidId;
+            if(action=="COMET_SESSION")
+            {
+                string comet=GetString(payload,"cometSession");
+                if(raidId!=null && comet.Length==32 && Guid.TryParseExact(comet,"N",out _))lock(_cometCleanupLock)
+                {
+                    var key=(sessionId,comet);
+                    if(!_cometCleanupRaids.ContainsKey(key))
+                    {
+                        if(_cometCleanupRaids.Count>=128)_cometCleanupRaids.Remove(_cometCleanupRaids.Keys.First());
+                        _cometCleanupRaids.Add(key,raidId);
+                    }
+                }
+                return;
+            }
+            if(action=="COMET_DECISION" && ((GetString(payload,"feature")=="C13" && GetString(payload,"stage")=="cleanup")
+                || (GetString(payload,"feature") is "T01" or "T02" or "T03" or "T04" && GetString(payload,"stage")=="summary")))
+            {
+                lock(_cometCleanupLock)
+                {
+                    if(!_cometCleanupRaids.TryGetValue((sessionId,GetString(payload,"cometSession")),out raidId))return;
+                }
+            }
+
 
             if (raidId != null)
             {
@@ -482,6 +509,22 @@ public class WsPacketHandler
                           VALUES ($raidId, $dropId, $time, $crateTemplateId, $x, $y, $z)",
                         ("$raidId", raidId!), ("$dropId", dropId), ("$time", landedAt),
                         ("$crateTemplateId", GetString(payload, "crateTemplateId")), ("$x", x), ("$y", y), ("$z", z));
+                    break;
+                }
+
+                case "COMET_DECISION":
+                {
+                    if (raidId == null) break;
+                    string detail = GetString(payload, "detail");
+                    if (detail.Length > 32768) throw new InvalidDataException("COMET event exceeds 32 KiB");
+                    await _db.ExecuteAsync(
+                        @"INSERT OR IGNORE INTO comet_decision (raidId, time, cometSession, sequence, profileId, name, feature, decision, stage, reason, detail)
+                          VALUES ($raidId, $time, $session, $sequence, $profileId, $name, $feature, $decision, $stage, $reason, $detail)",
+                        ("$raidId", raidId!), ("$time", GetString(payload, "time")),
+                        ("$session", GetString(payload, "cometSession")), ("$sequence", GetString(payload, "sequence")),
+                        ("$profileId", GetString(payload, "profileId")), ("$name", GetString(payload, "name")),
+                        ("$feature", GetString(payload, "feature")), ("$decision", GetString(payload, "decision")),
+                        ("$stage", GetString(payload, "stage")), ("$reason", GetString(payload, "reason")), ("$detail", detail));
                     break;
                 }
 

@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "botInstance": "instance",
+  "doorReservation": {
+    "state": "active",
+    "reason": "reservation-validated",
+    "door": "door",
+    "squad": "squad",
+    "owner": "test-pmc",
+    "phase": "entry:planning",
+    "target": "known",
+    "token": 42,
+    "remaining": 2,
+    "budgetRemaining": 7,
+    "retryRemaining": 0,
+    "validFor": 1.5,
+    "actionObserved": true,
+    "alternatives": []
+  },
+  "doorReservationConfig": {
+    "enabled": true,
+    "leaseSeconds": 2,
+    "renewInterval": 0.5,
+    "busyRetry": 2
+  }
+}

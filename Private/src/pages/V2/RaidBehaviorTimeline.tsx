@@ -1,4 +1,5 @@
 import GhostWakeDiagnostics from '../../component/GhostWakeDiagnostics';
+import CometDecisionDiagnostics from '../../component/CometDecisionDiagnostics';
 import { LoaderFunctionArgs, useLoaderData, useOutletContext } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/api";
@@ -30,7 +31,8 @@ function buildSegments(entries: TrackingPositionalData[]): BehaviorSegment[] {
         const decision = (entry as any).decision || ''
         const cat = getBehaviorCategory(decision)
 
-        if (current && current.category === cat.key) {
+        if (current && current.category === cat.key &&
+            (!(decision.startsWith('COMET:') || current.decision.startsWith('COMET:')) || current.decision === decision)) {
             current.endTime = Number(entry.time)
         } else {
             if (current) segments.push(current)
@@ -89,6 +91,7 @@ function ensureHatchStyles() {
 export default function RaidBehaviorTimeline() {
     const { positions } = useLoaderData() as { positions: Record<string, TrackingPositionalData[]> };
     const { raid } = useOutletContext() as { raid: TrackingRaidData, intl: { [key: string]: string } };
+    const cometNames = useMemo(() => Object.fromEntries((raid?.players || []).map(p => [p.profileId, displayPlayerName(p.name, p.profileId)])), [raid?.players]);
     const pmcIndexMap = useMemo(() => raid?.players ? buildPmcIndexMap(raid.players) : {}, [raid?.players]);
     const getPlayerColor = useMemo(() => createPlayerColorResolver(raid?.players, raid?.profileId), [raid?.players, raid?.profileId]);
 
@@ -244,6 +247,7 @@ export default function RaidBehaviorTimeline() {
         return (
             <>
             <GhostWakeDiagnostics raidId={raid.raidId} />
+            <CometDecisionDiagnostics raidId={raid.raidId} names={cometNames} />
             <div className="p-4 text-eft text-center opacity-50" style={{ fontSize: '14px' }}>
                 No behavior data available. Play a raid with the updated mod to capture bot decisions.
             </div>
@@ -256,6 +260,7 @@ export default function RaidBehaviorTimeline() {
     return (
         <div ref={containerRef} className="p-4" style={{ overflowX: 'auto' }}>
             <GhostWakeDiagnostics raidId={raid.raidId} />
+            <CometDecisionDiagnostics raidId={raid.raidId} names={cometNames} />
             {/* SAIN recommendation banner */}
             {!hasSain && (
                 <div className="mb-3 px-3 py-2" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 4, fontSize: '13px', color: '#F59E0B' }}>

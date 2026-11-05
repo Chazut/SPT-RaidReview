@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>annotations</Nullable></PropertyGroup>
-  <ItemGroup>
+  <ItemGroup><Compile Include="../../Client/CometSummaryCapture.cs" Link="CometSummaryCapture.cs" />
     <PackageReference Include="HarmonyX" Version="2.16.0" />
     <Compile Include="../../Client/helpers/OrderedPacketSender.cs" Link="OrderedPacketSender.cs" />
     <Compile Include="../../Client/helpers/RecordingRoster.cs" Link="RecordingRoster.cs" />
@@ -19,5 +19,69 @@
     <Compile Include="../../ServerMod/WebSocket/AirdropFlightPacket.cs" Link="AirdropFlightPacket.cs" />
     <Compile Include="../../ServerMod/WebSocket/SwitchStatesPacket.cs" Link="SwitchStatesPacket.cs" />
     <Reference Include="Newtonsoft.Json"><HintPath>../../Client/dependencies/4.1.X/Newtonsoft.Json.dll</HintPath></Reference>
+    <None Include="../fixtures/m02-fire-pause.json" Link="m02-fire-pause.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-</Project>
+  <ItemGroup><Content Include="../Fixtures/d08-door-search.json" Link="d08-door-search.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><Content Include="../Fixtures/d09-door-ambush.json" Link="d09-door-ambush.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><Content Include="../Fixtures/d10-door-hold.json" Link="d10-door-hold.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><Content Include="../Fixtures/d11-door-support.json" Link="d11-door-support.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><Content Include="../Fixtures/d12-door-interruption.json" Link="d12-door-interruption.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><Content Include="../Fixtures/d13-door-emergency.json" Link="d13-door-emergency.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><Content Include="../Fixtures/d14-door-reservation.json" Link="d14-door-reservation.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><Content Include="../Fixtures/d15-door-entry.json" Link="d15-door-entry.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m01-combat-step.json" Link="m01-combat-step.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m03-corner-peek.json" Link="m03-corner-peek.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m04-combat-lean.json" Link="m04-combat-lean.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m05-corner-chase.json" Link="m05-corner-chase.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m06-corner-prefire.json" Link="m06-corner-prefire.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m07-angle-watch.json" Link="m07-angle-watch.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m08-hold-angle.json" Link="m08-hold-angle.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m09-cover-travel.json" Link="m09-cover-travel.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m10-ads-travel.json" Link="m10-ads-travel.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m11-retreat-weave.json" Link="m11-retreat-weave.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m12-tactical-jump.json" Link="m12-tactical-jump.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m13-outdoor-relocation.json" Link="m13-outdoor-relocation.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/m14-cover-feint.json" Link="m14-cover-feint.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/w01-reload-timing.json" Link="w01-reload-timing.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/w02-pistol-swap.json" Link="w02-pistol-swap.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/w03-weapon-return.json" Link="w03-weapon-return.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/w04-quick-reload.json" Link="w04-quick-reload.json" CopyToOutputDirectory="PreserveNewest" />
+<None Include="../fixtures/w05-weapon-range.json" Link="w05-weapon-range.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/w06-weapon-sync.json" Link="w06-weapon-sync.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/w07-suppression-discipline.json" Link="w07-suppression-discipline.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/w08-shot-geometry.json" Link="w08-shot-geometry.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/w09-recoil-recovery.json" Link="w09-recoil-recovery.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/w10-hands-recovery.json" Link="w10-hands-recovery.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/g01-grenade-judgment.json" Link="g01-grenade-judgment.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/g02-grenade-trajectory.json" Link="g02-grenade-trajectory.json" CopyToOutputDirectory="PreserveNewest" /><None Include="../fixtures/g03-grenade-choice.json" Link="g03-grenade-choice.json" CopyToOutputDirectory="PreserveNewest" /><None Include="../fixtures/g04-own-grenade.json" Link="g04-own-grenade.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/g02-grenade-trajectory.json" Link="g02-grenade-trajectory.json" CopyToOutputDirectory="PreserveNewest" /><None Include="../fixtures/g03-grenade-choice.json" Link="g03-grenade-choice.json" CopyToOutputDirectory="PreserveNewest" /><None Include="../fixtures/g05-grenade-reaction.json" Link="g05-grenade-reaction.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/g06-grenade-dispersion.json" Link="g06-grenade-dispersion.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+  <ItemGroup><None Include="../fixtures/g07-grenade-filter.json" Link="g07-grenade-filter.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/g08-gas-exposure.json" Link="g08-gas-exposure.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/g09-flash-continuity.json" Link="g09-flash-continuity.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/g10-explosion-awareness.json" Link="g10-explosion-awareness.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/h01-medical-choice.json" Link="h01-medical-choice.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/h02-surgery-interruption.json" Link="h02-surgery-interruption.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/h03-medical-posture.json" Link="h03-medical-posture.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/h04-post-combat.json" Link="h04-post-combat.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/h05-ready-stance.json" Link="h05-ready-stance.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><None Include="../fixtures/s01-crossfire.json" Link="s01-crossfire.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><None Include="../fixtures/s02-secondary-entrance.json" Link="s02-secondary-entrance.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><None Include="../fixtures/s03-squad-maneuver.json" Link="s03-squad-maneuver.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/s04-cover-mate.json" Link="s04-cover-mate.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/s05-squad-trade.json" Link="s05-squad-trade.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/s06-squad-storm.json" Link="s06-squad-storm.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/s07-fire-lane.json" Link="s07-fire-lane.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/s08-squad-fire.json" Link="s08-squad-fire.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/s09-squad-voice.json" Link="s09-squad-voice.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/l01-light-discipline.json" Link="l01-light-discipline.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/l02-tactical-devices.json" Link="l02-tactical-devices.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/l03-rest-lights.json" Link="l03-rest-lights.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/e03-encounter.json" Link="e03-encounter.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/e04-outcome.json" Link="e04-outcome.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/c03-geometry.json" Link="c03-geometry.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/c02-recovery.json" Link="c02-recovery.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/c01-transit.json" Link="c01-transit.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/c04-motion.json" Link="c04-motion.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><None Include="../fixtures/c05-closing.json" Link="c05-closing.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><None Include="../fixtures/c06-recovery.json" Link="c06-recovery.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><None Include="../fixtures/c07-cover-scan.json" Link="c07-cover-scan.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/c08-fault-isolation.json" Link="c08-fault-isolation.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/c09-lifecycle.json" Link="c09-lifecycle.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/c13-cleanup.json" Link="c13-cleanup.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../fixtures/c10-validity.json" Link="c10-validity.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><Content Include="../fixtures/c14-preset.json" Link="c14-preset.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><Content Include="../fixtures/u01-preset.json" Link="u01-preset.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><Content Include="../fixtures/u07-preset.json" Link="u07-preset.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
+<ItemGroup><None Include="../fixtures/i02-control.json" Link="i02-control.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><Content Include="../Fixtures/t02-summary.json" Link="t02-summary.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup><ItemGroup><None Include="../Fixtures/journal-summary.json" Link="journal-summary.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup></Project>

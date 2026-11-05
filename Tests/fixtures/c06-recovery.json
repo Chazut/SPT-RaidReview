@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "session": "c06-test",
+  "sequence": 7,
+  "feature": "C06",
+  "stage": "evaluated",
+  "decision": "MovementRecovery",
+  "reason": "recovery-repath-requested",
+  "realtime": 3.0,
+  "utc": "2026-11-03T22:49:37.9601819Z",
+  "configRevision": 1,
+  "profileId": "pmc",
+  "name": "Test PMC",
+  "botInstance": "instance",
+  "movementRecovery": {
+    "state": "attempted",
+    "reason": "recovery-repath-requested",
+    "step": "repath",
+    "result": "accepted-awaiting-movement",
+    "owner": "SAIN",
+    "action": "Search",
+    "route": "2/0/0",
+    "contact": "known-enemy",
+    "incident": 1,
+    "stalledSeconds": 3.0,
+    "displacement": 0.0,
+    "validFor": 1.0,
+    "teleportEnabled": false
+  },
+  "movementRecoveryConfig": {
+    "enabled": true,
+    "teleport": false,
+    "sampleInterval": 0.5,
+    "progressDistance": 0.6,
+    "earlyJumpAfter": 1.0,
+    "repathAfter": 3.0,
+    "jumpAfter": 5.0,
+    "teleportAfter": 8.0,
+    "stopAfter": 14.0,
+    "teleportDistance": 2.0,
+    "humanDistance": 50.0
+  }
+}

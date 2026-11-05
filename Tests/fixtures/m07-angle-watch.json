@@ -1,0 +1,35 @@
+{
+  "angleWatch": {
+    "state": "watching",
+    "reason": "angle-prepare-known-approach",
+    "target": "enemy",
+    "source": "personal-vision",
+    "action": "Search",
+    "candidate": "near-corner",
+    "kind": "corner",
+    "episode": 1,
+    "leanSide": -1,
+    "contactAge": 1,
+    "remaining": 3,
+    "validFor": 0.2,
+    "knownX": 4,
+    "knownY": 0,
+    "knownZ": 4,
+    "aimX": 2,
+    "aimY": 1.2,
+    "aimZ": 4,
+    "requestedPitch": 0,
+    "observedPitch": 1,
+    "angleError": 12,
+    "requested": true,
+    "aligned": false,
+    "elevation": false,
+    "wallBlocked": true,
+    "moving": true,
+    "leanRequested": false,
+    "alternatives": [
+      "Native SAIN gaze; no firing or movement requested",
+      "near-corner: clear eye and muzzle lanes; selected"
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "session": "g05-harness",
+  "sequence": 3,
+  "feature": "G06",
+  "stage": "evaluated",
+  "decision": "GrenadeDispersion",
+  "reason": "dispersion-shared-safe-exit",
+  "realtime": 10.01,
+  "utc": "2026-11-02T22:08:52.1180842Z",
+  "configRevision": 1,
+  "profileId": "pmc-1",
+  "name": "pmc-1",
+  "botInstance": "pmc-1-instance",
+  "grenadeDispersion": {
+    "state": "shared",
+    "reason": "dispersion-shared-safe-exit",
+    "squad": "team",
+    "peer": "pmc-0",
+    "token": 2,
+    "peers": 1,
+    "x": 16.0,
+    "y": 0.0,
+    "z": 0.0,
+    "spacing": 3.0,
+    "memberRange": 25.0,
+    "nearest": 0.0,
+    "leaseRemaining": 1.0,
+    "validFor": 0.5,
+    "alternatives": [
+      "Candidate 1: reserved-near-pmc-0 (0.0 m)",
+      "Candidate 2: route-crosses-danger",
+      "Candidate 3: route-crosses-danger",
+      "Candidate 4: route-crosses-danger"
+    ]
+  },
+  "grenadeDispersionConfig": {
+    "enabled": true,
+    "spacing": 3.0,
+    "memberRange": 25.0
+  }
+}

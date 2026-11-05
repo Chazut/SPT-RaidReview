@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "session": "l01-harness",
+  "sequence": 2,
+  "feature": "L01",
+  "stage": "evaluated",
+  "decision": "LightDiscipline",
+  "reason": "light-tactical-concealment",
+  "realtime": 11.0,
+  "utc": "2026-11-03T17:16:29.3775747Z",
+  "configRevision": 1,
+  "profileId": "4f535dbc-6adb-42d5-8944-bbcecc8e9377",
+  "name": "Test PMC",
+  "botInstance": "light-instance",
+  "lightDiscipline": {
+    "state": "dark",
+    "reason": "light-tactical-concealment",
+    "contact": "enemy",
+    "source": "personal-hearing",
+    "action": "Freeze",
+    "tactic": "native-freeze",
+    "weapon": "e027138b-f61d-45ad-83e7-ffbab4dfd55b",
+    "execution": "Extinction requested; devices observed OFF",
+    "scope": "held weapon",
+    "known": {
+      "x": 20.0,
+      "y": 0.0,
+      "z": 0.0,
+      "finite": true,
+      "length": 20.0
+    },
+    "contactAge": 1.0,
+    "distance": 20.0,
+    "speed": 0.0,
+    "holdWait": 0.0,
+    "hiddenWait": 0.0,
+    "visibleWait": 0.0,
+    "validFor": 0.8,
+    "requested": true,
+    "observedOff": true,
+    "nightVision": false,
+    "devices": 2,
+    "activeDevices": 0,
+    "modes": [
+      "df27a837-e0da-4c62-b39c-c8c2b9ab86f1:2",
+      "c32d9972-71ee-456d-a4d4-4f2808666b74:3"
+    ],
+    "alternatives": [
+      "Keep SAIN's current lighting choice",
+      "Wait for stable tactical concealment",
+      "Release on confirmed vision or a higher priority action"
+    ]
+  },
+  "lightDisciplineConfig": {
+    "enabled": true,
+    "contactLifetime": 15.0,
+    "maxDistance": 60.0,
+    "maxSpeed": 0.5,
+    "holdDelay": 0.5,
+    "hiddenDelay": 1.0,
+    "visibleDelay": 0.25
+  }
+}

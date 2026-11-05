@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "session": "harness",
+  "sequence": 7,
+  "feature": "G02",
+  "stage": "evaluated",
+  "decision": "GrenadeTrajectory",
+  "reason": "trajectory-execution-validated",
+  "realtime": 10.04,
+  "utc": "2026-11-02T20:11:06.5304590Z",
+  "configRevision": 1,
+  "profileId": "bot",
+  "name": "Test PMC",
+  "botInstance": "instance",
+  "grenadeTrajectory": {
+    "state": "validated",
+    "reason": "trajectory-execution-validated",
+    "target": "enemy",
+    "source": "seen",
+    "kind": "last-known",
+    "door": "",
+    "knownX": 20.0,
+    "knownY": 0.0,
+    "knownZ": 0.0,
+    "x": 18.700000762939453,
+    "y": 0.25,
+    "z": -0.6499999761581421,
+    "angle": 25,
+    "attempts": 4,
+    "clearance": 0.18,
+    "validFor": 0.2200002288818368,
+    "alternatives": [
+      {
+        "kind": "last-known",
+        "reason": "trajectory-clear",
+        "x": 18.700000762939453,
+        "y": 0.25,
+        "z": -0.6499999761581421,
+        "angle": 25,
+        "accepted": true,
+        "clearance": 0.18
+      },
+      {
+        "kind": "last-known",
+        "reason": "trajectory-clear",
+        "x": 18.700000762939453,
+        "y": 0.25,
+        "z": -0.6499999761581421,
+        "angle": 15,
+        "accepted": true,
+        "clearance": 0.18
+      },
+      {
+        "kind": "last-known",
+        "reason": "trajectory-clear",
+        "x": 18.700000762939453,
+        "y": 0.25,
+        "z": -0.6499999761581421,
+        "angle": 35,
+        "accepted": true,
+        "clearance": 0.18
+      },
+      {
+        "kind": "last-known",
+        "reason": "trajectory-clear",
+        "x": 18.700000762939453,
+        "y": 0.25,
+        "z": -0.6499999761581421,
+        "angle": 45,
+        "accepted": true,
+        "clearance": 0.18
+      }
+    ]
+  },
+  "grenadeTrajectoryConfig": {
+    "enabled": true,
+    "corners": true,
+    "doors": true,
+    "distance": 40.0,
+    "cornerDistance": 5.0,
+    "doorDepthFirst": 1.8,
+    "doorDepthSecond": 1.2,
+    "doorDepthThird": 2.6,
+    "preparedLifetime": 0.25
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "session": "g09-harness",
+  "sequence": 2,
+  "feature": "G09",
+  "stage": "evaluated",
+  "decision": "FlashContinuity",
+  "reason": "flash-overlap-preserved",
+  "realtime": 18.0,
+  "utc": "2026-11-03T06:57:40.5440279Z",
+  "configRevision": 1,
+  "profileId": "pmc",
+  "name": "test",
+  "botInstance": "instance",
+  "flashContinuity": {
+    "state": "new-flash",
+    "reason": "flash-overlap-preserved",
+    "source": "native-flash",
+    "target": "enemy",
+    "requestedDuration": 1.2000000476837158,
+    "remaining": 4.0,
+    "strongRemaining": 0.8400001525878906,
+    "blindFireRemaining": 4.0,
+    "validFor": 1.0,
+    "hasRemembered": true,
+    "gasActive": false,
+    "x": 4.0,
+    "y": 1.2000000476837158,
+    "z": 5.0,
+    "alternatives": [
+      "Keep each existing flash deadline",
+      "Never update a blind bot from a live enemy position",
+      "Gas modifiers stay separate"
+    ]
+  },
+  "flashContinuityConfig": {
+    "enabled": true
+  }
+}

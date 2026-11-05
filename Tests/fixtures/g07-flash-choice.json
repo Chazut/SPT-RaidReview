@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "session": "harness",
+  "sequence": 7,
+  "feature": "G03",
+  "stage": "evaluated",
+  "decision": "GrenadeChoice",
+  "reason": "choice-flash-fallback",
+  "realtime": 10.02,
+  "utc": "2026-11-02T22:34:19.3162034Z",
+  "configRevision": 1,
+  "profileId": "bot",
+  "name": "Test PMC",
+  "botInstance": "instance",
+  "grenadeChoice": {
+    "state": "selected",
+    "reason": "choice-flash-fallback",
+    "target": "enemy",
+    "source": "seen",
+    "item": "flash",
+    "template": "mod-flash",
+    "name": "Flash",
+    "preference": "flash-fallback",
+    "knownX": 10.0,
+    "knownY": 0.0,
+    "knownZ": 0.0,
+    "distance": 9.605337142944336,
+    "flight": 0.9182096374304536,
+    "fuse": 2.0,
+    "margin": 1.0817903625695464,
+    "requiredMargin": 0.75,
+    "validFor": 0.75,
+    "alternatives": [
+      {
+        "item": "smoke",
+        "template": "mod-smoke",
+        "name": "Test frag",
+        "reason": "filter-smoke-not-offensive",
+        "category": "smoke",
+        "fuse": 3.0,
+        "eligible": false
+      },
+      {
+        "item": "flash",
+        "template": "mod-flash",
+        "name": "Flash",
+        "reason": "selected",
+        "category": "flash",
+        "fuse": 2.0,
+        "eligible": true
+      }
+    ]
+  },
+  "grenadeChoiceConfig": {
+    "enabled": true,
+    "preferShortIndoors": true,
+    "shortFuseDistance": 20.0,
+    "minimumFuse": 2.5,
+    "arrivalMargin": 0.75
+  }
+}

@@ -1,0 +1,23 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const ts=require('../Private/node_modules/typescript');
+const ctx={exports:{}};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../Private/src/helpers/cometCounters.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,ctx);
+const parse=ctx.exports.parseCounterReports;
+const pages=JSON.parse(fs.readFileSync(path.join(__dirname,'Fixtures/t02-summary.json'),'utf8'));
+const event=p=>({feature:'T02',stage:'summary',cometSession:p.session,detail:JSON.stringify(p)});
+const events=pages.map(event), clone=o=>JSON.parse(JSON.stringify(o));let n=0;
+function check(name,body){try{body();n++}catch(e){e.message=name+': '+e.message;throw e}}
+check('actual COMET serialization is accepted',()=>{const r=parse(events)[0];assert.equal(r.complete,true);assert.ok(r.rows.length>0);assert.equal(r.rows.find(x=>x.feature==='A01').opportunities,1000)});
+check('duplicate delivery is idempotent',()=>assert.equal(JSON.stringify(parse([...events,...events])),JSON.stringify(parse(events))));
+check('out of order pages',()=>assert.equal(JSON.stringify(parse([...events].reverse())),JSON.stringify(parse(events))));
+check('missing header',()=>{const r=parse(events.slice(1))[0];assert.equal(r.complete,false);assert.equal(r.missing,1);assert.ok(r.warnings.length)});
+check('missing rows page',()=>{const r=parse(events.slice(0,1))[0];assert.equal(r.complete,false);assert.equal(r.rows.length,0)});
+check('two raids never sum',()=>{const second=clone(pages);second.forEach(p=>p.session='second');const r=parse([...events,...second.map(event)]);assert.equal(r.length,2);assert.equal(r[0].rows[0].opportunities,r[1].rows[0].opportunities)});
+check('invalid JSON and unrelated events ignored',()=>assert.equal(parse([{feature:'A01',stage:'selected',detail:'{}'},{feature:'T02',stage:'summary',detail:'['}]).length,0));
+for(const invalid of [null,[],{},'1',-1,Infinity])check('invalid page part '+JSON.stringify(invalid),()=>{const p=clone(pages[0]);p.tacticCounters.part=invalid;assert.equal(parse([event(p)]).length,0)});
+check('negative count is not displayed as an observation',()=>{const ps=clone(pages);ps[1].tacticCounters.rows[0].started=-1;const r=parse(ps.map(event))[0];assert.equal(r.complete,false);assert.ok(r.warnings.some(x=>x.includes('Invalid')))});
+check('conditional expectation cannot exceed trials',()=>{const ps=clone(pages);ps[1].tacticCounters.rows[0].expectedSelections=1e20;assert.equal(parse(ps.map(event))[0].complete,false)});
+check('explicit coverage gaps',()=>{const ps=clone(pages);ps.forEach(p=>{p.tacticCounters.complete=false;p.tacticCounters.queueDropped=12;p.tacticCounters.capacitySkipped=9});const r=parse(ps.map(event))[0];assert.equal(r.complete,false);assert.ok(r.warnings.some(w=>w.includes('12')))});
+check('disabled is distinct from zero opportunities',()=>{const p=clone(pages[0]);Object.assign(p.tacticCounters,{enabled:false,parts:1});assert.equal(parse([event(p)])[0].enabled,false)});
+check('untrusted reason is retained only as text',()=>{const ps=clone(pages);ps[1].tacticCounters.rows[0].reasons={'<script>bad()</script>':1};assert.equal(parse(ps.map(event))[0].rows[0].reasons['<script>bad()</script>'],1)});
+console.log(`T02 RR: ${n} summary parser checks passed.`);

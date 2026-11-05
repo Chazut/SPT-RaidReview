@@ -76,6 +76,7 @@ internal static class ProfileLoadingTests
         using(var response=await client.GetAsync("/api/raids/"+raidId+"/export"))
             check(response.IsSuccessStatusCode&&response.Content.Headers.ContentType?.MediaType=="application/zip",
                 "profile fallback also allows raid export");
+        await CometMapTests.Run(client,db,raidId,check);
         await app.StopAsync();
     }
 }

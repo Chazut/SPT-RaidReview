@@ -1,0 +1,37 @@
+{
+  "holdAngle": {
+    "state": "adjusting",
+    "reason": "hold-angle-safe-correction-selected",
+    "target": "enemy",
+    "source": "personal-vision",
+    "candidate": "step-1-1",
+    "episode": 1,
+    "contactAge": 1.2,
+    "remaining": 2.8,
+    "validFor": 0.2,
+    "knownX": 4,
+    "knownY": 0,
+    "knownZ": 4,
+    "aimX": 2,
+    "aimY": 1.3,
+    "aimZ": 3,
+    "originX": 0,
+    "originY": 0,
+    "originZ": 0,
+    "x": 0.6,
+    "y": 0,
+    "z": 0,
+    "requestedPose": 0.65,
+    "observedPose": 0.3,
+    "distance": 0.2,
+    "poseRequested": true,
+    "moveRequested": true,
+    "arrived": false,
+    "eyesClear": false,
+    "muzzleClear": false,
+    "alternatives": [
+      "posture-2: exposes another known threat",
+      "step-1-1: safe; selected"
+    ]
+  }
+}

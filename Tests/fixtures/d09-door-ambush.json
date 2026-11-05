@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "feature": "D09",
+  "stage": "evaluated",
+  "decision": "DoorAmbush",
+  "reason": "ambush-watching-exit",
+  "botInstance": "instance",
+  "doorAmbush": {
+    "state": "holding",
+    "reason": "ambush-watching-exit",
+    "target": "enemy",
+    "source": "heard",
+    "personality": "Rat",
+    "door": "door",
+    "side": "left",
+    "doorState": "Shut",
+    "feint": "none",
+    "feintResult": "",
+    "knownX": 0,
+    "knownY": 0,
+    "knownZ": 5,
+    "contactAge": 4,
+    "evidenceAt": 98,
+    "elapsed": 2,
+    "waitDuration": 16,
+    "holdElapsed": 1,
+    "remaining": 15,
+    "sharedRemaining": 18,
+    "x": -1,
+    "y": 0,
+    "z": -1,
+    "aimX": 0,
+    "aimY": 1.2,
+    "aimZ": -0.65,
+    "pose": 0.2,
+    "prepared": true,
+    "movementRequested": true,
+    "movementAccepted": true,
+    "movementObserved": true,
+    "arrived": true,
+    "eyesClear": true,
+    "muzzleClear": true,
+    "angleVerified": true,
+    "visualContact": false,
+    "validFor": 1.5,
+    "candidates": [],
+    "alternatives": [
+      "Keep the native hold if no safe doorway angle exists",
+      "Reconsider search, cover change or retreat when waiting ends"
+    ]
+  },
+  "doorAmbushConfig": {
+    "enabled": true,
+    "doorDistance": 8,
+    "contactLifetime": 10,
+    "targetCooldown": 60,
+    "allowFeint": true,
+    "waits": {
+      "Normal": {
+        "min": 6,
+        "max": 10
+      },
+      "Chad": {
+        "min": 6,
+        "max": 10
+      },
+      "GigaChad": {
+        "min": 6,
+        "max": 10
+      },
+      "Wreckless": {
+        "min": 5,
+        "max": 8
+      },
+      "Coward": {
+        "min": 5,
+        "max": 8
+      },
+      "Timmy": {
+        "min": 5,
+        "max": 8
+      },
+      "SnappingTurtle": {
+        "min": 10,
+        "max": 15
+      },
+      "Rat": {
+        "min": 12,
+        "max": 20
+      }
+    }
+  }
+}

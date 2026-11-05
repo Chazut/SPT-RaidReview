@@ -1,0 +1,31 @@
+.rr-comet-panel{color:#d8cba9;background:#171710;border:1px solid #514a3b;border-radius:5px;padding:12px;margin-bottom:16px;font:13px/1.5 Arial,sans-serif;overflow-wrap:anywhere}
+.rr-comet-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.rr-comet-panel h3,.rr-comet-panel h4{margin:0;font-weight:600}
+.rr-comet-panel h3{font-size:15px}.rr-comet-panel h4{font-size:16px;margin-top:12px}
+.rr-comet-panel p{margin:10px 0}.rr-comet-panel ul{list-style:disc;padding-left:18px;margin:8px 0}
+.rr-comet-panel button,.rr-comet-modes button{border:1px solid #6a5d43;background:#161510;color:#e0d4b5;border-radius:4px;padding:4px 9px;cursor:pointer;font:inherit}
+.rr-comet-panel button:focus-visible,.rr-comet-modes button:focus-visible{outline:2px solid #e4c875;outline-offset:2px}
+.rr-comet-modes{display:flex;gap:5px;align-items:center;font:12px/1.5 Arial,sans-serif}
+.rr-comet-modes button[aria-pressed=true]{background:#b7a06d;color:#161510}
+.rr-comet-owner,.rr-comet-note{font-size:12px;color:#b7ae98}.rr-comet-owner strong{color:#e0d4b5}
+.rr-comet-score{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #514a3b;padding-top:10px;margin-top:12px}
+.rr-comet-score strong{font-size:20px}.rr-comet-cue{color:#f2b266}
+.rr-comet-options{margin:12px 0}.rr-comet-options summary,.rr-comet-debug summary{cursor:pointer}
+.rr-comet-option{display:grid;grid-template-columns:1fr auto;gap:4px;padding:8px 0;border-bottom:1px solid #393629}
+.rr-comet-option small{grid-column:1/-1;color:#b7ae98;font-size:12px}
+.rr-comet-destination-toggle{display:flex;gap:7px;align-items:center;margin-top:14px}
+.rr-comet-debug{border-top:1px solid #514a3b;margin-top:14px;padding-top:10px}
+.rr-comet-panel .rr-comet-context{width:auto;max-width:none;border:0;white-space:normal;font-size:12px}
+.rr-comet-brief{max-width:250px;white-space:normal;margin-top:5px;line-height:1.5}
+.rr-comet-brief small{display:block;color:#c1b696;margin-top:3px}
+.rr-comet-mark{position:absolute;right:-9px;bottom:-6px;color:#f3d78a;font:bold 15px/16px Arial,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
+.rr-comet-action{position:absolute;left:50%;top:-19px;transform:translateX(-50%);color:#f3d78a;font:bold 15px/17px Arial,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
+.rr-comet-signal{position:absolute;right:-12px;top:-20px;color:#ffb56b;font:bold 18px/20px Arial,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
+.rr-comet-selected{outline:1px solid #e4cb83;outline-offset:5px;border-radius:50%}
+.rr-comet-map-key{font-size:12px;line-height:1.5;margin:10px 0;color:#b7ae98}
+.rr-comet-map-key strong{color:#e4cb83}
+.rr-comet-readable{font:13px/1.6 Arial,sans-serif}.rr-comet-readable p{margin:12px 0}.rr-comet-readable select{background:#191812;color:#e0d4b5;border:1px solid #6a5d43;border-radius:4px;padding:6px;margin:8px}.rr-comet-readable ul{list-style:disc;padding-left:20px}
+.rr-comet-history-entry{border-bottom:1px solid #514a3b;padding:12px 0}.rr-comet-history-entry summary{cursor:pointer;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.rr-comet-history-entry time{min-width:90px;color:#b7ae98}.rr-comet-history-entry summary span{color:#b7ae98}
+@media(max-width:1000px){.map-container .parent{grid-template-columns:220px minmax(160px,1fr) 290px;padding:8px}.map-container .sidebar-right{margin-left:6px;padding:8px}.map-container .sidebar{padding:8px;margin-right:6px}}
+@media(max-width:720px){.map-container .parent{grid-template-columns:1fr 280px}.map-container .top{grid-column:1/-1}.map-container .sidebar{display:none}.map-container .map{grid-column:1}.map-container .sidebar-right{grid-column:2}.map-container .timeline{grid-column:1}.map-container .dev__time_sliders{width:calc(100% - 8px);margin:4px;padding:6px}}
+@media(max-width:480px){.map-container .parent{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 300px auto auto;align-content:start;overflow-y:auto}.map-container .top{flex-wrap:wrap;align-items:start}.map-container .top>div:first-child{width:100%}.map-container .top>div{margin-left:0}.map-container .map{grid-area:2/1/3/2;min-height:0}.map-container .timeline{grid-area:3/1/4/2;margin:4px 0;width:100%}.map-container .sidebar-right{grid-area:4/1/5/2;max-height:none;margin:0;overflow:visible}}

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "session": "h04-test",
+  "feature": "H04",
+  "stage": "evaluated",
+  "decision": "PostCombat",
+  "reason": "post-combat-watch-last-threat",
+  "botInstance": "instance",
+  "postCombat": {
+    "state": "watch",
+    "reason": "post-combat-watch-last-threat",
+    "episode": 1,
+    "applied": true,
+    "validFor": 1,
+    "elapsed": 2,
+    "remaining": 12,
+    "watchRemaining": 4,
+    "ammoPercent": 100,
+    "medicalUseful": false,
+    "medicalBusy": false,
+    "advanceChance": 40,
+    "advanceRoll": 20,
+    "advanceSelected": true,
+    "contact": "enemy-known",
+    "contactAge": 25,
+    "x": 20,
+    "y": 0,
+    "z": 10,
+    "execution": "watching remembered threat",
+    "alternatives": [
+      "New threat: native combat immediately",
+      "No loot or extraction objective",
+      "Finish early when useful work is done"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "session": "064aef26-ca32-4325-95a5-f48dbc8e103a",
+  "sequence": 1,
+  "feature": "C10",
+  "stage": "evaluated",
+  "decision": "Validity",
+  "reason": "owner-not-alive",
+  "realtime": 10.0,
+  "utc": "2026-11-04T09:42:50.2984734Z",
+  "configRevision": 1,
+  "profileId": "1b480480-e4ab-4847-b00c-8eb3f311af08",
+  "name": "PMC",
+  "botInstance": "c10-4865245407ee4ba2b008bd69f5e8c7a2",
+  "validity": {
+    "operation": "movement",
+    "reason": "owner-not-alive",
+    "source": "1b480480-e4ab-4847-b00c-8eb3f311af08",
+    "sourceInstance": "33826822",
+    "blocked": 1,
+    "summary": false,
+    "validFor": 2.0
+  }
+}

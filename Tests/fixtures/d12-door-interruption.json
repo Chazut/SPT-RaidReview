@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "botInstance": "instance",
+  "doorInterruption": {
+    "attempt": "attempt",
+    "plan": "D09",
+    "phase": "holding",
+    "door": "door",
+    "target": "original",
+    "state": "resumed",
+    "reason": "safe-stage-resumed",
+    "cause": "incoming-fire",
+    "threat": "",
+    "evidence": "unlocated-impact",
+    "remaining": 11.900000000000006,
+    "quietRemaining": 0,
+    "resumes": 1,
+    "safeStage": true,
+    "feintConsumed": true,
+    "grenadeConsumed": false,
+    "nativeAccepted": true,
+    "executionObserved": true,
+    "gates": [
+      "original contact valid",
+      "same door",
+      "complete own-side route",
+      "protected point",
+      "allies clear",
+      "weapon and resources ready"
+    ],
+    "validFor": 1.5
+  },
+  "doorInterruptionConfig": {
+    "enabled": true,
+    "resumeWindow": 15,
+    "quietPeriod": 3,
+    "heardDistance": 25,
+    "heardAge": 3,
+    "gunfireDistance": 12,
+    "gunfireAge": 2,
+    "maxResumes": 1
+  }
+}

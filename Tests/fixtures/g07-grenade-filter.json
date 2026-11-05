@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "session": "harness",
+  "sequence": 10,
+  "feature": "G07",
+  "stage": "evaluated",
+  "decision": "GrenadeFilter",
+  "reason": "filter-execution-validated",
+  "realtime": 10.03,
+  "utc": "2026-11-02T22:32:06.9686249Z",
+  "configRevision": 1,
+  "profileId": "bot",
+  "name": "Test PMC",
+  "botInstance": "instance",
+  "grenadeFilter": {
+    "state": "validated",
+    "reason": "filter-execution-validated",
+    "item": "flash",
+    "template": "mod-flash",
+    "name": "Flash",
+    "category": "flash",
+    "previous": "flash",
+    "validFor": 0.75,
+    "alternatives": [
+      {
+        "item": "smoke",
+        "template": "mod-smoke",
+        "name": "Test frag",
+        "category": "smoke",
+        "reason": "filter-smoke-not-offensive",
+        "eligible": false
+      },
+      {
+        "item": "flash",
+        "template": "mod-flash",
+        "name": "Flash",
+        "category": "flash",
+        "reason": "eligible",
+        "eligible": true
+      }
+    ]
+  },
+  "grenadeFilterConfig": {
+    "enabled": true,
+    "allowFlash": true
+  }
+}

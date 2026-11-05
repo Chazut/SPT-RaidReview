@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "session": "harness",
+  "sequence": 2,
+  "feature": "G03",
+  "stage": "evaluated",
+  "decision": "GrenadeChoice",
+  "reason": "choice-execution-validated",
+  "realtime": 10.01,
+  "utc": "2026-11-02T20:43:33.7167313Z",
+  "configRevision": 1,
+  "profileId": "bot",
+  "name": "Test PMC",
+  "botInstance": "instance",
+  "grenadeChoice": {
+    "state": "validated",
+    "reason": "choice-execution-validated",
+    "target": "enemy",
+    "source": "seen",
+    "item": "short",
+    "template": "tpl-frag",
+    "name": "Test frag",
+    "preference": "short-indoors",
+    "knownX": 20.0,
+    "knownY": 0.0,
+    "knownZ": 0.0,
+    "distance": 20.0,
+    "flight": 1.9125217262016525,
+    "fuse": 3.0,
+    "margin": 1.0874782737983475,
+    "requiredMargin": 0.75,
+    "validFor": 0.75,
+    "alternatives": [
+      {
+        "item": "long",
+        "template": "tpl-frag",
+        "name": "Test frag",
+        "reason": "less-preferred-fuse",
+        "fuse": 5.0,
+        "eligible": true
+      },
+      {
+        "item": "short",
+        "template": "tpl-frag",
+        "name": "Test frag",
+        "reason": "selected",
+        "fuse": 3.0,
+        "eligible": true
+      }
+    ]
+  },
+  "grenadeChoiceConfig": {
+    "enabled": true,
+    "preferShortIndoors": true,
+    "shortFuseDistance": 20.0,
+    "minimumFuse": 2.5,
+    "arrivalMargin": 0.75
+  }
+}

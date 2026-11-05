@@ -24,8 +24,15 @@ import { createFloorFilter, hasFloors, floorSegments, positionAt, objectivePoint
 
 import { getParticipantMarkerHtml, createPlayerColorResolver, getParticipantKind, getLegendIcon, buildPmcIndexMap, getFactionRole, resolveBotType, isRaiderHunter } from '../helpers/players'
 import { participantMarkerHtml } from '../helpers/participantMarkers'
+import { DEFAULT_PLAYER_COLOR, readPlayerColor, savePlayerColor } from '../helpers/playerColor'
 import { getIsbDisplayName } from '../helpers/isb'
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from '../helpers/botBehavior'
+import { cometMapState } from '../helpers/cometMap'
+import { cometPresentation, cometMarkerHtml, cometSimpleTooltip } from '../helpers/cometPresentation'
+import { useCometMapEvents } from './useCometMapEvents'
+import { useCometDisplayMode } from './useCometDisplayMode'
+import CometReplayPanel, { CometModePicker } from './CometReplayPanel'
+import CometDestinationOverlay from './CometDestinationOverlay'
 
 import 'leaflet/dist/leaflet.css';
 
@@ -126,39 +133,70 @@ function resolveQuestName(triggerName: string, map: Record<string, string>): str
 // tooltip — see issue #24).
 const GHOST_MARKER_OPACITY = 0.75
 
-function buildPlayerIcon(color: string, player: any, proportionalScale: number, pmcIndex?: number, behaviorColor?: string | null, hpPercent?: number): { icon: L.DivIcon, html: string } {
+function buildPlayerIcon(color: string, player: any, proportionalScale: number, pmcIndex?: number, behaviorColor?: string | null, hpPercent?: number, comet = ''): { icon: L.DivIcon, html: string } {
     const kind = getParticipantKind(player)
     const size = kind === 'player' ? 24 : kind === 'scav' ? Math.max(20, proportionalScale * 2) : 22
     // Leaflet owns opacity so focus and Ghost fading are applied only once.
-    const html = getParticipantMarkerHtml(player, color, pmcIndex, size, hpPercent, behaviorColor)
+    const html = getParticipantMarkerHtml(player, color, pmcIndex, size, hpPercent, behaviorColor) + comet
     return { icon: L.divIcon({ className: 'special-bot-marker', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }), html }
 }
 
 // Imported recordings can contain arbitrary names and labels. Escape text before building Leaflet HTML.
 const htmlText = (value: unknown) => escapeMainText(String(value ?? ''))
 
-function createPlayerMarker(latlng: any, color: string, player: any, proportionalScale: number, opacity: number = 1, pmcIndex?: number, tooltipText?: string, behaviorColor?: string | null, hpPercent?: number): L.Marker {
+// Detailed COMET hovers can be taller than the space above a marker. Fit them on
+// the roomier side without moving the map or recreating the marker/tooltip.
+function fitCometTooltip(marker: L.Marker): void {
+    const tooltip = marker.getTooltip(), element = tooltip?.getElement()
+    const map = (marker as any)._map as L.Map | undefined
+    if (!tooltip || !element || !map) return
+    if (!element.querySelector('.rr-comet-context')) {
+        if (element.style.maxHeight) {
+            element.style.maxHeight = element.style.overflowY = ''
+            tooltip.options.direction = 'top'; tooltip.options.offset = L.point(0, -10); tooltip.update()
+        }
+        return
+    }
+    const container = map.getContainer(), mapRect = container.getBoundingClientRect()
+    const controls = container.closest('.parent')?.querySelector('.timeline')?.getBoundingClientRect()
+    const y = map.latLngToContainerPoint(marker.getLatLng()).y
+    // The replay controls sit above Leaflet's stacking context; keep the hover in
+    // the free map area instead of putting it behind those controls.
+    const bottom = controls ? Math.min(map.getSize().y, controls.top - mapRect.top) : map.getSize().y
+    const aboveSpace = Math.max(0, Math.min(y, bottom)), belowSpace = Math.max(0, bottom - y)
+    const below = belowSpace > aboveSpace
+    tooltip.options.direction = below ? 'bottom' : 'top'
+    tooltip.options.offset = L.point(0, below ? 10 : -10 - Math.max(0, y - bottom))
+    element.style.maxHeight = Math.max(100, (below ? belowSpace : aboveSpace) - 30) + 'px'
+    element.style.overflowY = 'auto'
+    L.DomEvent.disableScrollPropagation(element)
+    tooltip.update()
+}
+
+function createPlayerMarker(latlng: any, color: string, player: any, proportionalScale: number, opacity: number = 1, pmcIndex?: number, tooltipText?: string, behaviorColor?: string | null, hpPercent?: number, comet = ''): L.Marker {
     const displayName = tooltipText || htmlText(getDisplayName(player))
-    const tooltipOpts: L.TooltipOptions = { direction: 'top', offset: [0, -10], className: 'player-tooltip player-tooltip-html' }
-    const { icon, html } = buildPlayerIcon(color, player, proportionalScale, pmcIndex, behaviorColor, hpPercent)
+    const tooltipOpts: L.TooltipOptions = { direction: 'top', offset: [0, -10], interactive: true, className: 'player-tooltip player-tooltip-html' }
+    const { icon, html } = buildPlayerIcon(color, player, proportionalScale, pmcIndex, behaviorColor, hpPercent, comet)
     const marker = L.marker(latlng, { icon, interactive: true, opacity }).bindTooltip(displayName, tooltipOpts) as L.Marker
     ;(marker as any)._rr_iconHtml = html
     ;(marker as any)._rr_baseTooltip = displayName
+    marker.on('tooltipopen', () => fitCometTooltip(marker))
     return marker
 }
 
 // Mutates an existing persistent player marker in place rather than tearing it
 // down + rebuilding it every playback frame (issue #24). Preserves the Leaflet
 // layer + tooltip identity so the hovered/followed tooltip never flickers.
-function updatePlayerMarker(marker: L.Marker, latlng: any, color: string, player: any, proportionalScale: number, opacity: number, pmcIndex: number | undefined, tooltipText: string, behaviorColor: string | null | undefined, hpPercent: number | undefined, isFocused: boolean): void {
+function updatePlayerMarker(marker: L.Marker, latlng: any, color: string, player: any, proportionalScale: number, opacity: number, pmcIndex: number | undefined, tooltipText: string, behaviorColor: string | null | undefined, hpPercent: number | undefined, isFocused: boolean, comet = ''): void {
     marker.setLatLng(latlng)
     marker.setOpacity(opacity)
-    const { icon, html } = buildPlayerIcon(color, player, proportionalScale, pmcIndex, behaviorColor, hpPercent)
-    // Only swap the icon element when the visuals actually changed, and never
-    // while this is the focused/hovered marker — setIcon recreates the DOM node
-    // and would interrupt the open tooltip.
-    if (html !== (marker as any)._rr_iconHtml && !isFocused) {
-        marker.setIcon(icon)
+    const { icon, html } = buildPlayerIcon(color, player, proportionalScale, pmcIndex, behaviorColor, hpPercent, comet)
+    // Keep the hovered root and tooltip alive, but refresh its children so a
+    // COMET release or behavior change is visible while playback continues.
+    if (html !== (marker as any)._rr_iconHtml) {
+        const element = marker.getElement()
+        if (isFocused && element) element.innerHTML = html
+        else marker.setIcon(icon)
         ;(marker as any)._rr_iconHtml = html
     }
     const displayName = tooltipText || htmlText(getDisplayName(player))
@@ -168,6 +206,7 @@ function updatePlayerMarker(marker: L.Marker, latlng: any, color: string, player
     ;(marker as any)._rr_baseTooltip = displayName
     if (!isFocused) {
         marker.setTooltipContent(displayName)
+        if (marker.isTooltipOpen()) fitCometTooltip(marker)
     }
 }
 import '../modules/leaflet-heat.js'
@@ -286,6 +325,10 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [followPlayerZoomed, setFollowPlayerZoomed] = useState(false)
     const [calculatedLayerInfo, setCalculatedLayerInfo] = useState({})
     const [playerFocus, setPlayerFocus] = useState<string | null>(null)
+    const [cometSelected, setCometSelected] = useState<string | null>(null)
+    const [cometMode, setCometMode] = useCometDisplayMode()
+    const [cometDestination, setCometDestination] = useState(true)
+    useEffect(() => { setCometSelected(null) }, [raidId])
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(['SCAV']))
     const [proportionalScale, setProportionalScale] = useState(0)
     const [MAP, SET_MAP] = useState(null)
@@ -303,6 +346,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [hidePlayers, setHidePlayers] = useState(false)
     const [showBehavior, setShowBehavior] = useState(!!raidData?.detectedMods?.match(/SAIN/gi))
     const [showOrientation, setShowOrientation] = useState(() => localStorage.getItem('rr_showOrientation') !== 'false')
+    const [playerColor, setPlayerColor] = useState(readPlayerColor)
+    const changePlayerColor = (color: string) => {
+        savePlayerColor(color)
+        setPlayerColor(color.toUpperCase())
+    }
     const [hideEvents, setHideEvents] = useState(false)
     const [hideBallistics, setHideBallistics] = useState(false)
     const [hideNerdStats, setHideNerdStats] = useState(true)
@@ -422,9 +470,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
     // Pre-compute PMC index within each team group (for numbered markers in legend + map)
     const pmcIndexMap = useMemo(() => buildPmcIndexMap(raidData.players), [raidData.players])
-    const getPlayerColor = useMemo(() => createPlayerColorResolver(raidData.players, raidData.profileId), [raidData.players, raidData.profileId])
+    const getPlayerColor = useMemo(() => createPlayerColorResolver(raidData.players, raidData.profileId, playerColor), [raidData.players, raidData.profileId, playerColor])
     const calculatedPlayerInfo = useMemo(() => Object.fromEntries(raidData.players.map((player, index) =>
         [player.profileId, { player, index, pickedColor: getPlayerColor(player, index) }])), [raidData.players, getPlayerColor])
+    const cometRecords = useCometMapEvents(raidId, cometSelected || playerFocus, showBehavior)
+    const cometNames = useMemo(() => Object.fromEntries(raidData.players.map(player => [player.profileId, getDisplayName(player)])), [raidData.players])
 
     const focusItem = useRef(searchParams.get('q') ? searchParams.get('q').split(',') : [])
     const focusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -972,6 +1022,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     // Get latest behavior decision + health from position data (skip BTR)
                     const isBTR = player?.type?.includes('BTR')
                     let currentDecision: string | undefined
+                    let sampledDecisionTime = 0
                     let currentHealth: number | undefined
                     let maxHealth: number | undefined
                     let currentGhost = false
@@ -983,6 +1034,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         for (let di = pp.length - 1; di >= 0; di--) {
                             if (pp[di].time <= timeEndLimit) {
                                 currentDecision = pp[di].decision
+                                sampledDecisionTime = Number(pp[di].time)
                                 currentHealth = pp[di].health
                                 maxHealth = pp[di].maxHealth
                                 currentGhost = !!((pp[di] as any).ghost ?? (pp[di] as any).dormant)
@@ -992,7 +1044,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     }
                     // Keep sleeping bots readable; their dashed outline carries the Ghost state.
                     if (currentGhost) markerOpacity = Math.min(markerOpacity, GHOST_MARKER_OPACITY)
+                    const comet = cometMapState(cometRecords[playerId], Number(timeEndLimit), currentDecision, sampledDecisionTime, currentGhost)
+                    const cometView = cometPresentation(cometRecords[playerId], Number(timeEndLimit), currentDecision, sampledDecisionTime, currentGhost, cometNames, comet)
                     if (showBehavior && !isBTR) {
+                        // A chosen COMET plan may still be waiting for execution.
+                        // Keep the sampled behavior color until its action is observed.
+                        if (cometView.owner === 'COMET / SAIN' && cometView.badge) currentDecision = comet.decision
                         behaviorCat = getBehaviorCategory(currentDecision)
                         const decisionLabel = currentDecision ? htmlText(formatDecisionLabel(currentDecision)) : ''
                         // Source mod as a white head, decision suffix in the category colour. ORBIT patrol is the
@@ -1001,6 +1058,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         behaviorLine = behaviorCat.key === 'orbit'
                             ? `<br/><span style="color:${behaviorCat.color}">${behaviorHead}</span>`
                             : `<br/>${behaviorHead}${decisionLabel ? ': <span style="color:' + behaviorCat.color + '">' + decisionLabel + '</span>' : ''}`
+                        if (comet.active || comet.handoff) behaviorLine = cometSimpleTooltip(cometView)
                     }
                     if (currentHealth != null && maxHealth != null && maxHealth > 0) {
                         const pct = Math.round((currentHealth / maxHealth) * 100)
@@ -1053,7 +1111,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     let marker = playerMarkersRef.current.get(playerId)
                     if (!marker) {
                         // First appearance: create once, wire listeners once.
-                        marker = createPlayerMarker(endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct)
+                        marker = createPlayerMarker(endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct, showBehavior ? cometMarkerHtml(cometView) : '')
                         marker._rr_playerId = playerId
                         marker._rr_isDead = false
                         marker._rr_normalOpacity = currentGhost ? GHOST_MARKER_OPACITY : 1
@@ -1063,13 +1121,35 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current)
                             setPlayerFocus(playerId)
                         })
-                        marker.on('mouseout', () => {
+                        // Leave enough time to cross the small gap into a long,
+                        // scrollable tooltip. Leaflet otherwise closes it immediately.
+                        marker.off('mouseout', marker.closeTooltip)
+                        const leaveMarkerOrTooltip = () => {
                             if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current)
-                            focusTimeoutRef.current = setTimeout(() => setPlayerFocus(null), 100)
+                            focusTimeoutRef.current = setTimeout(() => {
+                                marker.closeTooltip()
+                                setPlayerFocus(null)
+                            }, 180)
+                        }
+                        marker.on('mouseout', leaveMarkerOrTooltip)
+                        marker.on('tooltipopen', () => {
+                            // Keyboard/touch activation can open Leaflet's tooltip without mouseover.
+                            // Fetch COMET context for that path too, instead of leaving "Loading" forever.
+                            if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current)
+                            setPlayerFocus(playerId)
+                            const element = marker.getTooltip()?.getElement()
+                            if (!element) return
+                            element.onmouseenter = () => {
+                                if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current)
+                                setPlayerFocus(playerId)
+                            }
+                            element.onmouseleave = leaveMarkerOrTooltip
                         })
+                        marker.on('tooltipclose', () => setPlayerFocus(current => current === playerId ? null : current))
                         // ORBIT main objectives: click any bot marker to toggle
                         // the per-squad mains overlay (see findSquadIdForPlayer).
                         marker.on('click', () => {
+                            setCometSelected(prev => prev === playerId ? null : playerId)
                             const sqId = findSquadIdForPlayer(playerId)
                             if (sqId == null) return
                             setSelectedSquadForMains(prev => prev === sqId ? null : sqId)
@@ -1077,11 +1157,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         playerMarkersRef.current.set(playerId, marker)
                     } else {
                         // Subsequent frames: mutate in place — no teardown/rebind.
-                        updatePlayerMarker(marker, endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct, isFocused)
+                        updatePlayerMarker(marker, endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct, isFocused, showBehavior ? cometMarkerHtml(cometView) : '')
                         marker._rr_isDead = false
                         marker._rr_normalOpacity = currentGhost ? GHOST_MARKER_OPACITY : 1
                     }
                     marker.getElement()?.classList.toggle('rr-ghost', currentGhost)
+                    marker.getElement()?.classList.toggle('rr-comet-selected', cometSelected === playerId)
                     const orientation = showOrientation && !isBTR && !currentGhost
                         ? bodyOrientationAngle(currentSample, (x, z) => MAP.project(L.latLng(z, x), MAP.getZoom()))
                         : null
@@ -1135,7 +1216,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             setTimeEndLimit(times[times.length - 1])
             setTimeCurrentIndex(times.length - 1)
         }
-    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, getPlayerColor, showBehavior, showOrientation, presenceEnds, onFloor])
+    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, getPlayerColor, showBehavior, showOrientation, presenceEnds, onFloor, cometRecords, cometNames, cometSelected])
 
     // Focus overlay: adjusts layer opacity + kill visualization without full re-render
     useEffect(() => {
@@ -1149,7 +1230,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         // them down + rebuild when the focus or relevant kill-set actually changes,
         // otherwise the skull icons strobe while hovering the killer during play.
         const killVizSig = playerFocus
-            ? `${floorActive}:${selectedLayer}|${playerFocus}|${events.filter(e => (e.killedId === playerFocus || (e.profileId === playerFocus && e.profileId !== e.killedId)) && e.time < timeEndLimit).length}`
+            ? `${floorActive}:${selectedLayer}|${playerColor}|${playerFocus}|${events.filter(e => (e.killedId === playerFocus || (e.profileId === playerFocus && e.profileId !== e.killedId)) && e.time < timeEndLimit).length}`
             : ''
         const killVizChanged = killVizSig !== killVizSigRef.current
         if (killVizChanged) {
@@ -1269,6 +1350,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 if (!prev || prev.id !== playerFocus || prev.html !== html) {
                     marker.setTooltipContent(html)
                     if (!(marker.isTooltipOpen && marker.isTooltipOpen())) marker.openTooltip()
+                    else fitCometTooltip(marker)
                     focusTooltipRef.current = { id: playerFocus, html }
                 }
             }
@@ -1328,7 +1410,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 focusLayersRef.current.push(marker)
             }
         }
-    }, [playerFocus, MAP, mapIsReady, events, timeEndLimit, intl_dir, onFloor])
+    }, [playerFocus, MAP, mapIsReady, events, timeEndLimit, intl_dir, onFloor, cometRecords, showBehavior, playerColor, getPlayerColor])
 
     // Issue #24: persistent player markers live across frames; when the map
     // instance is torn down/rebuilt, drop them so the ref never holds dead layers.
@@ -2859,7 +2941,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const layer = m._layers[key];
         
             // Skip layers managed by other overlays (quests, loose loot, grenades, etc.)
-            if (layer._rr_quest || layer._rr_looseLoot || layer._rr_grenade || layer._rr_objective || layer._rr_phobos || layer._rr_ghostHearing || layer._rr_airdrop || layer._rr_switch) continue;
+            if (layer._rr_quest || layer._rr_looseLoot || layer._rr_grenade || layer._rr_objective || layer._rr_phobos || layer._rr_ghostHearing || layer._rr_airdrop || layer._rr_switch || layer._rr_cometDestination) continue;
 
             // Persistent player-dot markers (issue #24) are mutated in place across
             // frames, not torn down here; their lifecycle is reconciled in the main
@@ -2990,6 +3072,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         return ''
     }
 
+    const selectedCometSample = useMemo(() => cometSelected ? positionAt(positions[cometSelected], Number(timeEndLimit)) : undefined, [positions, cometSelected, timeEndLimit])
+    const selectedCometGhost = !!(selectedCometSample?.ghost ?? selectedCometSample?.dormant)
+    const selectedCometPresent = !!selectedCometSample && !playerIsDead(cometSelected, Number(timeEndLimit)) && (presenceEnds[cometSelected] ?? Infinity) >= Number(timeEndLimit)
+    const selectedCometView = useMemo(() => cometSelected ? cometPresentation(cometRecords[cometSelected], Number(timeEndLimit), selectedCometSample?.decision, Number(selectedCometSample?.time || 0), selectedCometGhost, cometNames) : null,
+        [cometSelected, cometRecords, timeEndLimit, selectedCometSample, selectedCometGhost, cometNames])
+
     return (
         <div className="map-container" key="map-wrapper">
             <div className="parent">
@@ -3035,7 +3123,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     <div className="playerfeed text-eft">
                         <strong>Legend</strong>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs py-2" aria-label="Participant marker key">
-                            {([['player', 'Players', '#D9C48A'], ['pmc', 'PMCs', '#4E9BFF'], ['scav', 'Scavs', '#33FF57'], ['other', 'Other bots', '#FF7B00']] as const).map(([kind, label, color]) => (
+                            {([['player', 'Players', playerColor], ['pmc', 'PMCs', '#4E9BFF'], ['scav', 'Scavs', '#33FF57'], ['other', 'Other bots', '#FF7B00']] as const).map(([kind, label, color]) => (
                                 <span key={kind} className="inline-flex items-center gap-1">
                                     <span dangerouslySetInnerHTML={{ __html: participantMarkerHtml(kind, color, kind === 'scav' ? '' : kind === 'other' ? 'Rd' : '1', 18) }} />
                                     {label}
@@ -3108,7 +3196,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                                     onMouseEnter={() => { if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current); setPlayerFocus(player.profileId) }}
                                                                     onMouseLeave={() => setPlayerFocus(null)}
                                                                     onClick={() => {
-                                                                        setFollowPlayer(followPlayer === player.profileId ? null : player.profileId)
+                                                                        setCometSelected(player.profileId); setFollowPlayer(followPlayer === player.profileId ? null : player.profileId)
                                                                         setFollowPlayerZoomed(false)
                                                                     }}
                                                                 >
@@ -3172,7 +3260,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                                     onMouseEnter={() => { if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current); setPlayerFocus(player.profileId) }}
                                                                     onMouseLeave={() => setPlayerFocus(null)}
                                                                     onClick={() => {
-                                                                        setFollowPlayer(followPlayer === player.profileId ? null : player.profileId)
+                                                                        setCometSelected(player.profileId); setFollowPlayer(followPlayer === player.profileId ? null : player.profileId)
                                                                         setFollowPlayerZoomed(false)
                                                                     }}
                                                                 >
@@ -3219,7 +3307,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                         onMouseEnter={() => { if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current); setPlayerFocus(player.profileId) }}
                                                         onMouseLeave={() => setPlayerFocus(null)}
                                                         onClick={() => {
-                                                            setFollowPlayer(followPlayer === player.profileId ? null : player.profileId)
+                                                            setCometSelected(player.profileId); setFollowPlayer(followPlayer === player.profileId ? null : player.profileId)
                                                             setFollowPlayerZoomed(false)
                                                         }}
                                                     >
@@ -3313,6 +3401,18 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     <div id="leaflet-map" ref={onMapContainerRefChange} className={'leaflet-map-container'} />
                 </div>
                 <aside className="sidebar-right border border-eft ml-3 p-3 overflow-x-auto">
+                    {showBehavior && <>
+                        {cometSelected ? <CometReplayPanel
+                            name={cometNames[cometSelected] || 'Selected participant'} record={cometRecords[cometSelected]}
+                            time={Number(timeEndLimit)} decision={selectedCometSample?.decision} sampledAt={Number(selectedCometSample?.time || 0)}
+                            ghost={selectedCometGhost} available={selectedCometPresent} names={cometNames}
+                            mode={cometMode} setMode={setCometMode} onClose={() => setCometSelected(null)}
+                            showDestination={cometDestination} setShowDestination={setCometDestination} />
+                            : <section className="rr-comet-panel"><h3>Bot decisions</h3><CometModePicker mode={cometMode} onChange={setCometMode} /><p className="rr-comet-note">Click a bot to keep its decisions here.</p></section>}
+                        <div className="rr-comet-map-key"><strong>✦</strong> COMET intervention · <strong>!</strong> Visual contact · <strong>?</strong> Heard movement</div>
+                    </>}
+                    <CometDestinationOverlay map={MAP} ready={mapIsReady} visible={showBehavior && cometDestination && selectedCometPresent && !selectedCometGhost && !hidePlayers}
+                        origin={selectedCometSample} destination={selectedCometView?.destination} onFloor={onFloor} />
                     <div className="playerfeed text-eft">
                         {/* ── Animations Section ── */}
                         <div>
@@ -4003,6 +4103,16 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             </button>
                             <button aria-pressed={showOrientation} title="Show which way characters and bots are facing" className={`text-xs p-1 text-sm cursor-pointer ${showOrientation ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setShowOrientation(!showOrientation)}>
                                 Orientation arrows
+                            </button>
+                            <label className="inline-flex items-center gap-2 border border-eft px-2 text-xs cursor-pointer" title="Saved in this browser for all raids">
+                                Player color
+                                <input type="color" value={playerColor} onInput={e => changePlayerColor(e.currentTarget.value)}
+                                    className="w-7 h-6 cursor-pointer bg-transparent border-0 p-0" />
+                            </label>
+                            <button type="button" onClick={() => changePlayerColor(DEFAULT_PLAYER_COLOR)}
+                                disabled={playerColor === DEFAULT_PLAYER_COLOR} title="Restore the default player color"
+                                className="text-xs p-1 cursor-pointer border border-eft disabled:opacity-40 disabled:cursor-default">
+                                Reset player color
                             </button>
                         </div>
                     </div>

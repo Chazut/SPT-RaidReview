@@ -1,0 +1,34 @@
+{
+  "coverTravel": {
+    "state": "face-walk",
+    "reason": "travel-face-near-threat",
+    "target": "enemy",
+    "context": "cover-a",
+    "source": "personal-vision",
+    "observed": "backpedaling",
+    "contactAge": 1.2,
+    "validFor": 0.2,
+    "remaining": 1.6,
+    "length": 10,
+    "turn": 45,
+    "exposure": 0.33,
+    "speed": 1.1,
+    "facingDot": -0.8,
+    "knownX": 0,
+    "knownY": 0,
+    "knownZ": 8,
+    "x": 10,
+    "y": 0,
+    "z": 0,
+    "geometry": true,
+    "protected": true,
+    "nativeSprint": true,
+    "sprintRequested": false,
+    "walkRequested": true,
+    "gazeRequested": true,
+    "alternatives": [
+      "Dash: route exceeds short dash length",
+      "Native travel: urgency retains priority"
+    ]
+  }
+}

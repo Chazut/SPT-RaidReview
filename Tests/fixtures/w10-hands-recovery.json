@@ -1,0 +1,38 @@
+{
+  "handsRecovery": {
+    "state": "requested",
+    "reason": "hands-native-request",
+    "kind": "grenade",
+    "held": "grenade",
+    "targetWeapon": "rifle",
+    "targetSlot": "FirstPrimaryWeapon",
+    "operation": "Idling",
+    "action": "StandAndShoot",
+    "contact": "known",
+    "attempts": 1,
+    "limit": 2,
+    "confirmedSeconds": 2,
+    "requiredSeconds": 2,
+    "retryRemaining": 0,
+    "requestAge": 0,
+    "validFor": 1.5,
+    "reloadFlag": false,
+    "nativeReload": false,
+    "accepted": true,
+    "inHands": false,
+    "ready": false,
+    "alternatives": [
+      "Wait for legitimate reloads, medicine, weapon changes and grenade actions",
+      "Request the existing weapon through the native selector; never create items or finish animations",
+      "Stop after the attempt limit until the actual hands state changes"
+    ]
+  },
+  "handsRecoveryConfig": {
+    "enabled": true,
+    "reloadStaleSeconds": 6,
+    "grenadeStaleSeconds": 2,
+    "checkSeconds": 0.5,
+    "retrySeconds": 2,
+    "maxAttempts": 2
+  }
+}

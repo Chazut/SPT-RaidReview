@@ -1,0 +1,31 @@
+{
+  "recoilRecovery": {
+    "state": "recovering",
+    "reason": "recoil-time-based-recovery",
+    "weapon": "test-dmr",
+    "weaponClass": "marksmanRifle",
+    "action": "StandAndShoot",
+    "target": "known-contact",
+    "applied": true,
+    "multiplier": 3,
+    "beforeHorizontal": 4,
+    "beforeVertical": -2,
+    "afterHorizontal": 3.759999990463257,
+    "afterVertical": -1.8799999952316284,
+    "coefficient": 1,
+    "step": 0.02,
+    "elapsed": 0.02,
+    "validFor": 0.75,
+    "shots": 1,
+    "steps": 1,
+    "alternatives": [
+      "Keep native SAIN recovery (module off or multiplier x1)",
+      "Initial recoil, fire rate and hit outcome stay native"
+    ]
+  },
+  "recoilRecoveryConfig": {
+    "enabled": true,
+    "dmrMultiplier": 3,
+    "sniperMultiplier": 3
+  }
+}

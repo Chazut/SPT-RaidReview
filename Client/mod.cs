@@ -27,6 +27,7 @@ namespace RAID_REVIEW
     [BepInDependency("com.danw.questingbots", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.janky.phobos", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.chazut.orbit", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("com.chazut.comet", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.fika.core", BepInDependency.DependencyFlags.SoftDependency)]
     public class RAID_REVIEW : BaseUnityPlugin
     {
@@ -704,6 +705,7 @@ namespace RAID_REVIEW
 
         void Awake()
         {
+            CometIntegration.Bind(message => Logger.LogWarning(message));
             Logger.LogInfo("RAID_REVIEW :::: INFO :::: Mod Loaded");
 
             // Clean up legacy versioned DLLs (e.g. RAID_REVIEW__0.4.0.dll) from older releases
@@ -1080,6 +1082,7 @@ namespace RAID_REVIEW
                                         catch { }
                                     }
 
+                                    if (player.IsAI) decision = CometIntegration.Resolve(player.ProfileId, activeLayer, decision, ghost);
                                     var bodyForward = player.Transform.forward;
                                     var bodyYaw = BodyOrientation.FromForward(bodyForward.x, bodyForward.z, ghost);
                                     // Retain dir for wire compatibility. Only bodyYaw identifies reliable
@@ -1172,6 +1175,7 @@ namespace RAID_REVIEW
             if (!inRaid) return;
             try
             {
+                CometIntegration.FinishRecording();
                 SwitchRecorder.FinishRaid();
                 AirdropFlightRecorder.FinishRaid();
                 RAID_REVIEW_Player_OnItemAddedOrRemovedPatch.FlushPending(true);
@@ -1199,7 +1203,7 @@ namespace RAID_REVIEW
             }
         }
 
-        private void OnDestroy() { SwitchRecorder.Reset(); Telemetry.Shutdown(); }
+        private void OnDestroy() { CometIntegration.Unbind(); SwitchRecorder.Reset(); Telemetry.Shutdown(); }
 
         public static bool DetectMod(string modName)
         {

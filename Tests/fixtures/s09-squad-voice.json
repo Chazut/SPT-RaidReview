@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "session": "voice-harness",
+  "sequence": 6,
+  "feature": "S09",
+  "stage": "evaluated",
+  "decision": "SquadVoice",
+  "reason": "squad-voice-squad-delay",
+  "realtime": 10.6,
+  "utc": "2026-11-03T18:00:00Z",
+  "configRevision": 1,
+  "profileId": "pmc-b",
+  "name": "Test PMC",
+  "botInstance": "voice-harness:pmc-b",
+  "squadVoice": {
+    "request": "voice-harness:pmc-b:voice:1",
+    "state": "filtered",
+    "reason": "squad-voice-squad-delay",
+    "phrase": "OnFirstContact",
+    "source": "SAINBotTalkClass.GroupSay",
+    "mode": "Reduced",
+    "action": "StandAndShoot",
+    "execution": "COMET prevented this native squad voice attempt",
+    "urgent": false,
+    "filtered": true,
+    "played": false,
+    "chance": 100.0,
+    "roll": -1.0,
+    "botWait": 0.0,
+    "squadWait": 1.6999998092651367,
+    "validFor": 2.0,
+    "alternatives": [
+      "Normal: retain SAIN's voice rules",
+      "Reduced: ordinary chance and spacing; urgent alerts bypass",
+      "Disabled: mute squad callouts only"
+    ]
+  },
+  "squadVoiceConfig": {
+    "mode": "Reduced",
+    "chance": 100.0,
+    "botDelay": 5.0,
+    "squadDelay": 2.0
+  }
+}

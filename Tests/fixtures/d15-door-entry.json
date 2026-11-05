@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "botInstance": "instance",
+  "doorEntry": {
+    "state": "crossing",
+    "reason": "entry-crossing",
+    "context": "prepared",
+    "door": "door",
+    "target": "known",
+    "source": "sain-last-known",
+    "interaction": "native-kick",
+    "network": "Fika native StartInteraction (host only)",
+    "chance": 40,
+    "roll": 0,
+    "rolled": true,
+    "stamina": 80,
+    "remaining": 12.5,
+    "knownX": 0,
+    "knownY": 0,
+    "knownZ": 0,
+    "contactAge": 0,
+    "requested": true,
+    "breachObserved": true,
+    "doorOpenObserved": true,
+    "animationFinished": true,
+    "crossed": false,
+    "arrived": false,
+    "validFor": 1.5,
+    "alternatives": [
+      "normal door opening if still eligible",
+      "native combat priority"
+    ]
+  },
+  "doorEntryConfig": {
+    "enabled": true,
+    "minimumStamina": 35,
+    "crossingLimit": 3.5,
+    "doorRetry": 30,
+    "preparedChance": 40,
+    "rushChance": 50,
+    "retreatChance": 60,
+    "searchChance": 15,
+    "moveChance": 10
+  }
+}
