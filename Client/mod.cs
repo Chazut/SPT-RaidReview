@@ -437,7 +437,7 @@ namespace RAID_REVIEW
             }
             catch { }
 
-            // Vanilla states (peaceful/simplePatrol/standBy) are reported without the "SAIN:" prefix.
+            // Resolve() prefixes this fallback only when SAIN actually owns the active layer.
             return "peaceful";
         }
 
@@ -976,23 +976,11 @@ namespace RAID_REVIEW
                                     {
                                         try
                                         {
-                                            // Try SAIN reflection first for meaningful decision names
-                                            var sainDec = GetSainDecision(player);
-                                            if (!string.IsNullOrEmpty(sainDec))
-                                            {
-                                                decision = sainDec;
-                                            }
-                                            else
-                                            {
-                                                // Preserve the raw decision when no named decision is available.
-                                                var botOwner = player.AIData?.BotOwner;
-                                                if (botOwner?.Brain != null)
-                                                {
-                                                    var lastDecision = botOwner.Brain.LastDecision;
-                                                    if (lastDecision.HasValue)
-                                                        decision = lastDecision.Value.ToString();
-                                                }
-                                            }
+                                            var lastDecision = player.AIData?.BotOwner?.Brain?.LastDecision;
+                                            if (lastDecision.HasValue) decision = lastDecision.Value.ToString();
+                                            var sainDec = BehaviorOwnership.IsSainLayer(activeLayer)
+                                                ? GetSainDecision(player) : null;
+                                            decision = BehaviorOwnership.Resolve(decision, activeLayer, sainDec);
                                         }
                                         catch { }
                                     }
@@ -1049,10 +1037,10 @@ namespace RAID_REVIEW
                                         {
                                             var od = orbitObjective;
                                             var resolved = OrbitBehaviorDecision.Resolve(decision, activeLayer, od?.status, od?.category);
-                                            if (resolved != decision && int.TryParse(decision, out _)
-                                                && _seenLayerNames.Add("ORBIT behavior:" + decision))
+                                            if (resolved != decision
+                                                && _seenLayerNames.Add("ORBIT behavior:" + resolved))
                                             {
-                                                Logger.LogInfo($"RAID_REVIEW :::: ORBIT_BEHAVIOR :::: Resolved BigBrain action {decision} using active layer {activeLayer}.");
+                                                Logger.LogInfo($"RAID_REVIEW :::: ORBIT_BEHAVIOR :::: Recorded {resolved} from active layer {activeLayer}; previous label={decision}, objective status={od?.status ?? "unavailable"}.");
                                             }
                                             decision = resolved;
                                         }

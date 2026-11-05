@@ -8,8 +8,11 @@ namespace RAID_REVIEW
         // together with live objective telemetry, identifies who owns this sample.
         internal static string Resolve(string decision, string activeLayer, string status, string category)
         {
-            if (!string.Equals(activeLayer, "OrbitBrainLayer", StringComparison.Ordinal) || status == null)
+            if (!string.Equals(activeLayer, "OrbitBrainLayer", StringComparison.Ordinal))
                 return decision;
+
+            if (status == null) return "Orbit:ActionUnavailable";
+            if (status == "None" || status == "Failed") return "Orbit:ChoosingObjective";
 
             if (category == "SearchingAmbushExtract" || category == "ApproachingAmbushExtract")
                 return "Orbit:" + category;
@@ -20,7 +23,9 @@ namespace RAID_REVIEW
             if (status == "Finished")
                 return category == "SquadCover" ? "Orbit:SquadCover" : "Orbit:Guarding";
 
-            return decision;
+            // The owner is known even when objective telemetry is incomplete.
+            // Do not invent a vanilla patrol or retain an old SAIN combat decision.
+            return "Orbit:ActionUnavailable";
         }
     }
 }

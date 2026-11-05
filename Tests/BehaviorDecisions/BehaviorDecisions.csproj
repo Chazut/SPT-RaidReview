@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../Client/helpers/BehaviorOwnership.cs" Link="BehaviorOwnership.cs" />
     <Compile Include="../../Client/helpers/OrbitBehaviorDecision.cs" Link="OrbitBehaviorDecision.cs" />
     <Compile Include="../../Client/CometCleanupCapture.cs" />
     <Compile Include="../../Client/CometBehaviorDecision.cs" Link="CometBehaviorDecision.cs" />

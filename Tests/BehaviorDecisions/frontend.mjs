@@ -17,6 +17,12 @@ for (const raw of ['9000', '9001', '9002', '9003', '9004', '9157']) {
 for (const [decision, source, category] of [
     ['Orbit:ContainerLoot', 'ORBIT', 'loot'],
     ['Orbit:LooseLoot', 'ORBIT', 'loot'],
+    ['Orbit:ChoosingObjective', 'ORBIT', 'idle'],
+    ['Orbit:ActionUnavailable', 'ORBIT', 'other'],
+    ['SAIN:peaceful', 'SAIN', 'patrol'],
+    ['SAIN:ActionUnavailable', 'SAIN', 'other'],
+    ['BL:PatrolFollower', 'Vanilla', 'movement'],
+    ['BL:COMET : Post-combat', 'COMET', 'other'],
     ['Orbit:Synthetic', 'ORBIT', 'orbit'],
     ['Orbit:CampingAmbushSniper', 'ORBIT', 'ambush'],
     ['SAIN:FirstAid', 'SAIN', 'medical'],

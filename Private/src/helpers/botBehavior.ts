@@ -100,6 +100,7 @@ export function getBehaviorCategory(decision: string | undefined | null): Behavi
     }
     if (decision.startsWith('QB:')) return BEHAVIOR_CATEGORIES.quest
     if (decision.startsWith('LootingBots:')) return BEHAVIOR_CATEGORIES.loot
+    if (decision.startsWith('BL:COMET')) return BEHAVIOR_CATEGORIES.other
     if (decision.startsWith('BL:')) return BEHAVIOR_CATEGORIES.movement
     if (decision.startsWith('Phobos:')) {
         // Legacy upstream Phobos objective category → behavior category
@@ -112,6 +113,8 @@ export function getBehaviorCategory(decision: string | undefined | null): Behavi
     if (decision.startsWith('Orbit:')) {
         // ORBIT objective category → behavior category
         const cat = decision.substring(6)
+        if (cat === 'ChoosingObjective') return BEHAVIOR_CATEGORIES.idle
+        if (cat === 'ActionUnavailable') return BEHAVIOR_CATEGORIES.other
         const operation = /^MultiStep:\s+(.+?)\s+\(\d+\/\d+\)/.exec(cat)?.[1]
         if (operation && EXTRACTION_OPERATIONS.has(operation)) return BEHAVIOR_CATEGORIES.extract
         if (cat.includes('Ambush')) return BEHAVIOR_CATEGORIES.ambush
@@ -133,6 +136,8 @@ export function getBehaviorCategory(decision: string | undefined | null): Behavi
 // the raw enum name (e.g. "ContainerLoot") to a human label. Anything not
 // listed falls through to the generic camelCase splitter.
 const OBJECTIVE_CATEGORY_LABELS: Record<string, string> = {
+    ChoosingObjective: 'Between objectives',
+    ActionUnavailable: 'Action not recorded',
     SquadCover: 'Waiting in cover for squadmate',
     AirdropLoot: 'Looting airdrop',
     AmbushHotspot: 'Ambush at hotspot',
@@ -197,6 +202,7 @@ export function getDecisionSource(decision: string | undefined | null): string {
     if (decision.startsWith('LootingBots:')) return 'LB'
     if (decision.startsWith('BL:')) {
         const n = decision.substring(3)
+        if (n.startsWith('COMET')) return 'COMET'
         if (n.includes('SAIN')) return 'SAIN'
         if (n.includes('Orbit')) return 'ORBIT'
         return 'Vanilla'

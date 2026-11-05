@@ -26,10 +26,29 @@ foreach (var raw in new[] { "9000", "9001", "9004", "9157", "peaceful", "SAIN:Pe
         Check(raw, raw, layer, "Moving", "LooseLoot", "Objective alone does not prove ownership");
 }
 
-Check("9000", "9000", "OrbitBrainLayer", null, null, "Unavailable telemetry");
-Check("9000", "9000", "OrbitBrainLayer", "None", "", "No objective yet");
-Check("9000", "9000", "OrbitBrainLayer", "Failed", "ContainerLoot", "Failed objective is not looting");
-Check("9000", "9000", "OrbitBrainLayer", "Moving", "", "Incomplete category");
+Check("Orbit:ActionUnavailable", "9000", "OrbitBrainLayer", null, null, "Unavailable telemetry");
+Check("Orbit:ChoosingObjective", "9000", "OrbitBrainLayer", "None", "", "No objective yet");
+Check("Orbit:ChoosingObjective", "9000", "OrbitBrainLayer", "Failed", "ContainerLoot", "Failed objective is not looting");
+Check("Orbit:ActionUnavailable", "9000", "OrbitBrainLayer", "Moving", "", "Incomplete category");
+Check("Orbit:ChoosingObjective", "peaceful", "OrbitBrainLayer", "None", "", "Raid385 GamesB4Gains 298-332s");
+Check("Orbit:ChoosingObjective", "SAIN:Search", "OrbitBrainLayer", "None", "", "Stale SAIN search cannot claim ORBIT transition");
+Check("Orbit:ChoosingObjective", "9000", "OrbitBrainLayer", "Failed", "AmbushExtract", "Failed ambush cannot claim approach");
+Check("BL:PatrolFollower", "BL:PatrolFollower", "PatrolFollower", "None", "", "Raid385 tyvas real native layer is preserved");
+foreach (var (raw, layer, sain, expected) in new[] {
+    ("heal", "PatrolFollower", "SAIN:Search", "heal"),
+    ("peaceful", "PatrolFollower", "SAIN:FirstAid", "peaceful"),
+    ("goToLootPointNode", "LootPatrol", "SAIN:Search", "goToLootPointNode"),
+    ("9000", "OrbitBrainLayer", "SAIN:Search", "BL:OrbitBrainLayer"),
+    ("9000", "SAIN : Combat Layer", "SAIN:StandAndShoot", "SAIN:StandAndShoot"),
+    ("9000", "SAIN : Peace Layer", "peaceful", "SAIN:peaceful"),
+    ("9000", "SAIN : Combat Layer", (string)null, "SAIN:ActionUnavailable"),
+    ("9000", "PatrolFollower", (string)null, "BL:PatrolFollower"),
+    ("9000", (string)null, "SAIN:Search", "9000"),
+    ("9000", "COMET : Post-combat", "SAIN:FirstAid", "BL:COMET : Post-combat"),
+}) {
+    if (BehaviorOwnership.Resolve(raw, layer, sain) != expected) throw new Exception("Recorded owner: " + layer);
+    checks++;
+}
 Check("Orbit:SearchingAmbushExtract", "9000", "OrbitBrainLayer", "Moving", "SearchingAmbushExtract", "Search extract ambush");
 Check("Orbit:ApproachingAmbushExtract", "9000", "OrbitBrainLayer", "Moving", "ApproachingAmbushExtract", "Approach extract ambush");
 Check("Orbit:CampingAmbushSniper", "9000", "OrbitBrainLayer", "Finished", "AmbushSniper", "Sniper hold");
