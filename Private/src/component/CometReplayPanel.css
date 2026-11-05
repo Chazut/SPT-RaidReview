@@ -24,6 +24,26 @@
 .rr-comet-selected{outline:1px solid #e4cb83;outline-offset:5px;border-radius:50%}
 .rr-comet-map-key{font-size:12px;line-height:1.5;margin:10px 0;color:#b7ae98}
 .rr-comet-map-key strong{color:#e4cb83}
+.rr-comet-tabs{display:flex;gap:4px;border-bottom:1px solid #514a3b;margin-bottom:10px;padding-bottom:8px}
+.rr-comet-tabs button{flex:1;padding:7px 4px}
+.rr-comet-tabs button[aria-selected=true]{background:#b7a06d;color:#161510}
+.rr-comet-plan{border-left:2px solid #c5a96e;background:#252319;margin:12px 0;padding:10px}
+.rr-comet-members{display:grid;gap:6px;margin:12px 0}
+.rr-comet-members button{text-align:left;padding:7px 9px}
+.rr-comet-members strong,.rr-comet-members span{display:block}
+.rr-comet-members span{font-size:11px;color:#c1b696;margin-top:3px}
+.rr-comet-history-filter{margin-top:8px}
+.rr-comet-panel .rr-comet-recent{list-style:none;margin:8px 0;padding:0}
+.rr-comet-recent li{border-bottom:1px solid #393629;padding:8px 0}
+.rr-comet-recent button{display:flex;flex-wrap:wrap;gap:3px 8px;width:100%;text-align:left;border:0;background:transparent;padding:4px 0}
+.rr-comet-recent button:hover{background:#302c1f;color:#ffe4a0}
+.rr-comet-recent time{font-size:11px;color:#d6b874;font-variant-numeric:tabular-nums}
+.rr-comet-recent span,.rr-comet-recent small{display:block;width:100%}
+.rr-comet-recent small{font-size:11px;color:#b7ae98}
+.rr-comet-recent pre{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}
+.rr-comet-role{position:absolute;left:50%;top:25px;transform:translateX(-50%);white-space:nowrap;color:#ffe4a0;background:#18160de6;border:1px solid #887341;border-radius:3px;padding:1px 4px;font:11px/15px Arial,sans-serif;pointer-events:none}
+.rr-comet-aux{position:absolute;left:-13px;top:-9px;color:#f3d78a;font:bold 15px/17px Arial,sans-serif;text-shadow:0 1px 2px #000;pointer-events:none}
+.rr-comet-squad-member{outline:1px dashed #bca76b;outline-offset:4px;border-radius:50%}
 .rr-comet-readable{font:13px/1.6 Arial,sans-serif}.rr-comet-readable p{margin:12px 0}.rr-comet-readable select{background:#191812;color:#e0d4b5;border:1px solid #6a5d43;border-radius:4px;padding:6px;margin:8px}.rr-comet-readable ul{list-style:disc;padding-left:20px}
 .rr-comet-history-entry{border-bottom:1px solid #514a3b;padding:12px 0}.rr-comet-history-entry summary{cursor:pointer;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.rr-comet-history-entry time{min-width:90px;color:#b7ae98}.rr-comet-history-entry summary span{color:#b7ae98}
 @media(max-width:1000px){.map-container .parent{grid-template-columns:220px minmax(160px,1fr) 290px;padding:8px}.map-container .sidebar-right{margin-left:6px;padding:8px}.map-container .sidebar{padding:8px;margin-right:6px}}

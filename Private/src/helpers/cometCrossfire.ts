@@ -180,3 +180,20 @@ export function cometCrossfireSummary(t:CrossfireContext):string[]{return[
  ...t.alternatives.map(a=>'Rejected alternative: '+a)
 
 ]}
+
+export function squadTacticTitle(c: CrossfireContext): string {
+    return c.storm ? 'Rush a vulnerable enemy' : c.maneuver ? 'Support and flanking'
+        : c.coverMate ? 'Cover a busy teammate' : c.trade ? 'React to a teammate going down'
+        : c.entrance ? 'Use another entrance' : 'Create a crossfire'
+}
+export function squadRole(c: CrossfireContext): string {
+    if (c.maneuver) return c.maneuver.role === 'support' ? 'Support' : c.maneuver.role === 'rear' ? 'Rear guard' : 'Flank'
+    if (c.storm) return 'Assault'
+    if (c.coverMate) return 'Cover teammate'
+    if (c.trade) return c.trade.choice === 'push' ? 'Push' : 'Watch angle'
+    if (c.entrance) return c.entrance.state === 'entering' ? 'Enter' : c.state === 'moving' ? 'Reposition' : 'Watch entrance'
+    return c.state === 'holding' ? 'Hold angle' : 'Reposition'
+}
+export function squadEventTitle(c: CrossfireContext): string {
+    return `${squadTacticTitle(c)}: ${squadRole(c).toLowerCase()}`
+}

@@ -33,6 +33,8 @@ import { useCometMapEvents } from './useCometMapEvents'
 import { useCometDisplayMode } from './useCometDisplayMode'
 import CometReplayPanel, { CometModePicker } from './CometReplayPanel'
 import CometDestinationOverlay from './CometDestinationOverlay'
+import CometSquadPanel from './CometSquadPanel'
+import { cometSquadMembers, currentSquadRoles } from '../helpers/cometSquad'
 
 import 'leaflet/dist/leaflet.css';
 
@@ -326,6 +328,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [calculatedLayerInfo, setCalculatedLayerInfo] = useState({})
     const [playerFocus, setPlayerFocus] = useState<string | null>(null)
     const [cometSelected, setCometSelected] = useState<string | null>(null)
+    const [cometTab, setCometTab] = useState<'bot' | 'squad'>('bot')
     const [cometMode, setCometMode] = useCometDisplayMode()
     const [cometDestination, setCometDestination] = useState(true)
     useEffect(() => { setCometSelected(null) }, [raidId])
@@ -473,7 +476,15 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const getPlayerColor = useMemo(() => createPlayerColorResolver(raidData.players, raidData.profileId, playerColor), [raidData.players, raidData.profileId, playerColor])
     const calculatedPlayerInfo = useMemo(() => Object.fromEntries(raidData.players.map((player, index) =>
         [player.profileId, { player, index, pickedColor: getPlayerColor(player, index) }])), [raidData.players, getPlayerColor])
-    const cometRecords = useCometMapEvents(raidId, cometSelected || playerFocus, showBehavior)
+    const cometRoster = useMemo(() => raidData.players.map(p => ({profileId:p.profileId,name:getDisplayName(p),group:p.group,kind:getParticipantKind(p)})), [raidData.players])
+    const cometMembers = useMemo(() => cometSquadMembers(cometRoster, cometSelected || playerFocus), [cometRoster, cometSelected, playerFocus])
+    const cometRecords = useCometMapEvents(raidId, cometSelected ? cometMembers.map(m=>m.profileId) : playerFocus, showBehavior)
+    const cometSamples = useMemo(() => Object.fromEntries(cometMembers.map(m => {
+        const sample = positionAt(positions[m.profileId], Number(timeEndLimit))
+        return [m.profileId, {...sample, present: !!sample && !playerIsDead(m.profileId, Number(timeEndLimit)) && (presenceEnds[m.profileId] ?? Infinity) >= Number(timeEndLimit)}]
+    })), [cometMembers,positions,timeEndLimit,presenceEnds,raidData.kills])
+    const cometRoles = useMemo(() => currentSquadRoles(cometMembers,cometRecords,cometSamples,Number(timeEndLimit)), [cometMembers,cometRecords,cometSamples,timeEndLimit])
+    const cometMapRoleLabels = useMemo(() => Object.fromEntries(cometTab === 'squad' && cometSelected ? cometRoles.map(r=>[r.member.profileId, (r.confirmed?'':'Plan: ')+r.role]) : []), [cometTab,cometSelected,cometRoles])
     const cometNames = useMemo(() => Object.fromEntries(raidData.players.map(player => [player.profileId, getDisplayName(player)])), [raidData.players])
 
     const focusItem = useRef(searchParams.get('q') ? searchParams.get('q').split(',') : [])
@@ -1111,7 +1122,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     let marker = playerMarkersRef.current.get(playerId)
                     if (!marker) {
                         // First appearance: create once, wire listeners once.
-                        marker = createPlayerMarker(endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct, showBehavior ? cometMarkerHtml(cometView) : '')
+                        marker = createPlayerMarker(endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct, showBehavior ? cometMarkerHtml(cometView, cometMapRoleLabels[playerId]) : '')
                         marker._rr_playerId = playerId
                         marker._rr_isDead = false
                         marker._rr_normalOpacity = currentGhost ? GHOST_MARKER_OPACITY : 1
@@ -1157,12 +1168,13 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         playerMarkersRef.current.set(playerId, marker)
                     } else {
                         // Subsequent frames: mutate in place — no teardown/rebind.
-                        updatePlayerMarker(marker, endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct, isFocused, showBehavior ? cometMarkerHtml(cometView) : '')
+                        updatePlayerMarker(marker, endOfLine, pickedColor, player, proportionalScale, markerOpacity, pmcIndexMap[playerId], tip, ringColor, hpPct, isFocused, showBehavior ? cometMarkerHtml(cometView, cometMapRoleLabels[playerId]) : '')
                         marker._rr_isDead = false
                         marker._rr_normalOpacity = currentGhost ? GHOST_MARKER_OPACITY : 1
                     }
                     marker.getElement()?.classList.toggle('rr-ghost', currentGhost)
                     marker.getElement()?.classList.toggle('rr-comet-selected', cometSelected === playerId)
+                    marker.getElement()?.classList.toggle('rr-comet-squad-member', !!cometMapRoleLabels[playerId] && cometSelected !== playerId)
                     const orientation = showOrientation && !isBTR && !currentGhost
                         ? bodyOrientationAngle(currentSample, (x, z) => MAP.project(L.latLng(z, x), MAP.getZoom()))
                         : null
@@ -1216,7 +1228,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             setTimeEndLimit(times[times.length - 1])
             setTimeCurrentIndex(times.length - 1)
         }
-    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, getPlayerColor, showBehavior, showOrientation, presenceEnds, onFloor, cometRecords, cometNames, cometSelected])
+    }, [mapIsReady, mapViewRef, timeEndLimit, timeStartLimit, timeCurrentIndex, MAP, preserveHistory, events, hideEvents, hidePlayers, followPlayer, pmcIndexMap, getPlayerColor, showBehavior, showOrientation, presenceEnds, onFloor, cometRecords, cometNames, cometSelected, cometMapRoleLabels])
 
     // Focus overlay: adjusts layer opacity + kill visualization without full re-render
     useEffect(() => {
@@ -3072,6 +3084,17 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         return ''
     }
 
+    const seekCometEvent = (time: number, profileId: string) => {
+        setPlaying(false)
+        setCometSelected(profileId)
+        let lo = 0, hi = sliderTimes.length
+        while (lo < hi) { const mid = (lo + hi) >>> 1; if (sliderTimes[mid] <= time) lo = mid + 1; else hi = mid }
+        const index = Math.max(0, lo - 1)
+        setTimeCurrentIndex(index)
+        setTimeEndLimit(time)
+        setTimeStartLimit(preserveHistory ? sliderTimes[0] ?? 0 : sliderTimes[Math.max(0,index-dropOffIndex)] ?? 0)
+    }
+
     const selectedCometSample = useMemo(() => cometSelected ? positionAt(positions[cometSelected], Number(timeEndLimit)) : undefined, [positions, cometSelected, timeEndLimit])
     const selectedCometGhost = !!(selectedCometSample?.ghost ?? selectedCometSample?.dormant)
     const selectedCometPresent = !!selectedCometSample && !playerIsDead(cometSelected, Number(timeEndLimit)) && (presenceEnds[cometSelected] ?? Infinity) >= Number(timeEndLimit)
@@ -3404,12 +3427,16 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     {showBehavior && <>
                         {cometSelected ? <CometReplayPanel
                             name={cometNames[cometSelected] || 'Selected participant'} record={cometRecords[cometSelected]}
+                            profileId={cometSelected} tab={cometTab} setTab={setCometTab} onSeek={seekCometEvent}
+                            squad={<CometSquadPanel members={cometMembers} records={cometRecords} roles={cometRoles} samples={cometSamples}
+                                time={Number(timeEndLimit)} names={cometNames} mode={cometMode} onSeek={seekCometEvent} onSelect={setCometSelected} />}
                             time={Number(timeEndLimit)} decision={selectedCometSample?.decision} sampledAt={Number(selectedCometSample?.time || 0)}
                             ghost={selectedCometGhost} available={selectedCometPresent} names={cometNames}
                             mode={cometMode} setMode={setCometMode} onClose={() => setCometSelected(null)}
                             showDestination={cometDestination} setShowDestination={setCometDestination} />
                             : <section className="rr-comet-panel"><h3>Bot decisions</h3><CometModePicker mode={cometMode} onChange={setCometMode} /><p className="rr-comet-note">Click a bot to keep its decisions here.</p></section>}
-                        <div className="rr-comet-map-key"><strong>✦</strong> COMET intervention · <strong>!</strong> Visual contact · <strong>?</strong> Heard movement</div>
+                        <div className="rr-comet-map-key"><strong>✦</strong> COMET intervention (glyph = action) · <strong>!</strong> Visual contact · <strong>?</strong> Heard movement</div>
+                        <details className="rr-comet-map-key"><summary>Action symbols</summary>↗ Move / evade · ◇ Hold · ⌖ Fire · ↻ Reload / weapon · + Medical · ● Grenade · ⇥ Door · ◉ Peek / watch · ☼ Lights · ♪ Voice<p>Squad roles appear on the selected squad in the Squad tactic tab. "Plan" means execution is not confirmed.</p></details>
                     </>}
                     <CometDestinationOverlay map={MAP} ready={mapIsReady} visible={showBehavior && cometDestination && selectedCometPresent && !selectedCometGhost && !hidePlayers}
                         origin={selectedCometSample} destination={selectedCometView?.destination} onFloor={onFloor} />

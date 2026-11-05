@@ -73,3 +73,24 @@ check('ghost has no contact cue',()=>assert.equal(view(ready([heardRow(1,1000)])
 check('target switch cue requires accepted visible target',()=>{assert.equal(view(ready([attentionRow()]),1200,'SAIN:Search',1100).signal.glyph,'!');assert.equal(view(ready([attentionRow(false)]),1200,'SAIN:Search',1100).signal,null);assert.equal(view(ready([attentionRow(true,'evaluated')]),1200,'SAIN:Search',1100).signal,null)});
 check('invalid destination never produces a map line',()=>assert.equal(view(ready([moveRow(1,1000,{goalX:NaN})]),1100,'SAIN:StandAndShoot',900).destination,null));
 console.log(checks+' COMET presentation checks passed.');
+check('pending exposure keeps accepted action and readable reason',()=>{
+ const kept=row(2,1200,'evaluated','Shoot',{feature:'A13',reason:'plan-kept-pending-exposure',detail:{botInstance:'one',handoff:{state:'kept',kind:'continuity',reason:'plan-kept-pending-exposure',fromFeature:'A02',fromAction:'Shoot'}}});
+ const r=ready([row(1,1100,'accepted','Shoot',{feature:'A02'}),kept]);
+ assert.equal(view(r,1300,'COMET:Shoot',1250).badge,true);
+ assert.equal(episodes(r).at(-1).title,'Plan retained');
+});
+check('self action pause is not shown as returned control',()=>{
+ const r=ready([row(1,1100),row(2,1200,'released','Hold',{reason:'comet-service-pause'}),
+  row(3,1201,'evaluated','',{feature:'A13',reason:'comet-service-Surgery',detail:{botInstance:'one',handoff:{state:'service-paused',kind:'continuity',reason:'comet-service-Surgery',fromFeature:'A01',fromAction:'Hold',nativeSelf:'Surgery'}}})]);
+ assert.equal(view(r,1250,'COMET:Hold',1150).badge,false);
+ const active=view(r,1400,'COMET:Surgery',1300);assert.equal(active.badge,true);assert.equal(active.title,'Surgery');assert.equal(active.symbol,'medical');
+ assert.equal(episodes(r).at(-1).title,'Plan paused');assert.ok(!episodes(r).some(e=>e.title==='Returned control'));
+ assert.equal(view(r,1400,'Orbit:Loot',1300).badge,false);
+ assert.equal(view(r,1400,'COMET:Surgery',1300,true).badge,false);
+ assert.equal(view(r,1100,'COMET:Hold',1100).badge,true);
+});
+check('reevaluation after service does not authorize a stale plan',()=>{
+ const r=ready([row(1,1100,'released','Hold',{reason:'comet-service-pause'}),row(2,1200,'evaluated','',{feature:'A13',reason:'comet-service-ended-revalidate-plan',detail:{botInstance:'one',handoff:{state:'service-revalidate',reason:'comet-service-ended-revalidate-plan',fromFeature:'A01',fromAction:'Hold'}}})]);
+ assert.equal(view(r,1300,'SAIN:Search',1250).badge,false);assert.equal(episodes(r).at(-1).title,'Plan reevaluation');
+});
+console.log(`Continuity and service presentation checks included: ${checks}`);

@@ -25,6 +25,10 @@ namespace RAID_REVIEW
             string clean = native != null && native.StartsWith("SAIN:") ? native.Substring(5) : native;
             switch (comet)
             {
+                case "COMET:FirstAid": return clean == "FirstAid" ? comet : native;
+                case "COMET:Surgery": return clean == "Surgery" ? comet : native;
+                case "COMET:Stims": return clean == "Stims" ? comet : native;
+                case "COMET:Reload": return clean == "Reload" ? comet : native;
                 case "COMET:KeepAngle": return clean == "StandAndShoot" ? comet : native;
                 case "COMET:ContinuePush": return clean == "RushEnemy" ? comet : native;
                 case "COMET:Shoot": return clean == "StandAndShoot" ? comet : native;

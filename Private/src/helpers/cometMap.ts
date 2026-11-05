@@ -1,3 +1,4 @@
+import { cometActionMatches } from './cometActionMatch'
 import {JournalContext,parseCometJournal} from './cometJournal'
 import { ControlHandoffContext, parseCometControlHandoff, cometControlHandoffSummary } from './cometControlHandoff'
 import { ValidityContext, parseCometValidity, cometValiditySummary } from './cometValidity'
@@ -417,7 +418,14 @@ const reasons: Record<string, string> = {
 
     'handoff-native-observed': 'Next native SAIN decision observed',
 
-    'handoff-native-priority': 'Native treatment, weapon or squad action takes priority',
+    'handoff-native-priority': 'An active treatment, weapon operation or immediate danger prevents a tactical change',
+    'plan-kept-pending-exposure': 'Keeping the verified plan while the next exposure check is pending',
+    'comet-service-pause': 'Tactical plan paused for COMET treatment or reload',
+    'comet-service-FirstAid': 'COMET chose first aid; the tactical plan is paused',
+    'comet-service-Surgery': 'COMET chose surgery; the tactical plan is paused',
+    'comet-service-Stims': 'COMET chose a stimulant; the tactical plan is paused',
+    'comet-service-Reload': 'COMET chose to reload; the tactical plan is paused',
+    'comet-service-ended-revalidate-plan': 'Treatment or reload ended; recheck the plan before resuming',
 
     'handoff-safe-path-grace': 'Brief interruption while an already verified move still progresses',
 
@@ -695,7 +703,7 @@ export function cometOpponentEffect(c: { decision: string; scoreBeforeOpponent?:
 
 export function parseCometHandoff(raw: any): HandoffContext | null {
 
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !['native-pending', 'native-observed', 'grace'].includes(raw.state)) return null
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !['native-pending', 'native-observed', 'grace', 'kept', 'service-paused', 'service-revalidate'].includes(raw.state)) return null
 
     const positive = (v: unknown) => { const n = number(v); return n != null && n >= 0 ? n : undefined }
 
@@ -708,6 +716,12 @@ export function parseCometHandoff(raw: any): HandoffContext | null {
 }
 
 export function cometHandoffSummary(h: HandoffContext): string[] {
+    if (['kept', 'service-paused', 'service-revalidate'].includes(h.state)) return [
+        `${h.fromAction ? formatDecisionLabel('COMET:' + h.fromAction) : 'Tactical plan'}: ${cometReason(h.reason)}`,
+        h.state === 'kept' ? 'A brief missing check does not restart the plan. Confirmed danger still cancels it.'
+            : h.state === 'service-paused' ? 'COMET chose the self action. SAIN/EFT execute it; this is not a tactical takeover.'
+            : 'The saved plan is a candidate only. Current danger, target and route must still pass validation.'
+    ]
 
     return [`${h.fromFeature || 'COMET'} ${h.fromAction || 'selection'}: ${cometReason(h.reason)}`,
 
@@ -1890,7 +1904,7 @@ export function cometMapState(record: CometMapRecord | undefined, at: number, sa
 
     const handoff = handoffEvent?.handoff
 
-    if (handoff && handoff.state !== 'grace' && action.decision.startsWith('COMET:')) {
+    if (handoff && ['native-pending','native-observed'].includes(handoff.state) && action.decision.startsWith('COMET:')) {
 
         action.active = false; action.decision = ''; action.event = undefined
 
@@ -2153,18 +2167,18 @@ export function cometMapState(record: CometMapRecord | undefined, at: number, sa
     const recovery = recoveryEvent?.recoilRecovery
     const recoveryAge = recoveryEvent ? (at-recoveryEvent.time)/1000 : Infinity
     const recoilRecovery = recovery && recoveryAge>=0 && recoveryAge<recovery.validFor && ['started','recovering'].includes(recovery.state)
-        && (sampledDecision || '').replace(/^SAIN:/,'')===recovery.action ? recovery : undefined
+        && cometActionMatches(sampledDecision, recovery.action) ? recovery : undefined
     const geometryEvent = ghost ? undefined : latestShotGeometry(record, at)
     const geometry = geometryEvent?.shotGeometry
     const geometryAge = geometryEvent ? (at-geometryEvent.time)/1000 : Infinity
     const shotGeometry = geometry && geometryAge>=0 && geometryAge<geometry.validFor && geometry.state!=='released'
-        && (sampledDecision || '').replace(/^SAIN:/,'')===geometry.action
+        && cometActionMatches(sampledDecision, geometry.action)
         ? {...geometry,age:geometry.age+geometryAge} : undefined
     const suppressionEvent = ghost ? undefined : latestSuppressionDiscipline(record, at)
     const sup = suppressionEvent?.suppressionDiscipline
     const suppressionAge = suppressionEvent ? (at-suppressionEvent.time)/1000 : Infinity
     const suppressionDiscipline = sup && suppressionAge>=0 && suppressionAge<sup.validFor && !['ended','rejected'].includes(sup.state)
-        && (sampledDecision || '').replace(/^SAIN:/,'')===sup.action
+        && cometActionMatches(sampledDecision, sup.action)
         ? {...sup,elapsed:sup.elapsed+suppressionAge,contactAge:sup.contactAge+suppressionAge,
             pauseRemaining:Math.max(0,sup.pauseRemaining-suppressionAge),remaining:Math.max(0,sup.remaining-suppressionAge)} : undefined
     const weaponSyncEvent = ghost ? undefined : latestWeaponSync(record, at)
@@ -2175,13 +2189,13 @@ export function cometMapState(record: CometMapRecord | undefined, at: number, sa
     const wrg = weaponRangeEvent?.weaponRange
     const weaponRangeAge = weaponRangeEvent ? (at-weaponRangeEvent.time)/1000 : Infinity
     const weaponRange = wrg && weaponRangeAge>=0 && weaponRangeAge<wrg.validFor && wrg.state!=='ended'
-        && (sampledDecision || '').replace(/^SAIN:/,'')===wrg.action
+        && cometActionMatches(sampledDecision, wrg.action)
         ? {...wrg,elapsed:wrg.elapsed+weaponRangeAge,contactAge:wrg.contactAge+weaponRangeAge} : undefined
     const quickReloadEvent = ghost ? undefined : latestQuickReload(record, at)
     const qrt = quickReloadEvent?.quickReload
     const quickReloadAge = quickReloadEvent ? (at-quickReloadEvent.time)/1000 : Infinity
     const quickReload = qrt && quickReloadAge>=0 && quickReloadAge<qrt.validFor && qrt.state!=='ended'
-        && (sampledDecision || '').replace(/^SAIN:/,'')===qrt.action
+        && cometActionMatches(sampledDecision, qrt.action)
         ? {...qrt,elapsed:qrt.elapsed+quickReloadAge,contactAge:qrt.contactAge+quickReloadAge} : undefined
     const controlJournalEvent=ghost?undefined:latestControlJournal(record,at)
     const controlJournal=controlJournalEvent?.controlJournal && at>=controlJournalEvent.time && at-controlJournalEvent.time<7000?controlJournalEvent.controlJournal:undefined
@@ -2191,25 +2205,25 @@ export function cometMapState(record: CometMapRecord | undefined, at: number, sa
     const wrt = weaponReturnEvent?.weaponReturn
     const weaponReturnAge = weaponReturnEvent ? (at-weaponReturnEvent.time)/1000 : Infinity
     const weaponReturn = wrt && weaponReturnAge>=0 && weaponReturnAge<wrt.validFor && wrt.state!=='ended'
-        && (sampledDecision || '').replace(/^SAIN:/,'')===wrt.action
+        && cometActionMatches(sampledDecision, wrt.action)
         ? {...wrt,elapsed:wrt.elapsed+weaponReturnAge,contactAge:wrt.contactAge+weaponReturnAge,quietFor:wrt.quietFor+weaponReturnAge,holdRemaining:Math.max(0,wrt.holdRemaining-weaponReturnAge),returnRemaining:Math.max(0,wrt.returnRemaining-weaponReturnAge),retryRemaining:Math.max(0,wrt.retryRemaining-weaponReturnAge)} : undefined
     const pistolEvent = ghost ? undefined : latestPistolSwap(record, at)
     const pst = pistolEvent?.pistolSwap
     const pistolAge = pistolEvent ? (at-pistolEvent.time)/1000 : Infinity
     const pistolSwap = pst && pistolAge>=0 && pistolAge<pst.validFor && pst.state!=='ended'
-        && (sampledDecision || '').replace(/^SAIN:/,'')===pst.action
+        && cometActionMatches(sampledDecision, pst.action)
         ? {...pst,elapsed:pst.elapsed+pistolAge,contactAge:pst.contactAge+pistolAge} : undefined
     const reloadEvent = ghost ? undefined : latestReloadTiming(record, at)
     const rt = reloadEvent?.reloadTiming
     const reloadAge = reloadEvent ? (at-reloadEvent.time)/1000 : Infinity
     const reloadTiming = rt && reloadAge>=0 && reloadAge<rt.validFor && rt.state!=='ended'
-        && (sampledDecision || '').replace(/^SAIN:/,'')===rt.action
+        && cometActionMatches(sampledDecision, rt.action)
         ? {...rt,elapsed:rt.elapsed+reloadAge,contactAge:rt.contactAge+reloadAge} : undefined
     const feintEvent = ghost ? undefined : latestCoverFeint(record, at)
     const ft = feintEvent?.coverFeint
     const feintAge = feintEvent ? (at-feintEvent.time)/1000 : Infinity
     const coverFeint = ft && feintAge>=0 && feintAge<ft.validFor && ft.state!=='ended'
-        && (sampledDecision || '').replace(/^SAIN:/,'')==='Freeze'
+        && cometActionMatches(sampledDecision, 'Freeze')
         ? {...ft,elapsed:ft.elapsed+feintAge,contactAge:ft.contactAge+feintAge} : undefined
     const relocationEvent = ghost ? undefined : latestOutdoorRelocation(record, at)
     const reloc = relocationEvent?.outdoorRelocation
@@ -2281,35 +2295,34 @@ export function cometMapState(record: CometMapRecord | undefined, at: number, sa
     const restEvent = ghost ? undefined : latestRestLights(record, at)
     const rl = restEvent?.restLights
     const restAge = restEvent ? (at-restEvent.time)/1000 : Infinity
-    const restLights = rl && (sampledDecision||'').replace(/^SAIN:/,'')===rl.behavior && restAge>=0 && restAge<rl.validFor && !['released','no-device'].includes(rl.state)
+    const restLights = rl && cometActionMatches(sampledDecision, rl.behavior) && restAge>=0 && restAge<rl.validFor && !['released','no-device'].includes(rl.state)
         ? {...rl, waitRemaining:Math.max(0,rl.waitRemaining-restAge), cooldownRemaining:Math.max(0,rl.cooldownRemaining-restAge)} : undefined
     const devicesEvent = ghost ? undefined : latestTacticalDevices(record, at)
     const td = devicesEvent?.tacticalDevices
     const devicesAge = devicesEvent ? (at-devicesEvent.time)/1000 : Infinity
-    const tacticalDevices = td && (sampledDecision||'').replace(/^SAIN:/,'')===td.action && devicesAge>=0 && devicesAge<td.validFor && !['released','no-device'].includes(td.state)
+    const tacticalDevices = td && cometActionMatches(sampledDecision, td.action) && devicesAge>=0 && devicesAge<td.validFor && !['released','no-device'].includes(td.state)
         ? {...td, accessories:td.accessories.map(a=>({...a,retryIn:Math.max(0,a.retryIn-devicesAge)}))} : undefined
     const lightEvent = ghost ? undefined : latestLightDiscipline(record, at)
     const ld = lightEvent?.lightDiscipline
     const lightAge = lightEvent ? (at-lightEvent.time)/1000 : Infinity
-    const lightAction = (sampledDecision||'').replace(/^SAIN:/,'')
-    const lightMatches = ld && (lightAction===ld.action || lightAction==='COMET:Hold'&&ld.action==='Freeze' || lightAction==='COMET:Shoot'&&ld.action==='StandAndShoot')
+    const lightMatches = ld && (cometActionMatches(sampledDecision, ld.action))
     const lightDiscipline = ld && lightMatches && lightAge>=0 && lightAge<ld.validFor && ld.state==='dark' && ld.observedOff
         ? {...ld, contactAge:ld.contactAge!==null?ld.contactAge+lightAge:null} : undefined
     const squadVoiceEvent = ghost ? undefined : latestSquadVoice(record, at)
     const sv = squadVoiceEvent?.squadVoice
     const svAge = squadVoiceEvent ? (at-squadVoiceEvent.time)/1000 : Infinity
-    const squadVoice = sv && (sampledDecision||'').replace(/^SAIN:/,'')===sv.action && svAge>=0 && svAge<sv.validFor
+    const squadVoice = sv && cometActionMatches(sampledDecision, sv.action) && svAge>=0 && svAge<sv.validFor
         && (sv.played || sv.filtered) ? sv : undefined
     const squadFireEvent = ghost ? undefined : latestSquadFire(record, at)
     const sf = squadFireEvent?.squadFire
     const sfAge = squadFireEvent ? (at-squadFireEvent.time)/1000 : Infinity
-    const squadFire = sf && (sampledDecision||'').replace(/^SAIN:/,'')===sf.action && sfAge>=0 && sfAge<sf.validFor
+    const squadFire = sf && cometActionMatches(sampledDecision, sf.action) && sfAge>=0 && sfAge<sf.validFor
         && sf.applied && (sf.stopped || sf.startPrevented) && ['blocked','clearing'].includes(sf.state)
         ? {...sf,blockedFor:sf.blockedFor+sfAge} : undefined
     const laneEvent = ghost ? undefined : latestFireLane(record, at)
     const lane = laneEvent?.fireLane
     const laneAge = laneEvent ? (at-laneEvent.time)/1000 : Infinity
-    const laneCompatible = lane && ((sampledDecision||'').replace(/^SAIN:/,'')===lane.action
+    const laneCompatible = lane && (cometActionMatches(sampledDecision, lane.action)
         || lane.action==='Freeze' && !!crossfire && /^COMET:Crossfire.*Moving$/.test(sampledDecision||''))
     const fireLane = lane && laneCompatible && laneAge>=0 && laneAge<lane.validFor && lane.applied && lane.confirmed
         && ['holding','stepping'].includes(lane.state)
@@ -2377,7 +2390,7 @@ export function cometTooltipHtml(state: ReturnType<typeof cometMapState>, record
     const heading = `${state.actionActive ? cometBadgeHtml : escape(getDecisionSource(state.decision))} <strong style="color:${color}">${escape(formatDecisionLabel(state.decision))}</strong>`
 
     const controlHandoff=state.controlHandoff ? `<div class="rr-comet-contact"><b>Control handoff · I02</b>${cometControlHandoffSummary(state.controlHandoff).map(line=>`<div>${escape(line)}</div>`).join('')}</div>` : ''
-    const handoff = state.handoff ? `<div class="rr-comet-contact"><b>SAIN handoff · A13</b>${cometHandoffSummary(state.handoff).map(line => `<div>${escape(line)}</div>`).join('')}</div>` : ''
+    const handoff = state.handoff ? `<div class="rr-comet-contact"><b>Plan continuity / SAIN handoff · A13</b>${cometHandoffSummary(state.handoff).map(line => `<div>${escape(line)}</div>`).join('')}</div>` : ''
 
     const hearing = state.hearing ? `<div class="rr-comet-contact">${cometBadgeHtml} <b>Movement heard · P01</b>${cometHearingSummary(state.hearing, names).map(line => `<div>${escape(line)}</div>`).join('')}<div class="rr-comet-muted">Recent perception; native behavior colors are unchanged.</div></div>` : ''
 

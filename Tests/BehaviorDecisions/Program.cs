@@ -74,6 +74,13 @@ foreach(var native in new[] { "SAIN:DogFight", "Search", "FirstAid", "COMET:Shoo
     if (CometBehaviorDecision.Resolve("COMET:SelectTarget", native) != native) throw new Exception("A07 target selection must not claim action ownership");
     checks++;
 }
+foreach(var service in new[]{"FirstAid","Surgery","Stims","Reload"})
+foreach(var actual in new[]{"SAIN:FirstAid","SAIN:Surgery","SAIN:Stims","SAIN:Reload","SAIN:StandAndShoot","Orbit:Guarding",""})
+{
+    var expected=actual=="SAIN:"+service?"COMET:"+service:actual;
+    if(CometBehaviorDecision.Resolve("COMET:"+service,actual)!=expected)throw new Exception("COMET self action must match native commit");
+    checks++;
+}
 if (CometBehaviorDecision.Resolve("COMET:FutureFeature", "Search") != "Search") throw new Exception("unknown plan must not claim ownership");
 checks++;
 if(CometBehaviorDecision.Resolve("COMET:DoorAmbush","SAIN:Freeze")!="SAIN:Freeze")throw new Exception("D09 diagnostic cannot masquerade as accepted behavior");

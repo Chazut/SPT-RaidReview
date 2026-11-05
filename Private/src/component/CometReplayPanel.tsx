@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { CometMapRecord, cometMapState, cometTooltipHtml } from '../helpers/cometMap'
 import { CometMode, cometPresentation, symbolText } from '../helpers/cometPresentation'
 import './CometReplayPanel.css'
+import { buildSquadHistory, recentSquadHistory } from '../helpers/cometSquad'
+import { replayClock } from './CometSquadPanel'
 
 export function CometModePicker({ mode, onChange }: { mode: CometMode; onChange: (mode: CometMode) => void }) {
     return <div className="rr-comet-modes" role="group" aria-label="COMET detail level">
@@ -13,15 +15,24 @@ type Props = {
     name: string; record?: CometMapRecord; time: number; decision?: string; sampledAt: number; ghost: boolean;
     names: Record<string, string>; mode: CometMode; setMode: (mode: CometMode) => void;
     available: boolean; showDestination: boolean; setShowDestination: (show: boolean) => void; onClose: () => void;
+    profileId: string; tab: 'bot' | 'squad'; setTab: (tab: 'bot' | 'squad') => void; squad: ReactNode;
+    onSeek: (time: number, profileId: string) => void;
 }
 export default function CometReplayPanel(props: Props) {
     const { name, record, time, decision, sampledAt, ghost, names, mode, setMode, available } = props
     const state = useMemo(() => cometMapState(record, time, decision, sampledAt, ghost), [record, time, decision, sampledAt, ghost])
     const view = useMemo(() => cometPresentation(record, time, decision, sampledAt, ghost, names, state), [record, time, decision, sampledAt, ghost, names, state])
     const debug = useMemo(() => mode === 'debug' && available ? cometTooltipHtml(state, record, time, names) : '', [mode, available, state, record, time, names])
+    const history = useMemo(() => buildSquadHistory([{profileId:props.profileId,name,kind:'pmc'}], record ? {[props.profileId]:record} : {}), [props.profileId,name,record])
+    const recent = useMemo(() => recentSquadHistory(history,time,8), [history,time])
     return <section className="rr-comet-panel" aria-label="Selected bot decisions">
         <div className="rr-comet-panel-head"><h3>{name}</h3><button type="button" aria-label="Close bot details" onClick={props.onClose}>×</button></div>
+        <div className="rr-comet-tabs" role="tablist" aria-label="Replay details">
+            <button type="button" role="tab" aria-selected={props.tab==='bot'} onClick={()=>props.setTab('bot')}>Bot</button>
+            <button type="button" role="tab" aria-selected={props.tab==='squad'} onClick={()=>props.setTab('squad')}>Squad tactic</button>
+        </div>
         <CometModePicker mode={mode} onChange={setMode} />
+        {props.tab==='squad' ? props.squad : <div role="tabpanel" aria-label="Bot decisions">
         {!available ? <p className="rr-comet-note">This participant is not present at this replay time.</p> : <>
             <p className="rr-comet-owner">Current behavior: <strong>{view.owner}</strong></p>
             <h4>{view.symbol && <span aria-hidden="true">{symbolText[view.symbol]} </span>}{view.title}</h4>
@@ -40,7 +51,7 @@ export default function CometReplayPanel(props: Props) {
                 {view.alternatives.map((a,i)=><div className="rr-comet-option" key={i}><strong>{a.label}</strong><span>{a.eligible ? `Score ${a.score?.toFixed(1) ?? '?'}` : 'Rejected'}</span><small>{a.reason}</small></div>)}
                 {view.factors.length > 3 && <ul>{view.factors.slice(3).map(f=><li key={f.label}>{f.label}: {f.delta>0?'+':''}{f.delta.toFixed(1)}</li>)}</ul>}
             </details>}
-            {view.interventions.length > 0 && <details className="rr-comet-options"><summary>COMET interventions ({view.interventions.length})</summary>
+            {view.interventions.length > 0 && <details className="rr-comet-options" open><summary>COMET interventions ({view.interventions.length})</summary>
                 {view.interventions.map((a,i)=><div className="rr-comet-option" key={i}><strong>{symbolText[a.symbol]} {a.title}</strong><small>{a.reason}</small></div>)}
             </details>}
             <label className="rr-comet-destination-toggle"><input type="checkbox" checked={props.showDestination} onChange={e=>props.setShowDestination(e.target.checked)} /> Show selected destination</label>
@@ -50,5 +61,10 @@ export default function CometReplayPanel(props: Props) {
             {record?.status==='unavailable' && <p className="rr-comet-note">This recording has no COMET event stream. Only recorded behavior is shown.</p>}
             {mode==='debug' && <details className="rr-comet-debug" open><summary>Full diagnostics at this time</summary><div dangerouslySetInnerHTML={{__html:debug}} /></details>}
         </>}
+        <details className="rr-comet-options" open><summary>Recent COMET actions</summary>
+            {!recent.length && <p className="rr-comet-note">No COMET events recorded yet.</p>}
+            <ol className="rr-comet-recent">{recent.map(e=><li key={`${e.event.id}:${e.start}`}><button type="button" onClick={()=>props.onSeek(e.start,props.profileId)}><time>{replayClock(e.start)}</time><span>{e.title}</span><small>{e.status}</small></button></li>)}</ol>
+        </details>
+        </div>}
     </section>
 }
