@@ -1,7 +1,7 @@
 /* Parent Grid Layout */
 .parent {
   display: grid;
-  grid-template-columns: 380px 1fr 300px;
+  grid-template-columns: 380px minmax(0, 1fr) 400px;
   grid-template-rows: auto repeat(3, 1fr) auto;
   grid-column-gap: 0px;
   grid-row-gap: 0px;
@@ -21,6 +21,7 @@
 .sidebar-right {
   grid-area: 2 / 3 / 6 / 4;
   z-index: 500;
+  min-width: 0;
 }
 .timeline {
   grid-area: 5 / 2 / 6 / 3;

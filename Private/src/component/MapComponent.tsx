@@ -34,6 +34,7 @@ import { useCometDisplayMode } from './useCometDisplayMode'
 import CometReplayPanel, { CometModePicker } from './CometReplayPanel'
 import CometDestinationOverlay from './CometDestinationOverlay'
 import CometSquadPanel from './CometSquadPanel'
+import CometLegend from './CometLegend'
 import { cometSquadMembers, currentSquadRoles } from '../helpers/cometSquad'
 
 import 'leaflet/dist/leaflet.css';
@@ -3354,6 +3355,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                 )
                             })
                         })()}
+                        {showBehavior && <CometLegend />}
                         {showBehavior && <div className="mt-4" style={{ borderTop: '1px solid rgba(154, 136, 102, 0.3)', paddingTop: '8px' }}>
                             <strong style={{ fontSize: '13px' }}>Bot Behavior</strong>
                             <div style={{ marginTop: '4px' }}>
@@ -3429,14 +3431,12 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             name={cometNames[cometSelected] || 'Selected participant'} record={cometRecords[cometSelected]}
                             profileId={cometSelected} tab={cometTab} setTab={setCometTab} onSeek={seekCometEvent}
                             squad={<CometSquadPanel members={cometMembers} records={cometRecords} roles={cometRoles} samples={cometSamples}
-                                time={Number(timeEndLimit)} names={cometNames} mode={cometMode} onSeek={seekCometEvent} onSelect={setCometSelected} />}
+                                time={Number(timeEndLimit)} names={cometNames} mode={cometMode} onSeek={seekCometEvent} onSelect={setCometSelected} selectedProfileId={cometSelected} />}
                             time={Number(timeEndLimit)} decision={selectedCometSample?.decision} sampledAt={Number(selectedCometSample?.time || 0)}
                             ghost={selectedCometGhost} available={selectedCometPresent} names={cometNames}
                             mode={cometMode} setMode={setCometMode} onClose={() => setCometSelected(null)}
                             showDestination={cometDestination} setShowDestination={setCometDestination} />
                             : <section className="rr-comet-panel"><h3>Bot decisions</h3><CometModePicker mode={cometMode} onChange={setCometMode} /><p className="rr-comet-note">Click a bot to keep its decisions here.</p></section>}
-                        <div className="rr-comet-map-key"><strong>✦</strong> COMET intervention (glyph = action) · <strong>!</strong> Visual contact · <strong>?</strong> Heard movement</div>
-                        <details className="rr-comet-map-key"><summary>Action symbols</summary>↗ Move / evade · ◇ Hold · ⌖ Fire · ↻ Reload / weapon · + Medical · ● Grenade · ⇥ Door · ◉ Peek / watch · ☼ Lights · ♪ Voice<p>Squad roles appear on the selected squad in the Squad tactic tab. "Plan" means execution is not confirmed.</p></details>
                     </>}
                     <CometDestinationOverlay map={MAP} ready={mapIsReady} visible={showBehavior && cometDestination && selectedCometPresent && !selectedCometGhost && !hidePlayers}
                         origin={selectedCometSample} destination={selectedCometView?.destination} onFloor={onFloor} />

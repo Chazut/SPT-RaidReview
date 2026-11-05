@@ -144,6 +144,8 @@ export function cometPresentation(record: CometMapRecord | undefined, at: number
     if (currentCore) owner = observedCore ? 'COMET / SAIN' : sampleSource || 'Unknown'
     else if (handoff && handoff.time >= sampledAt && at - handoff.time < 30000) owner = ({ orbit: 'ORBIT', questing: 'Questing Bots', looting: 'Looting Bots', sain: 'SAIN', sleep: 'Ghost', extraction: 'Extraction', other: 'Other layer' } as Record<string, string>)[handoff.controlHandoff?.owner || ''] || owner
     if (outsideCombat && sampledAt >= (state.event?.time ?? -Infinity)) owner = sampleSource
+    const ghostObjective = ghost && sampleSource === 'ORBIT' ? (sampledDecision === 'Orbit:Synthetic' ? 'Patrolling' : formatDecisionLabel(sampledDecision)) : ''
+    if (ghost) owner = ghostObjective ? 'Ghost / ORBIT' : 'Ghost'
     const event = core?.event || primary?.event || interventions[0]?.event
     const chosen = event?.candidates.find(c => c.decision === (core ? state.decision.replace(/^COMET:/, '') : event.decision))
     const factorKeys = [['loadoutDelta','Equipment'],['opponentDelta','Opponent'],['opportunityDelta','Opportunity'],['coverResponseDelta','Cover / exposure'],['fearDelta','Fear / pressure'],['progressDelta','Progress']] as const
@@ -166,7 +168,7 @@ export function cometPresentation(record: CometMapRecord | undefined, at: number
         else if (threat && at-threat.time < 2000 && threat.stage==='accepted' && threat.threat?.previous !== threat.threat?.selected && threat.threat?.candidates.some(c=>c.target===threat.threat?.selected && c.visible)) signal={glyph:'!',title:'Switched attention to a visible enemy'}
         else if (hearing && at-hearing.time < 2000 && hearing.hearing?.outcome==='heard') signal={glyph:'?',title:'Movement heard'}
     }
-    return { owner, title: primary?.title || (ghost ? 'Sleeping' : formatDecisionLabel(state.decision) || (owner==='ORBIT'?'Following an objective':'No COMET action observed')), status: primary?.status || 'Current behavior', reason: primary?.reason || '', badge: !!observedCore || interventions.length>0, symbol: observedCore ? core!.symbol : interventions[0]?.symbol || null, signal,
+    return { owner, title: primary?.title || (ghost ? ghostObjective || 'Sleeping' : formatDecisionLabel(state.decision) || (owner==='ORBIT'?'Following an objective':'No COMET action observed')), status: primary?.status || 'Current behavior', reason: primary?.reason || '', badge: !!observedCore || interventions.length>0, symbol: observedCore ? core!.symbol : interventions[0]?.symbol || null, signal,
         destination: interventions.find(a=>a.destination)?.destination || null, event, interventions, score: chosen?.score ?? null, factors, alternatives, contact:contactText, selection }
 }
 
