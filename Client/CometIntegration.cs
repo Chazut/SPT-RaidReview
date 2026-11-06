@@ -19,12 +19,14 @@ namespace RAID_REVIEW
         private static Action<string> warning;
         private static bool warned;
         private static Func<string> raidSession;
+        private static Action flushPending;
         private static readonly CometCleanupCapture cleanup = new CometCleanupCapture();
         private static string announcedSession;
         internal static void FinishRecording()
         {
             if(!RAID_REVIEW.CanCapture || RAID_REVIEW.sessionId==null)return;
             try {
+                flushPending?.Invoke();
                 var comet=raidSession?.Invoke();
                 if(string.IsNullOrEmpty(comet))return;
                 Announce(comet);
@@ -54,6 +56,8 @@ namespace RAID_REVIEW
                 if(recovery != null) postCombat = (Func<string,string>)Delegate.CreateDelegate(typeof(Func<string,string>),recovery);
                 var sessionMethod=type.GetMethod("GetRaidSession");
                 if(sessionMethod!=null)raidSession=(Func<string>)Delegate.CreateDelegate(typeof(Func<string>),sessionMethod);
+                var flushMethod=type.GetMethod("FlushPending");
+                if(flushMethod!=null)flushPending=(Action)Delegate.CreateDelegate(typeof(Action),flushMethod);
                 published = type.GetEvent("Published");
                 listener = Capture;
                 published.AddEventHandler(null, listener);
@@ -132,7 +136,7 @@ namespace RAID_REVIEW
             if (published != null && listener != null) published.RemoveEventHandler(null, listener);
             if(summaries!=null&&summaryListener!=null)summaries.RemoveEventHandler(null,summaryListener);
             summaries=null;summaryListener=null;summaryCapture.Clear();
-            published = null; listener = null; current = null; postCombat = null; crossfire = null; raidSession=null;announcedSession=null;cleanup.Clear();
+            published = null; listener = null; current = null; postCombat = null; crossfire = null; raidSession=null;flushPending=null;announcedSession=null;cleanup.Clear();
         }
     }
 }
