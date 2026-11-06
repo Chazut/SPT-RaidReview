@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from 'react'
 import { CometMapRecord, cometMapState, cometTooltipHtml } from '../helpers/cometMap'
-import { CometMode, cometPresentation, symbolText } from '../helpers/cometPresentation'
+import { CometMode, cometPresentation, cometActionText, symbolText } from '../helpers/cometPresentation'
 import './CometReplayPanel.css'
 import { buildSquadHistory, recentSquadHistory } from '../helpers/cometSquad'
 import { replayClock } from './CometSquadPanel'
@@ -39,14 +39,16 @@ export default function CometReplayPanel(props: Props) {
             <div className="rr-comet-now">
                 <div className="rr-comet-now-heading">
                     <h4>{view.symbol && <span aria-hidden="true">{symbolText[view.symbol]} </span>}{view.title}</h4>
-                    {view.score !== null && <span className="rr-comet-score" title="Decision score at selection, not a success probability.">Score <strong>{view.score.toFixed(1)}</strong></span>}
+                    {view.score !== null && <span className="rr-comet-score" title="Tactical plan score at selection, not a success probability.">{view.plan ? 'Plan score' : 'Score'} <strong>{view.score.toFixed(1)}</strong></span>}
                 </div>
+                {view.featureTitle && view.featureTitle !== view.title && <div className="rr-comet-action-detail">{view.featureTitle}</div>}
+                {view.plan && <div className="rr-comet-note">Plan: {view.plan}</div>}
                 <div className="rr-comet-note"><strong>{view.owner}</strong>{view.status && (detailed || view.status !== 'Current behavior') && <> · {view.status}</>}</div>
                 {view.reason && <p>{view.reason}</p>}
             </div>
             {view.signal && <p className="rr-comet-cue">{view.signal.glyph} {view.signal.title}</p>}
             {(view.score !== null || view.contact || view.selection || view.alternatives.length > 0) && <details className="rr-comet-options" key={`decision-${mode}`} open={detailed}>
-                <summary>Why this action?</summary>
+                <summary>{view.plan ? `Why this plan (${view.plan})?` : 'Why this action?'}</summary>
                 {view.contact && <p className="rr-comet-note">{view.contact}</p>}
                 {view.score !== null && <p className="rr-comet-note">Score at selection, not a success probability.</p>}
                 {view.selection && <p>{view.selection}</p>}
@@ -55,7 +57,7 @@ export default function CometReplayPanel(props: Props) {
             </details>}
             {interventions.length > 0 && <details className="rr-comet-options" key={`interventions-${mode}`} open={detailed}>
                 <summary>Also doing <span className="rr-comet-inline-actions">{interventions.slice(0,2).map(a=>`${symbolText[a.symbol]} ${a.title}`).join(' · ')}{interventions.length > 2 && ` · +${interventions.length - 2}`}</span></summary>
-                {interventions.map((a,i)=><div className="rr-comet-option" key={i}><strong>{symbolText[a.symbol]} {a.title}</strong><small>{a.reason}</small></div>)}
+                {interventions.map((a,i)=><div className="rr-comet-option" key={i}><strong>{symbolText[a.symbol]} {a.title}</strong><small>{a.featureTitle && a.featureTitle !== a.title && <>{a.featureTitle} · </>}{a.reason}</small></div>)}
             </details>}
             <label className="rr-comet-destination-toggle" title="Dotted line to the recorded destination, not the route."><input type="checkbox" checked={props.showDestination} onChange={e=>props.setShowDestination(e.target.checked)} /> Destination line</label>
             {detailed && <div className="rr-comet-note">Dotted line = recorded destination, not the route.</div>}
@@ -66,7 +68,7 @@ export default function CometReplayPanel(props: Props) {
         </>}
         <details className="rr-comet-options" key={`history-${mode}`} open={detailed}><summary>Recent COMET actions</summary>
             {!recent.length && <p className="rr-comet-note">No COMET events recorded yet.</p>}
-            <ol className="rr-comet-recent">{recent.map(e=><li key={`${e.event.id}:${e.start}`}><button type="button" onClick={()=>props.onSeek(e.start,props.profileId)}><time>{replayClock(e.start)}</time><span>{e.title}</span><small>{e.status}</small></button></li>)}</ol>
+            <ol className="rr-comet-recent">{recent.map(e=><li key={`${e.event.id}:${e.start}`}><button type="button" onClick={()=>props.onSeek(e.start,props.profileId)}><time>{replayClock(e.start)}</time><span>{cometActionText(e)}</span><small>{e.status}</small></button></li>)}</ol>
         </details>
         </div>}
     </section>

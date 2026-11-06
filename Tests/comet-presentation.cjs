@@ -94,3 +94,52 @@ check('reevaluation after service does not authorize a stale plan',()=>{
  assert.equal(view(r,1300,'SAIN:Search',1250).badge,false);assert.equal(episodes(r).at(-1).title,'Plan reevaluation');
 });
 console.log(`Continuity and service presentation checks included: ${checks}`);
+
+const {cometFeatureNames,cometFeatureLabel}=load('../Private/src/helpers/cometFeatureLabels.ts');
+check('full coverage catalog and safe unknown feature fallback',()=>{
+ assert.equal(Object.keys(cometFeatureNames).length,132);
+ for(const [id,name] of Object.entries(cometFeatureNames)){assert.match(id,/^[A-Z]\d{2}$/);assert.ok(name.length>5);assert.equal(cometFeatureLabel(id),name)}
+ for(const key of ['Z99','toString','__proto__','',undefined])assert.equal(cometFeatureLabel(key),'');
+});
+const lean=fixture('m04-combat-lean').combatLean;
+const shootRow=()=>row(1,1000,'accepted','Shoot',{feature:'A02',detail:{botInstance:'one',candidates:[{decision:'Shoot',eligible:true,score:70},{decision:'Push',eligible:false},{decision:'Hold',eligible:true,score:60}]}});
+const leanRow=(change={})=>row(2,1100,'evaluated','CombatLean',{feature:'M04',detail:{botInstance:'one',combatLean:{...lean,...change}}});
+const detailedAction=ready([shootRow(),leanRow()]);
+check('observed intervention is not hidden by a generic plan and retains the plan score',()=>{
+ const v=view(detailedAction,1150,'COMET:Shoot',1050);
+ assert.equal(v.title,'Leaning to evade shots');assert.equal(v.featureTitle,'Head movement in combat');assert.equal(v.plan,'Shoot');assert.equal(v.symbol,'move');
+ assert.equal(v.score,70);assert.equal(v.alternatives.length,2);assert.equal(v.event.feature,'A02');
+ assert.match(tip(v),/Head movement in combat: Leaning to evade shots/);assert.match(tip(v),/Plan: Shoot/);assert.match(tip(v),/Plan score: 70.0/);
+ assert.match(marker(v),/Head movement in combat/);
+});
+check('queued refused or expired work cannot replace the tactical plan',()=>{
+ const pending=ready([shootRow(),leanRow({tiltObserved:false,headMotionObserved:false})]);
+ assert.equal(view(pending,1150,'COMET:Shoot',1050).title,'Shoot');
+ const expired=view(detailedAction,1800,'COMET:Shoot',1700);
+ assert.equal(expired.title,'Shoot');assert.equal(expired.featureTitle,'Visible enemy decisions');assert.equal(expired.plan,'');
+ assert.equal(episodes(pending).length,1);
+});
+check('Ghost and ORBIT never inherit feature names from stale COMET actions',()=>{
+ for(const v of [view(detailedAction,1150,'Orbit:ContainerLoot',1120),view(detailedAction,1150,'COMET:Shoot',1050,true)]){
+  assert.equal(v.featureTitle,'');assert.equal(v.plan,'');assert.equal(v.badge,false);
+ }
+});
+check('specific readable history remains factual and deterministic on reverse seek',()=>{
+ const e=episodes(detailedAction);assert.equal(e[1].featureTitle,'Head movement in combat');assert.equal(e[1].title,'Leaning to evade shots');assert.equal(e[1].status,'Observed intervention');
+ const before=view(detailedAction,1150,'COMET:Shoot',1050);view(detailedAction,5000,'Orbit:Loot',4000);
+ assert.deepEqual(view(detailedAction,1150,'COMET:Shoot',1050),before);
+});
+check('recordings without event details keep sampled behavior without invented feature names',()=>{
+ const v=view(undefined,1000,'COMET:Shoot',1000);assert.equal(v.title,'Shoot');assert.equal(v.featureTitle,'');
+});
+check('feature labels and plan names remain escaped in all HTML',()=>{
+ const v={...view(detailedAction,1150,'COMET:Shoot',1050),featureTitle:'<script>feature</script>',plan:'<img src=x>',title:'action'};
+ assert.doesNotMatch(tip(v),/<script>|<img/);assert.doesNotMatch(marker(v),/<script>/);assert.match(tip(v),/&lt;script/);
+});
+check('squad feature follows the concrete tactic within the shared crossfire context',()=>{
+ const source=fixture('s03-squad-maneuver');
+ const e=row(1,1000,'evaluated','Crossfire',{feature:'S03',detail:{botInstance:'one',crossfire:source.crossfire}});
+ const record=ready([e]);assert.equal(record.events.length,1);
+ assert.equal(episodes(record)[0].featureTitle,'Squad support and coordinated flanking');
+});
+console.log(`${checks} COMET presentation checks with feature names passed.`);

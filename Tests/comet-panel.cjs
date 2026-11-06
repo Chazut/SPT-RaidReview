@@ -80,7 +80,7 @@ check('squad still shows recorded native behavior when COMET data is unavailable
 });
 check('squad role supplements the action instead of replacing it', () => {
     const html = render(React.createElement(Squad, { ...squadProps, roles: [{ member: members[0], event: {}, title: 'Crossfire', role: 'Support', status: 'Executing', confirmed: true, plan: 'test', target: '', reason: 'Test' }] }));
-    assert.match(html, /Support · Executing/); assert.match(html, /◇ Hold/);
+    assert.match(html, /Support · Executing/); assert.match(html, /rr-comet-member-action">◇ Hold<\/span>/); assert.match(html, /<span>Decisions after losing sight of an enemy<\/span>/);
 });
 check('legend includes every marker glyph and perception cues', () => {
     const html = render(React.createElement(Legend));
@@ -100,3 +100,18 @@ check('Ghost keeps its sampled ORBIT objective, never stale COMET control', () =
     }
 });
 console.log(`${checks} COMET panel checks passed.`);
+
+check('specific intervention leads the panel while the score stays attached to its tactical plan', () => {
+    const lean = JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/m04-combat-lean.json'),'utf8')).combatLean;
+    const base = { id:1,time:1000,profileId:'pmc',cometSession:'s',sequence:1,feature:'A02',stage:'accepted',decision:'Shoot',reason:'new-contact',detail:{botInstance:'one',candidates:[{decision:'Shoot',eligible:true,score:70}]} };
+    const record = {status:'ready',events:prepare([base,{...base,id:2,time:2100,feature:'M04',stage:'evaluated',decision:'CombatLean',detail:{botInstance:'one',combatLean:lean}}],'pmc')};
+    const html = render(React.createElement(Panel,{...botProps,record,decision:'COMET:Shoot'}));
+    assert.match(html, /<h4>.*Leaning to evade shots<\/h4>/);
+    assert.match(html, /rr-comet-action-detail">Head movement in combat/);
+    assert.match(html, /Plan: Shoot/); assert.match(html, /Plan score <strong>70\.0/);
+    assert.match(html, /Why this plan \(Shoot\)\?/);
+    assert.doesNotMatch(html, /<details[^>]*\bopen/);
+    const squad = render(React.createElement(Squad,{...squadProps,members:[{profileId:'pmc',name:'Test PMC',kind:'pmc',group:1}],records:{pmc:record},samples:{pmc:{present:true,time:2000,decision:'COMET:Shoot'}}}));
+    assert.match(squad,/Head movement in combat/); assert.match(squad, /Leaning to evade shots/); assert.match(squad,/Plan: Shoot/);
+});
+console.log(`${checks} COMET panel checks with feature names passed.`);

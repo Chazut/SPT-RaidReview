@@ -1,6 +1,7 @@
 .rr-comet-panel{color:#d8cba9;background:#171710;border:1px solid #514a3b;border-radius:5px;padding:12px;margin-bottom:16px;font:13px/1.5 Arial,sans-serif;overflow-wrap:anywhere}
 .rr-comet-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .rr-comet-panel h3,.rr-comet-panel h4{margin:0;font-weight:600}
+.rr-comet-action-detail{color:#e0d4b5;font-size:13px;margin:4px 0}
 .rr-comet-panel h3{font-size:15px}.rr-comet-panel h4{font-size:16px;margin-top:12px}
 .rr-comet-panel p{margin:10px 0}.rr-comet-panel ul{list-style:disc;padding-left:18px;margin:8px 0}
 .rr-comet-panel button,.rr-comet-modes button{border:1px solid #6a5d43;background:#161510;color:#e0d4b5;border-radius:4px;padding:4px 9px;cursor:pointer;font:inherit}

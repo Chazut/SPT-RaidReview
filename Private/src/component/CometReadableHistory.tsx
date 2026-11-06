@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useCometMapEvents } from './useCometMapEvents'
-import { cometEpisodes } from '../helpers/cometPresentation'
+import { cometEpisodes, cometActionText } from '../helpers/cometPresentation'
 import { cometReason } from '../helpers/cometMap'
 import { formatDecisionLabel } from '../helpers/botBehavior'
 
@@ -24,11 +24,11 @@ export default function CometReadableHistory({raidId,names}:{raidId:string;names
         {episodes.slice(page*20,page*20+20).map((episode,i)=>{
             const e=episode.event,chosen=e.candidates.find(c=>c.decision===e.decision)
             return <details className="rr-comet-history-entry" key={`${bot}-${episode.start}-${i}`}>
-                <summary><time>{time(episode.start)}{episode.end>episode.start?` - ${time(episode.end)}`:''}</time><strong>{episode.title}</strong><span>{episode.status}</span>{chosen?.score!=null&&<span>Score {chosen.score.toFixed(1)}</span>}</summary>
+                <summary><time>{time(episode.start)}{episode.end>episode.start?` - ${time(episode.end)}`:''}</time><strong>{cometActionText(episode)}</strong><span>{episode.status}</span>{chosen?.score!=null&&<span>Score {chosen.score.toFixed(1)}</span>}</summary>
                 <p>{cometReason(e.choiceReason||e.reason)}</p>
                 {e.contact&&<p>Known contact: {names[e.contact.target||'']||'unnamed'} · {cometReason(e.contact.source||'unknown source')}{e.contact.age!=null?` · ${e.contact.age.toFixed(1)} s old at this decision`:''}</p>}
                 <ul>{e.candidates.map((c,j)=><li key={j}>{formatDecisionLabel('COMET:'+c.decision)}: {c.eligible?`score ${c.score?.toFixed(1)??'not recorded'}`:'unavailable'} · {cometReason(c.reason)}</li>)}</ul>
-                {episode.count>1&&<p className="rr-comet-note">{episode.count} observations grouped. Details above are the last observation in this group.</p>}
+                {episode.count>1&&<p className="rr-comet-note">{episode.count} observations grouped. Details above are the first observation in this group.</p>}
                 <p className="rr-comet-note">Chosen means accepted as a plan, not proof of success. Use the map to follow execution.</p>
             </details>
         })}

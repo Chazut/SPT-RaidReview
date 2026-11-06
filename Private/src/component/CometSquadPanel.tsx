@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CometMapRecord, cometReason } from '../helpers/cometMap'
 import { MemberSample, SquadMember, SquadRoleView, buildSquadHistory, recentSquadHistory } from '../helpers/cometSquad'
-import { CometMode, cometPresentation, symbolText } from '../helpers/cometPresentation'
+import { CometMode, cometPresentation, cometActionText, symbolText } from '../helpers/cometPresentation'
 
 type Props = {
     members: SquadMember[]; records: Record<string, CometMapRecord>; roles: SquadRoleView[];
@@ -44,6 +44,8 @@ export default function CometSquadPanel({ members, records, roles, samples, time
                 return <button type="button" key={member.profileId} aria-pressed={selectedProfileId===member.profileId} onClick={()=>onSelect(member.profileId)}>
                     <span className="rr-comet-member-heading"><strong>{member.name}</strong>{view && <small>{view.owner}</small>}</span>
                     <span className="rr-comet-member-action">{!sample?.present ? 'Not present' : view && <>{view.symbol && `${symbolText[view.symbol]} `}{view.title}</>}</span>
+                    {view?.featureTitle && view.featureTitle !== view.title && <span>{view.featureTitle}</span>}
+                    {view?.plan && <span>Plan: {view.plan}</span>}
                     {view && r && <span>Squad: {r.role} · {r.status}</span>}
                     {view && view.status && (mode==='debug' || !['In progress','Current behavior'].includes(view.status)) && <span>{view.status}</span>}
                 </button>
@@ -60,7 +62,7 @@ export default function CometSquadPanel({ members, records, roles, samples, time
             {recent.map(e => <li key={`${e.profileId}:${e.event.id}:${e.start}`}>
                 <button type="button" onClick={()=>onSeek(e.start,e.profileId)}>
                     <time>{replayClock(e.start)}</time><strong>{e.name}</strong>
-                    <span>{e.title}</span><small>{e.status}</small>
+                    <span>{cometActionText(e)}</span><small>{e.status}</small>
                 </button>
                 {mode==='debug' && <div className="rr-comet-note">{cometReason(e.event.crossfire?.reason || e.event.reason)}</div>}
                 {mode==='debug' && <details><summary>Recorded event</summary><pre>{JSON.stringify({feature:e.event.feature,stage:e.event.stage,sequence:e.event.sequence,reason:e.event.reason,crossfire:e.event.crossfire,candidates:e.event.candidates},null,2)}</pre></details>}
