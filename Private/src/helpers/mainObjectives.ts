@@ -60,6 +60,7 @@ export function mainHoldDetail(main: any, atTime?: number): string {
 }
 
 export function airdropDetail(main: any): string {
+    if (main.airdropStage === 'paused') return 'Paused (will resume after interruption)'
     if (main.airdropStage === 'loot') return 'Loot'
     if (main.airdropStage === 'waiting') {
         const hold = `${Math.round(main.campElapsed || 0)} / ${Math.round(main.campTargetDuration || 0)}s`

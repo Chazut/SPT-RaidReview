@@ -39,6 +39,16 @@ check(find([...data].reverse(), 2, 3000).mainObjectives[1].airdropLanded, 'snaps
 check(data[1].squads[0].mainObjectives.length === 2, 'lookup never mutates recorded snapshots');
 check(mainLabel(main) === 'Kills' && !mainStarted(main), 'legacy main unchanged');
 check(airdropDetail({ ...drop, airdropLanded: true }) === 'Approach', 'landed approach label');
+check(airdropDetail({ ...drop, airdropStage: 'paused' }) === 'Paused (will resume after interruption)', 'paused intent stays visible');
+const resumed = [
+  { time: 1000, squads: [entry({ ...drop, airdropStage: 'waiting', campElapsed: 20, campHolding: true })] },
+  { time: 2000, squads: [entry({ ...drop, airdropStage: 'paused', campElapsed: 20, campHolding: false })] },
+  { time: 200000, squads: [entry({ ...drop, airdropStage: 'approach', campElapsed: 20, campHolding: false })] }
+];
+check(find(resumed, 2, 100000).mainObjectives[0].airdropId === 'crate-1', 'combat keeps same crate identity');
+check(find(resumed, 2, 100000).mainObjectives[0].campElapsed === 20, 'paused waiting budget does not advance');
+check(airdropDetail(find(resumed, 2, 200000).mainObjectives[0]).startsWith('Approach'), 'resume shown at recorded time');
+check(airdropDetail(find(resumed, 2, 2000).mainObjectives[0]).startsWith('Paused'), 'rewind restores interruption');
 check(mainHoldDetail({ type: 'ExtractCamp', campUntilTimeExtract: true }).includes('Last main'), 'final camp described before approach');
 check(mainHoldDetail({ type: 'ExtractCamp', campUntilTimeExtract: true, campStartedAt: 100, campElapsed: 1800 }) === '1800s holding cover; until time-based extraction', 'new camp has no fixed timer');
 check(mainHoldDetail({ type: 'ExtractCamp', campTargetDuration: 63 }) === '0 / 63s holding cover', 'historical TiMBo timer preserved');
