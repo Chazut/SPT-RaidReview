@@ -43,6 +43,16 @@ check(mainHoldDetail({ type: 'ExtractCamp', campUntilTimeExtract: true }).includ
 check(mainHoldDetail({ type: 'ExtractCamp', campUntilTimeExtract: true, campStartedAt: 100, campElapsed: 1800 }) === '1800s holding cover; until time-based extraction', 'new camp has no fixed timer');
 check(mainHoldDetail({ type: 'ExtractCamp', campTargetDuration: 63 }) === '0 / 63s holding cover', 'historical TiMBo timer preserved');
 check(mainHoldDetail({ type: 'Kills', killAmbush: true, killsRoamTargetDuration: 120 }) === '0 / 120s holding cover', 'Kill ambush keeps its budget');
+for (const type of ['Kills', 'ExtractCamp']) {
+    const searching = { type, campState: 'searching cover', campSearchAttempt: 4 };
+    for (const radius of [undefined, null, 0, -1, NaN, Infinity, '35']) {
+        check(mainHoldDetail({ ...searching, campSearchRadius: radius }) === 'Searching cover (4/4)', 'unknown historical radius stays unknown: ' + radius);
+    }
+    check(mainHoldDetail({ ...searching, campSearchRadius: 35 }) === 'Searching cover (4/4, radius 35m)', 'effective radius displayed');
+    check(mainHoldDetail({ ...searching, campSearchRadius: 112.5 }) === 'Searching cover (4/4, radius 113m)', 'expanded extraction radius displayed');
+    check(mainHoldDetail({ ...searching, campSearchRadius: .2 }).includes('radius 1m'), 'positive radius never rounds to zero');
+    check(mainHoldDetail({ ...searching, campState: 'failed', campFailure: 'cover search exhausted', campSearchRadius: 0 }) === 'Failed: cover search exhausted', 'failed searches do not look ongoing');
+}
 const camp = { type: 'ExtractCamp', campUntilTimeExtract: true, campStartedAt: 1, campElapsed: 30, campHolding: true, campExtractAt: 121000 };
 const camps = [{ time: 1000, squads: [entry(camp)] }];
 check(mainHoldDetail(find(camps, 2, 21000).mainObjectives[0], 21000) === '50s holding cover; 1:40 until departure', 'timer and holding advance between snapshots');

@@ -39,8 +39,11 @@ export function mainHoldDetail(main: any, atTime?: number): string {
         && Number.isFinite(main.campExtractAt) && Number.isFinite(atTime)
         ? Math.max(0, Math.ceil((main.campExtractAt - atTime!) / 1000)) : null
     const countdown = remaining == null ? '' : `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')} until departure`
+    // Older Kill ambush recordings left this field at zero although the configured radius was used.
+    const radius = Number.isFinite(main.campSearchRadius) && main.campSearchRadius > 0
+        ? `, radius ${Math.max(1, Math.round(main.campSearchRadius))}m` : ''
     const status = main.campState === 'searching cover' ? main.campSearchAttempt > 0
-        ? `Searching cover (${main.campSearchAttempt}/4, radius ${Math.round(main.campSearchRadius || 0)}m)` : 'Searching cover'
+        ? `Searching cover (${main.campSearchAttempt}/4${radius})` : 'Searching cover'
         : main.campState === 'approach' ? 'Approaching camp position'
         : main.campState === 'paused' ? `Interrupted: ${main.campFailure || 'Waiting to resume'}` : ''
     if (status) return countdown ? `${status}; ${countdown}` : status
