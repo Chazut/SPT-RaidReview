@@ -35,6 +35,8 @@ import CometReplayPanel, { CometModePicker } from './CometReplayPanel'
 import CometDestinationOverlay from './CometDestinationOverlay'
 import CometSquadPanel from './CometSquadPanel'
 import CometLegend from './CometLegend'
+import PbtCheaterBadge, { PbtCheaterDetails } from './PbtCheaterBadge'
+import { isPbtCheater, pbtDescription, pbtMarkerHtml } from '../helpers/pbtCheaters'
 import { cometSquadMembers, currentSquadRoles } from '../helpers/cometSquad'
 
 import 'leaflet/dist/leaflet.css';
@@ -140,7 +142,7 @@ function buildPlayerIcon(color: string, player: any, proportionalScale: number, 
     const kind = getParticipantKind(player)
     const size = kind === 'player' ? 24 : kind === 'scav' ? Math.max(20, proportionalScale * 2) : 22
     // Leaflet owns opacity so focus and Ghost fading are applied only once.
-    const html = getParticipantMarkerHtml(player, color, pmcIndex, size, hpPercent, behaviorColor) + comet
+    const html = getParticipantMarkerHtml(player, color, pmcIndex, size, hpPercent, behaviorColor) + comet + pbtMarkerHtml(player)
     return { icon: L.divIcon({ className: 'special-bot-marker', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }), html }
 }
 
@@ -1116,7 +1118,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         }
                     }
                     const ghostLine = currentGhost ? '<br/><span style="color:#94A3B8">\u{1F47B} Ghost (AI limiter)</span>' : ''
-                    const tip = `${htmlText(getDisplayName(player))} (${htmlText(getPlayerDifficultyAndBrain(player))})${healthLine}${behaviorLine}${ghostLine}${extractLine}${lootLine}`
+                    const pbtLine = isPbtCheater(player) ? `<div style="color:#efb9fa;margin-top:4px">${htmlText(pbtDescription(player)).replace(/\n/g, '<br/>')}</div>` : ''
+                    const tip = `${htmlText(getDisplayName(player))} (${htmlText(getPlayerDifficultyAndBrain(player))})${healthLine}${behaviorLine}${ghostLine}${extractLine}${lootLine}${pbtLine}`
                     const ringColor = behaviorCat && behaviorCat.key !== 'idle' && behaviorCat.key !== 'patrol' ? behaviorCat.color : undefined
                     const hpPct = (currentHealth != null && maxHealth != null && maxHealth > 0) ? Math.round((currentHealth / maxHealth) * 100) : undefined
                     const isFocused = playerFocusRef.current === playerId
@@ -3146,6 +3149,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 <aside className="sidebar border border-eft mr-3 p-3 overflow-x-auto">
                     <div className="playerfeed text-eft">
                         <strong>Legend</strong>
+                        {raidData.players.some(isPbtCheater) && <div style={{ color: '#efb9fa', marginTop: 6, fontSize: 11 }}>C = PBT cheater. Hover or select for details.</div>}
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs py-2" aria-label="Participant marker key">
                             {([['player', 'Players', playerColor], ['pmc', 'PMCs', '#4E9BFF'], ['scav', 'Scavs', '#33FF57'], ['other', 'Other bots', '#FF7B00']] as const).map(([kind, label, color]) => (
                                 <span key={kind} className="inline-flex items-center gap-1">
@@ -3228,7 +3232,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                                         {getLegendIcon(player, getPlayerColor(player, originalIndex), pmcIndexMap[player.profileId])}
                                                                         <div>
                                                                             <span className="capitalize">
-                                                                                {getDisplayName(player)} ({getPlayerDifficultyAndBrain(player)})
+                                                                                {getDisplayName(player)} ({getPlayerDifficultyAndBrain(player)})<PbtCheaterBadge player={player} />
                                                                             </span>
                                                                             {botSpawnValues[player.profileId] > 0 && (
                                                                                 <span style={{ fontSize: '9px', opacity: 0.5, marginLeft: '4px' }}>{'\u20BD'}{formatCompactNumber(botSpawnValues[player.profileId])}</span>
@@ -3292,7 +3296,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                                         {getLegendIcon(player, getPlayerColor(player, originalIndex))}
                                                                         <div>
                                                                             <span className="capitalize">
-                                                                                {getDisplayName(player)} ({getPlayerDifficultyAndBrain(player)})
+                                                                                {getDisplayName(player)} ({getPlayerDifficultyAndBrain(player)})<PbtCheaterBadge player={player} />
                                                                             </span>
                                                                             {botSpawnValues[player.profileId] > 0 && (
                                                                                 <span style={{ fontSize: '9px', opacity: 0.5, marginLeft: '4px' }}>{'\u20BD'}{formatCompactNumber(botSpawnValues[player.profileId])}</span>
@@ -3339,7 +3343,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                             {getLegendIcon(player, getPlayerColor(player, originalIndex))}
                                                             <div>
                                                                 <span className="capitalize">
-                                                                    {getDisplayName(player)} ({getPlayerDifficultyAndBrain(player)})
+                                                                    {getDisplayName(player)} ({getPlayerDifficultyAndBrain(player)})<PbtCheaterBadge player={player} />
                                                                 </span>
                                                                 {botSpawnValues[player.profileId] > 0 && (
                                                                     <span style={{ fontSize: '9px', opacity: 0.5, marginLeft: '4px' }}>{'\u20BD'}{formatCompactNumber(botSpawnValues[player.profileId])}</span>
@@ -3428,6 +3432,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 <aside className="sidebar-right border border-eft ml-3 p-3 overflow-x-auto">
                     {showBehavior && <>
                         {cometSelected ? <CometReplayPanel
+                            identity={<PbtCheaterDetails player={raidData.players.find(p => p.profileId === cometSelected)} />}
                             name={cometNames[cometSelected] || 'Selected participant'} record={cometRecords[cometSelected]}
                             profileId={cometSelected} tab={cometTab} setTab={setCometTab} onSeek={seekCometEvent}
                             squad={<CometSquadPanel members={cometMembers} records={cometRecords} roles={cometRoles} samples={cometSamples}

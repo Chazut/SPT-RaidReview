@@ -17,7 +17,7 @@ namespace RAID_REVIEW
         private static readonly List<string> gone = new List<string>();
         internal static bool IsEnding { get; private set; }
 
-        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); confirmed.Clear(); snapshot.Clear(); RecordingInventory.Reset(); IsEnding = false; }
+        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); confirmed.Clear(); snapshot.Clear(); RecordingInventory.Reset(); PbtIntegration.Reset(); IsEnding = false; }
         internal static void Seed(GameWorld world)
         {
             Reset();

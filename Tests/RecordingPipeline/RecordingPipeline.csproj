@@ -16,6 +16,7 @@
     <Compile Include="../../Client/models/JsonPosition.cs" Link="JsonPosition.cs" />
     <Compile Include="../../Client/models/Packets.cs" Link="Packets.cs" />
     <Compile Include="../../ServerMod/WebSocket/WsPacketHandler.cs" Link="WsPacketHandler.cs" />
+    <Compile Include="../../ServerMod/WebSocket/PbtPlayerMetadata.cs" Link="PbtPlayerMetadata.cs" />
     <Compile Include="../../ServerMod/WebSocket/AirdropFlightPacket.cs" Link="AirdropFlightPacket.cs" />
     <Compile Include="../../ServerMod/WebSocket/SwitchStatesPacket.cs" Link="SwitchStatesPacket.cs" />
     <Reference Include="Newtonsoft.Json"><HintPath>../../Client/dependencies/4.1.X/Newtonsoft.Json.dll</HintPath></Reference>

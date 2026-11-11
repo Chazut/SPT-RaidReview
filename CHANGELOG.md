@@ -1,3 +1,10 @@
+# Unreleased
+
+- Highlight PBT cheaters in the raid overview, map markers and participant list. Show their PBT personality and assigned cheats in tooltips and the selected bot panel.
+- Record PBT identity without changing its rolls or bot behavior. Keep the identity visible when another layer takes control, while showing PBT as the current controller only when its layer is active.
+- Preserve PBT metadata in shared raid ZIPs. Existing raids remain readable; missing personality and cheat details require a new recording.
+- Fix missing participant recovery when another participant or raid already used the same profile ID.
+
 # Raid Review 1.10.0
 
 For SPT 4.1.x. Cumulative changes since 1.9.0, including the fixes shared in the 1.9.1 test builds.

@@ -7,6 +7,7 @@ namespace RAID_REVIEW {
             {
                 LoggerInstance.Log.LogInfo("RAID_REVIEW :::: INFO :::: Searching For Supported Mods");
                 RAID_REVIEW.MODS_SEARCHED = true;
+                PbtIntegration.Initialize();
                 if (RAID_REVIEW.DetectMod("me.sol.sain"))
                 {
                     LoggerInstance.Log.LogInfo("RAID_REVIEW :::: INFO :::: Found 'SAIN' Enabling Plugin Features for SAIN.");

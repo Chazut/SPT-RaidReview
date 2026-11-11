@@ -49,6 +49,7 @@ its actual SQLite dependencies live in `lib/sqlite/`, isolated from other mods.
 - Loose loot and bot inventories on the map
 - Grenade trajectories, ballistics, hit flashes
 - Mod integrations: SAIN, ORBIT (ghosts included), QuestingBots, LootingBots
+- PBT cheaters have a purple **C** map marker and a **PBT cheater** badge. Hover or select them to see their PBT personality and assigned cheats. Their identity stays visible when PBT yields to SAIN; current behavior only shows PBT while its layer is active. Requires a new recording with PBT installed on the recorder.
 - Ghost hearing replay: enable **Ghost hearing** to see a small ear icon beside Ghost squad members for eight seconds after a recorded decision to investigate a sound. Hover or focus an icon to reveal the sound location and a dotted connection. Ignored sounds stay hidden. Requires hearing decisions recorded by compatible ORBIT and RaidReview clients; older raids without those events remain unchanged.
 - Faction badges for modded bots: UNTAR, RUAF, Black Division, ISB, Combine Soldiers
 - ISB White Tusks have a separate **ISB WT** display group and **WT** map markers,

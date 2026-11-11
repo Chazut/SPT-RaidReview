@@ -12,6 +12,7 @@ import { getLocationLabel } from '../../helpers/locations';
 import { getFactionRole, resolveBotType, isRaiderHunter, createPlayerColorResolver } from "../../helpers/players";
 import { getIsbDisplayName } from '../../helpers/isb';
 import { displayPlayerName } from '../../helpers/playerNames';
+import PbtCheaterBadge from '../../component/PbtCheaterBadge';
 import { isHumanPlayer, playerGroupKey } from '../../helpers/playerIdentity';
 import { finalPlayerStatuses, peakActiveBots, playerStatusLabel } from '../../helpers/playerStatuses';
 
@@ -464,7 +465,7 @@ export default function RaidOverview() {
                 <td className="text-center p-2 uppercase border-x border-eft">{p.group}</td>
                 <td className="text-center p-2 border-x border-eft">{p.level}</td>
                 <td className="text-left p-2">
-                  <div>{displayPlayerName(p.name)}</div>
+                  <div>{displayPlayerName(p.name)}<PbtCheaterBadge player={p} /></div>
                   {killInfo && (
                     <div className="text-xs opacity-50 mt-0.5">
                       by {displayPlayerName(killInfo.killerName)} ({killInfo.weapon}, {Number(killInfo.distance).toFixed(0)}m, {killInfo.bodyPart})

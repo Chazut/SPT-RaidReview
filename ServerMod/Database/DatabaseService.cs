@@ -613,6 +613,11 @@ public class DatabaseService : IDisposable
                 ALTER TABLE raid ADD COLUMN ""importedProfileName"" TEXT NOT NULL DEFAULT '';
                 ALTER TABLE raid ADD COLUMN ""importedIsHeadless"" INTEGER NOT NULL DEFAULT 0;
             "),
+            ("add_pbt_cheater_identity", @"
+                ALTER TABLE player ADD COLUMN ""mod_PBT_cheater"" INTEGER NOT NULL DEFAULT 0;
+                ALTER TABLE player ADD COLUMN ""mod_PBT_personality"" TEXT NOT NULL DEFAULT '';
+                ALTER TABLE player ADD COLUMN ""mod_PBT_cheats"" TEXT NOT NULL DEFAULT '';
+            "),
         };
 
         foreach (var (name, sql) in migrations)

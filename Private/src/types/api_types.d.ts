@@ -109,6 +109,9 @@ export interface TrackingRaidDataPlayers {
   mod_SAIN_brain: string
   mod_SAIN_difficulty: string
   mod_SAIN_name: string
+  mod_PBT_cheater?: number | boolean | string
+  mod_PBT_personality?: string
+  mod_PBT_cheats?: string
 }
 
 export interface TrackingRaidDataKills {

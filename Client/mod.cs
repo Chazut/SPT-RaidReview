@@ -928,11 +928,14 @@ namespace RAID_REVIEW
                                 }
 
                                 trackingPlayers[trackingPlayer.profileId] = trackingPlayer;
+                                PbtIntegration.Capture(player, trackingPlayer);
                                 _ = Telemetry.SendSnapshot("PLAYER", trackingPlayer.Snapshot());
 
                             }
 
                             RecordingInventory.Capture(player);
+                            if (PbtIntegration.Capture(player, trackingPlayer))
+                                _ = Telemetry.SendSnapshot("PLAYER_UPDATE", trackingPlayer.Snapshot());
 
                             // Checks if a player / bot has died since the last check...
                             if (RecordingRoster.Observe(player))
@@ -1071,6 +1074,7 @@ namespace RAID_REVIEW
                                     }
 
                                     if (player.IsAI) decision = CometIntegration.Resolve(player.ProfileId, activeLayer, decision, ghost);
+                                    decision = BehaviorOwnership.ResolvePbt(decision, activeLayer, player.IsAI, ghost);
                                     var bodyForward = player.Transform.forward;
                                     var bodyYaw = BodyOrientation.FromForward(bodyForward.x, bodyForward.z, ghost);
                                     // Retain dir for wire compatibility. Only bodyYaw identifies reliable

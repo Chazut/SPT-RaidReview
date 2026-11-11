@@ -17,6 +17,7 @@ type Props = {
     available: boolean; showDestination: boolean; setShowDestination: (show: boolean) => void; onClose: () => void;
     profileId: string; tab: 'bot' | 'squad'; setTab: (tab: 'bot' | 'squad') => void; squad: ReactNode;
     onSeek: (time: number, profileId: string) => void;
+    identity?: ReactNode;
 }
 export default function CometReplayPanel(props: Props) {
     const { name, record, time, decision, sampledAt, ghost, names, mode, setMode, available } = props
@@ -29,6 +30,7 @@ export default function CometReplayPanel(props: Props) {
     const interventions = detailed ? view.interventions : view.interventions.filter(a => a.title !== view.title)
     return <section className="rr-comet-panel" aria-label="Selected bot decisions">
         <div className="rr-comet-panel-head"><h3>{name}</h3><button type="button" aria-label="Close bot details" onClick={props.onClose}>×</button></div>
+        {props.identity}
         <div className="rr-comet-toolbar"><div className="rr-comet-tabs" role="tablist" aria-label="Replay details">
             <button type="button" role="tab" aria-selected={props.tab==='bot'} onClick={()=>props.setTab('bot')}>Bot</button>
             <button type="button" role="tab" aria-selected={props.tab==='squad'} onClick={()=>props.setTab('squad')}>Squad tactic</button>

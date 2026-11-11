@@ -510,4 +510,5 @@ await gc.CollectOldRaidsAsync();
 Check(await target.QuerySingleAsync("SELECT * FROM raid WHERE raidId=$id", ("$id", raidId)) != null, "Imported raid retained by automatic cleanup");
 Check(await target.QuerySingleAsync("SELECT * FROM raid WHERE raidId=$id", ("$id", localRaidId)) == null, "Normal raid retention still works");
 Check(!Directory.EnumerateDirectories(Path.Combine(targetData, "transfers")).Any(), "Transfer workspaces cleaned");
+checks += await PbtCaptureTests.Run(root);
 Console.WriteLine($"PASS RaidTransfer: {checks} checks. Isolated data: {root}");

@@ -1,0 +1,37 @@
+.rr-pbt-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 4px;
+    border: 1px solid #b47cbf;
+    border-radius: 3px;
+    color: #efb9fa;
+    background: #35243c;
+    font-size: 10px;
+    line-height: 15px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.rr-pbt-marker {
+    position: absolute;
+    left: -7px;
+    top: -6px;
+    width: 12px;
+    height: 14px;
+    border: 1px solid #efb9fa;
+    border-radius: 3px;
+    color: #fff;
+    background: #6c247d;
+    font: bold 11px/12px sans-serif;
+    text-align: center;
+    pointer-events: none;
+}
+.rr-pbt-details {
+    margin: 6px 0 10px;
+    padding-left: 8px;
+    border-left: 2px solid #b47cbf;
+    color: #efb9fa;
+    font-size: 11px;
+    line-height: 1.6;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}

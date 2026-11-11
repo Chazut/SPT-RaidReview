@@ -162,10 +162,11 @@ export function cometPresentation(record: CometMapRecord | undefined, at: number
     const external = ['orbit', 'questing', 'looting', 'extraction', 'sleep', 'other']
     const handedOff = handoff && (handoff.controlHandoff?.pending || external.includes(handoff.controlHandoff?.owner || '')) ? handoff.time : -Infinity
     const sampleSource = getDecisionSource(sampledDecision)
-    const outsideCombat = ['ORBIT', 'Phobos', 'QuestingBots', 'LB'].includes(sampleSource)
+    const pbtOwns = sampleSource === 'PBT'
+    const outsideCombat = ['ORBIT', 'Phobos', 'QuestingBots', 'LB', 'PBT'].includes(sampleSource)
     const boundary = Math.max(handedOff, outsideCombat ? sampledAt : -Infinity)
     const life = indexed(record, last, 'lifecycleIndex')
-    const stopped = ghost || !!(life && life.lifecycle?.state !== 'resumed')
+    const stopped = ghost || pbtOwns || !!(life && life.lifecycle?.state !== 'resumed')
     const motionEvent = indexed(record, last, 'motionIndex')
     const motion = motionEvent?.controlJournal?.motion
     const movement = !stopped && motion && motionEvent && motionEvent.time > boundary && at >= motionEvent.time && at-motionEvent.time < motion.validFor*1000
@@ -196,6 +197,7 @@ export function cometPresentation(record: CometMapRecord | undefined, at: number
     if (outsideCombat && sampledAt >= (state.event?.time ?? -Infinity)) owner = sampleSource
     const ghostObjective = ghost && sampleSource === 'ORBIT' ? (sampledDecision === 'Orbit:Synthetic' ? 'Patrolling' : formatDecisionLabel(sampledDecision)) : ''
     if (ghost) owner = ghostObjective ? 'Ghost / ORBIT' : 'Ghost'
+    else if (pbtOwns) owner = 'PBT'
     const event = core?.event || primary?.event || interventions[0]?.event
     const chosen = event?.candidates.find(c => c.decision === (core ? state.decision.replace(/^COMET:/, '') : event.decision))
     const factorKeys = [['loadoutDelta','Equipment'],['opponentDelta','Opponent'],['opportunityDelta','Opportunity'],['coverResponseDelta','Cover / exposure'],['fearDelta','Fear / pressure'],['progressDelta','Progress']] as const
@@ -218,7 +220,7 @@ export function cometPresentation(record: CometMapRecord | undefined, at: number
         else if (threat && at-threat.time < 2000 && threat.stage==='accepted' && threat.threat?.previous !== threat.threat?.selected && threat.threat?.candidates.some(c=>c.target===threat.threat?.selected && c.visible)) signal={glyph:'!',title:'Switched attention to a visible enemy'}
         else if (hearing && at-hearing.time < 2000 && hearing.hearing?.outcome==='heard') signal={glyph:'?',title:'Movement heard'}
     }
-    return { owner, title: primary?.title || (ghost ? ghostObjective || 'Sleeping' : formatDecisionLabel(state.decision) || (owner==='ORBIT'?'Following an objective':'No COMET action observed')), featureTitle: primary?.featureTitle || '', plan, planSymbol: observedCore ? core!.symbol : null, status: primary?.status || 'Current behavior', reason: primary?.reason || '', badge: !!observedCore || interventions.length>0, symbol: interventions[0]?.symbol || (observedCore ? core!.symbol : null), signal,
+    return { owner, title: primary?.title || (ghost ? ghostObjective || 'Sleeping' : formatDecisionLabel(pbtOwns ? sampledDecision : state.decision) || (owner==='ORBIT'?'Following an objective':'No COMET action observed')), featureTitle: primary?.featureTitle || '', plan, planSymbol: observedCore ? core!.symbol : null, status: primary?.status || 'Current behavior', reason: primary?.reason || '', badge: !!observedCore || interventions.length>0, symbol: interventions[0]?.symbol || (observedCore ? core!.symbol : null), signal,
         destination: interventions.find(a=>a.destination)?.destination || null, event, interventions, score: chosen?.score ?? null, factors, alternatives, contact:contactText, selection, movement }
 }
 

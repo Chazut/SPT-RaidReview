@@ -4,6 +4,9 @@ namespace RAID_REVIEW
 {
     internal static class BehaviorOwnership
     {
+        internal static string ResolvePbt(string decision, string layer, bool isAi, bool ghost)
+            => isAi && !ghost && layer == "PbtCheater" ? "PBT:Cheating" : decision;
+
         internal static bool IsSainLayer(string layer)
             => layer?.StartsWith("SAIN", StringComparison.OrdinalIgnoreCase) == true;
 

@@ -39,6 +39,9 @@ namespace RAID_REVIEW
         public string mod_SAIN_brain { get; set; }
         public string mod_SAIN_difficulty { get; set; }
         public string mod_SAIN_name { get; set; }
+        public bool mod_PBT_cheater { get; set; }
+        public string mod_PBT_personality { get; set; }
+        public string mod_PBT_cheats { get; set; }
     }
 
     public class TrackingRaidKill

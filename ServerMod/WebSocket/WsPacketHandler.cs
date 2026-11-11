@@ -197,11 +197,14 @@ public class WsPacketHandler
                 case "PLAYER_UPDATE":
                 {
                     await _db.ExecuteAsync(
-                        "UPDATE player SET mod_SAIN_brain = $brain, mod_SAIN_difficulty = $diff, mod_SAIN_name = $sainName, type = $type WHERE raidId = $raidId AND profileId = $profileId",
+                        "UPDATE player SET mod_SAIN_brain = $brain, mod_SAIN_difficulty = $diff, mod_SAIN_name = $sainName, type = $type, " + PbtPlayerMetadata.UpdateSql + " WHERE raidId = $raidId AND profileId = $profileId",
                         ("$brain", GetString(payload, "mod_SAIN_brain")),
                         ("$diff", GetString(payload, "mod_SAIN_difficulty")),
                         ("$sainName", GetString(payload, "mod_SAIN_name")),
                         ("$type", GetString(payload, "type")),
+                        ("$pbt", PbtPlayerMetadata.IsCheater(payload)),
+                        ("$pbtType", PbtPlayerMetadata.Text(payload, "mod_PBT_personality")),
+                        ("$pbtCheats", PbtPlayerMetadata.Text(payload, "mod_PBT_cheats")),
                         ("$raidId", raidId!),
                         ("$profileId", GetString(payload, "profileId")));
                     break;
@@ -220,22 +223,7 @@ public class WsPacketHandler
 
                 case "PLAYER":
                 {
-                    var profileId = GetString(payload, "profileId");
-                    // Dedup rides on the UNIQUE (raidId, profileId) index — the old SELECT round-trip
-                    // full-scanned the player table once per bot spawn (spawn waves = burst of scans).
-                    await _db.ExecuteAsync(
-                        @"INSERT OR IGNORE INTO player (raidId, profileId, level, team, name, ""group"", spawnTime, type, mod_SAIN_brain, mod_SAIN_difficulty, mod_SAIN_name) VALUES ($raidId, $profileId, $level, $team, $name, $group, $spawnTime, $type, $brain, $diff, $sainName)",
-                        ("$raidId", raidId!),
-                        ("$profileId", profileId),
-                        ("$level", GetString(payload, "level")),
-                        ("$team", GetString(payload, "team")),
-                        ("$name", GetString(payload, "name")),
-                        ("$group", GetString(payload, "group")),
-                        ("$spawnTime", GetString(payload, "spawnTime")),
-                        ("$type", GetString(payload, "type")),
-                        ("$brain", GetString(payload, "mod_SAIN_brain")),
-                        ("$diff", GetString(payload, "mod_SAIN_difficulty")),
-                        ("$sainName", GetString(payload, "mod_SAIN_name")));
+                    await EnsurePlayerExistsAsync(raidId!, payload);
                     break;
                 }
 
@@ -616,14 +604,10 @@ public class WsPacketHandler
     private async Task EnsurePlayerExistsAsync(string raidId, JsonElement playerEl)
     {
         var profileId = GetString(playerEl, "profileId");
-        var exists = await _db.QueryAsync(
-            "SELECT 1 FROM player WHERE raidId = $raidId OR profileId = $profileId LIMIT 1",
-            ("$raidId", raidId), ("$profileId", profileId));
-
-        if (exists.Count > 0) return;
-
+        // One indexed write also lets PLAYER_CHECK repair late identity metadata.
+        // Match both raid and profile: another bot/raid must not suppress insertion.
         await _db.ExecuteAsync(
-            @"INSERT INTO player (raidId, profileId, level, team, name, ""group"", spawnTime, mod_SAIN_brain, type, mod_SAIN_difficulty, mod_SAIN_name) VALUES ($raidId, $profileId, $level, $team, $name, $group, $spawnTime, $brain, $type, $diff, $sainName)",
+            @"INSERT INTO player (raidId, profileId, level, team, name, ""group"", spawnTime, mod_SAIN_brain, type, mod_SAIN_difficulty, mod_SAIN_name, mod_PBT_cheater, mod_PBT_personality, mod_PBT_cheats) VALUES ($raidId, $profileId, $level, $team, $name, $group, $spawnTime, $brain, $type, $diff, $sainName, $pbt, $pbtType, $pbtCheats) ON CONFLICT(raidId, profileId) DO UPDATE SET " + PbtPlayerMetadata.UpdateSql + PbtPlayerMetadata.UpdateRequiredSql,
             ("$raidId", raidId),
             ("$profileId", profileId),
             ("$level", GetString(playerEl, "level")),
@@ -634,7 +618,10 @@ public class WsPacketHandler
             ("$brain", GetString(playerEl, "mod_SAIN_brain")),
             ("$type", GetString(playerEl, "type")),
             ("$diff", GetString(playerEl, "mod_SAIN_difficulty")),
-            ("$sainName", GetString(playerEl, "mod_SAIN_name")));
+            ("$sainName", GetString(playerEl, "mod_SAIN_name")),
+            ("$pbt", PbtPlayerMetadata.IsCheater(playerEl)),
+            ("$pbtType", PbtPlayerMetadata.Text(playerEl, "mod_PBT_personality")),
+            ("$pbtCheats", PbtPlayerMetadata.Text(playerEl, "mod_PBT_cheats")));
     }
 
     private static string GetString(JsonElement el, string key)

@@ -54,3 +54,5 @@ namespace RaidReview.PostRaid
         public string ResolveName(string name,string id)=>string.IsNullOrWhiteSpace(name)?id:name;
         public string ResolveContainerName(string name,string id)=>string.IsNullOrWhiteSpace(name)?id:name; }
 }
+
+namespace RAID_REVIEW { internal static class PbtIntegration { internal static void Reset() {} } }
