@@ -44,6 +44,16 @@ player.AIData.BotOwner.Brain.Layer = "SAIN PbtCheater";
 Check(!PbtIntegration.Capture(player, new TrackingPlayer { profileId = "lookalike" }), "Similar name is not evidence");
 PbtIntegration.Reset(); player.Profile.AccountId = "42";
 Check(PbtIntegration.Capture(player, new TrackingPlayer { profileId = "bot" }), "New raid can reuse profile ID immediately");
+player.AIData.BotOwner.Brain.Uninitialized = true;
+Check(PbtIntegration.Capture(player, new TrackingPlayer { profileId = "initializing" }), "Roster survives an uninitialized brain");
+player.Profile.AccountId = "unknown";
+var pending = new TrackingPlayer { profileId = "pending" };
+Check(!PbtIntegration.Capture(player, pending), "Missing roster and uninitialized brain wait safely");
+player.AIData.BotOwner.Brain.Uninitialized = false;
+player.AIData.BotOwner.Brain.Layer = "PbtCheater";
+UnityEngine.Time.unscaledTime += 2;
+Check(PbtIntegration.Capture(player, pending), "Retry captures layer once initialization completes");
+Check(!PbtIntegration.Capture(player, new TrackingPlayer()), "Missing profile ID safely ignored");
 
 foreach (var stale in new[] { "SAIN:Search", "COMET:Push", "Orbit:Exfil", "9999" })
     Check(BehaviorOwnership.ResolvePbt(stale, "PbtCheater", true, false) == "PBT:Cheating", "PBT active layer owns behavior");
@@ -91,7 +101,7 @@ namespace EFT
     class Profile { public string AccountId; }
     class Ai { public Bot BotOwner = new(); }
     class Bot { public Brain Brain = new(); }
-    class Brain { public string Layer = "SAIN"; public string ActiveLayerName() => Layer; }
+    class Brain { public bool Uninitialized; public string Layer = "SAIN"; public string ActiveLayerName() => Uninitialized ? throw new NullReferenceException() : Layer; }
 }
 namespace RAID_REVIEW
 {

@@ -39,16 +39,22 @@ namespace RAID_REVIEW
         internal static bool Capture(Player player, TrackingPlayer data)
         {
             Initialize();
-            if (!detected || player == null || data == null || !player.IsAI) return false;
+            if (!detected || player == null || data == null || string.IsNullOrEmpty(data.profileId) || !player.IsAI) return false;
             var now = Time.unscaledTime;
             if (nextRead.TryGetValue(data.profileId, out var next) && now < next) return false;
             nextRead[data.profileId] = now + 1f;
             try
             {
-                var layer = player.AIData?.BotOwner?.Brain?.ActiveLayerName();
                 PbtIdentity identity = null;
                 try { if (int.TryParse(player.Profile?.AccountId, out var account)) identity = reader?.Read(account); }
-                catch (Exception ex) { Warn(ex.GetType().Name); }
+                catch (Exception ex) { Warn("Roster read for " + data.profileId + ": " + ex); }
+                // During spawn/teardown Brain can exist before its active-layer container.
+                // Roster identity must not depend on that transient layer being readable.
+                string layer = null;
+                if (identity == null)
+                    try { layer = player.AIData?.BotOwner?.Brain?.ActiveLayerName(); }
+                    catch (NullReferenceException) { /* Retry on the next bounded sample. */ }
+                    catch (Exception ex) { Warn("Layer read for " + data.profileId + ": " + ex); }
                 if (identity == null && layer != "PbtCheater") return false;
                 var changed = !data.mod_PBT_cheater;
                 data.mod_PBT_cheater = true;
