@@ -3,7 +3,7 @@ import { CometSymbol, symbolText } from '../helpers/cometPresentation'
 const labels: Record<CometSymbol, string> = {
     move: 'Move / evade', hold: 'Hold / bait', fire: 'Fire / suppress',
     reload: 'Reload / weapon', medical: 'Heal / recover', grenade: 'Grenade / escape',
-    door: 'Door action', look: 'Peek / watch', light: 'Lights / lasers', voice: 'Voice calls',
+    door: 'Door action', look: 'Peek / watch', light: 'Lights / lasers', voice: 'Voice calls', quiet: 'Quiet approach',
 }
 
 export default function CometLegend() {

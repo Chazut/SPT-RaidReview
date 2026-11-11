@@ -43,6 +43,7 @@ export default function CometReplayPanel(props: Props) {
                 </div>
                 {view.featureTitle && view.featureTitle !== view.title && <div className="rr-comet-action-detail">{view.featureTitle}</div>}
                 {view.plan && <div className="rr-comet-note">Plan: {view.plan}</div>}
+                {view.movement && <div className="rr-comet-motion" title="Observed posture and speed. This does not identify which mod set them or measure footstep noise.">Observed: {view.movement}</div>}
                 <div className="rr-comet-note"><strong>{view.owner}</strong>{view.status && (detailed || view.status !== 'Current behavior') && <> · {view.status}</>}</div>
                 {view.reason && <p>{view.reason}</p>}
             </div>

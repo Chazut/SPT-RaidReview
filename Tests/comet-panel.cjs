@@ -115,3 +115,20 @@ check('specific intervention leads the panel while the score stays attached to i
     assert.match(squad,/Head movement in combat/); assert.match(squad, /Leaning to evade shots/); assert.match(squad,/Plan: Shoot/);
 });
 console.log(`${checks} COMET panel checks with feature names passed.`);
+const quietFixture=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/p02-quiet-presentation.json'),'utf8'));
+const motionFixture=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/t04-observed-movement.json'),'utf8'));
+const quietEvent={id:2,time:2100,profileId:'pmc',cometSession:'s',sequence:2,feature:'P02',stage:'evaluated',decision:'QuietApproach',detail:{botInstance:'one',quiet:quietFixture.quiet}};
+const motionEvent={...quietEvent,id:3,sequence:3,feature:'T04',decision:'ControlJournal',detail:{botInstance:'one',controlJournal:motionFixture.controlJournal}};
+check('quiet approach and actual native crouch motion render in Simple and squad with readable labels',()=>{
+ const record={status:'ready',events:prepare([quietEvent,motionEvent],'pmc')};
+ const html=render(React.createElement(Panel,{...botProps,record,decision:'SAIN:Search',sampledAt:2000}));
+ assert.match(html,/<h4>.*Quiet approach \(crouch requested\)/);assert.match(html,/Observed: Crouch-walking slowly/);
+ assert.doesNotMatch(html,/<details[^>]*\bopen|Full diagnostics|poseCap|nativePose/);
+ const squad=render(React.createElement(Squad,{...squadProps,members:[{profileId:'pmc',name:'Test PMC',kind:'pmc',group:1}],records:{pmc:record},samples:{pmc:{present:true,time:2000,decision:'SAIN:Search'}}}));
+ assert.match(squad,/Quiet approach/);assert.match(squad,/Observed: Crouch-walking slowly/);
+});
+check('old records without locomotion do not invent crouched movement',()=>{
+ const html=render(React.createElement(Panel,{...botProps,record:{status:'ready',events:prepare([quietEvent],'pmc')},decision:'SAIN:Search'}));
+ assert.doesNotMatch(html,/Observed: Crouch|0\.6 m\/s/);assert.match(html,/crouch requested/);
+});
+console.log(`${checks} COMET panel checks including locomotion passed.`);

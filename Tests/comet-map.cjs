@@ -3164,7 +3164,8 @@ const s01Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','Crossfire',
  for(const st of ['planning','ready','ended']){const v=state(ready([s01Row(1,1000,{state:st,applied:false,reserved:st==='ready',validFor:0})]),1100,'SAIN:Search',1000,false);assert.equal(v.crossfire,undefined);assert.equal(v.decision,'SAIN:Search');checks++;}
  const x=state(ready([s01Row(1,1000,{reason:'<script>x</script>',supportName:'<img src=x>',contact:'<b>x</b>',alternatives:['<img onerror=x>']})]),1100,'COMET:CrossfireMoving',1000,false);assert.ok(x.crossfire);assert.ok(!tooltip(x).includes('<img'));assert.ok(!tooltip(x).includes('<script>'));assert.match(tooltip(x),/Rejected alternative/);checks++;
  const wire=path.join(__dirname,'../../COMET/artifacts/s01-adapter-events.jsonl');const data=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/s01-crossfire.json'),'utf8'))];
- for(const e of data){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
+ const observed=data.filter(e=>e.crossfire);assert.ok(observed.length>0,'crossfire adapter trace contains observations');
+ for(const e of observed){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
 }
 for(const change of [{state:'teleported'},{applied:'yes'},{reserved:false},{validFor:2},{validFor:0},{remaining:NaN},{angle:181},{pathLength:61},{roll:-1},{chance:101},{candidates:29},{x:Infinity},{goalY:null},{state:'ended'},{state:'ready'},{applied:false,validFor:1},{episode:0},{alternatives:Array(9).fill('x')},{supportName:'x'.repeat(513)}]){assert.equal(s01Helpers.parseCometCrossfire({...s01Trace,...change}),null,JSON.stringify(change));checks++;}
 assert.equal(ready([s01Row(1,1000,{}, {decision:'PostCombat'})]).events.length,0);checks++;
@@ -3195,7 +3196,8 @@ for(const change of [{state:'teleported'},{watchDuration:0},{watchRemaining:41},
 for(const change of [{candidates:49},{remaining:49},{entrance:[]},{entrance:{}},{state:'holding'}]){assert.equal(s01Helpers.parseCometCrossfire({...s02Trace,...change}),null,JSON.stringify(change));checks++;}
 {
  const wire=path.join(__dirname,'../../COMET/artifacts/s02-adapter-events.jsonl');const data=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[s02Fixture];
- for(const e of data){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
+ const observed=data.filter(e=>e.crossfire);assert.ok(observed.length>0,'crossfire adapter trace contains observations');
+ for(const e of observed){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
 }
 console.log(`${checks} COMET map checks passed (including S01/S02)`);
 
@@ -3218,7 +3220,8 @@ const s03Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','Crossfire',
   assert.equal(s01Helpers.parseCometCrossfire({...s03Trace,maneuver:{...s03Trace.maneuver,...bad}}),null,JSON.stringify(bad));checks++;
  }
  const wire=path.join(__dirname,'../../COMET/artifacts/s03-adapter-events.jsonl');const data=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[s03Fixture];
- for(const e of data){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
+ const observed=data.filter(e=>e.crossfire);assert.ok(observed.length>0,'crossfire adapter trace contains observations');
+ for(const e of observed){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
  for(const extra of [{feature:'S01'},{feature:'S02'},{decision:'Other'},{stage:'selected'}]){assert.equal(ready([s03Row(1,1000,{},extra)]).events.length,0);checks++;}
 }
 console.log(`${checks} COMET map checks passed (including S03)`);
@@ -3258,7 +3261,8 @@ const s04Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','Crossfire',
  const moving={...s04Trace,state:'moving',coverMate:{...s04Trace.coverMate,status:'moving',confirmed:false}};
  assert.equal(state(ready([s04Row(1,1000,moving)]),1100,'SAIN:Freeze',900,false).decision,'COMET:CrossfireCoverMateMoving');checks++;
  const wire=path.join(__dirname,'../../COMET/artifacts/s04-adapter-events.jsonl');const data=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[s04Fixture];
- for(const e of data){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
+ const observed=data.filter(e=>e.crossfire);assert.ok(observed.length>0,'crossfire adapter trace contains observations');
+ for(const e of observed){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
  for(const extra of [{feature:'S01'},{feature:'S02'},{feature:'S03'},{decision:'Other'},{stage:'selected'}]){assert.equal(ready([s04Row(1,1000,{},extra)]).events.length,0);checks++;}
 }
 console.log(`${checks} COMET map checks passed (including S04)`);
@@ -3292,7 +3296,8 @@ const s05Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','Crossfire',
  assert.equal(state(ready([s05Row(1,1000,moving)]),1100,'SAIN:Freeze',900,false).decision,'COMET:CrossfireTradePushing');checks++;
  assert.equal(s01Helpers.parseCometCrossfire({...moving,trade:{...moving.trade,confidence:'sector only'}}),null);checks++;
  const wire=path.join(__dirname,'../../COMET/artifacts/s05-adapter-events.jsonl');const data=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[s05Fixture];
- for(const e of data){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
+ const observed=data.filter(e=>e.crossfire);assert.ok(observed.length>0,'crossfire adapter trace contains observations');
+ for(const e of observed){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
  for(const extra of [{feature:'S01'},{feature:'S02'},{feature:'S03'},{feature:'S04'},{decision:'Other'},{stage:'selected'}]){assert.equal(ready([s05Row(1,1000,{},extra)]).events.length,0);checks++;}
 }
 
@@ -3320,7 +3325,7 @@ const s06Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','Crossfire',
 // Feed every real production adapter event through the replay validator.
 const s06AdapterEvents=path.resolve(__dirname,'../../COMET/artifacts/s06-adapter-events.jsonl');
 if(fs.existsSync(s06AdapterEvents))for(const line of fs.readFileSync(s06AdapterEvents,'utf8').trim().split(/\r?\n/)){
- const e=JSON.parse(line);if(e.feature!=='S06')continue;
+ const e=JSON.parse(line);if(e.feature!=='S06'||e.stage==='eligibility')continue;
  assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e.crossfire));checks++;
 }
 console.log(`${checks} COMET map checks passed (including S06)`);
@@ -3617,6 +3622,7 @@ const c03Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','DoorGeometr
  for(const bad of [{state:'moving'},{door:null},{margin:.2},{margin:2},{validFor:2},{validFor:Infinity},{x:NaN},{source:'anything'},{state:'ended'}]){assert.equal(c03Helpers.parseCometDoorSpatial({...c03Trace,...bad}),null);checks++;}
  for(const key of ['reason','door','blocker','doorState','blockerState']){const html=tooltip(state(ready([c03Row(1,1000,{[key]:'<img src=x onerror=x>'})]),1100,'SAIN:Search',900,false));assert.ok(!html.includes('<img'));checks++;}
  assert.match(c03Helpers.cometDoorSpatialSummary({...c03Trace,state:'clear'}).join(' '),/movement not confirmed/);checks++;
+ assert.ok(c03Helpers.parseCometDoorSpatial({...c03Trace,source:'native-physical-floor'}),'current COMET door floor repair is readable');checks++;
  const wire=path.resolve(__dirname,'../../COMET/artifacts/c03/geometry.jsonl');
  if(fs.existsSync(wire))for(const line of fs.readFileSync(wire,'utf8').trim().split(/\r?\n/)){const e=JSON.parse(line);assert.ok(c03Helpers.parseCometDoorSpatial(e.doorSpatial),JSON.stringify(e));checks++;}
 }

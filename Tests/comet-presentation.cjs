@@ -142,4 +142,88 @@ check('squad feature follows the concrete tactic within the shared crossfire con
  const record=ready([e]);assert.equal(record.events.length,1);
  assert.equal(episodes(record)[0].featureTitle,'Squad support and coordinated flanking');
 });
+const stealth=fixture('p02-quiet-presentation');
+const quietRow=(id,time,change={})=>row(id,time,'evaluated','QuietApproach',{feature:'P02',detail:{botInstance:'one',quiet:{...stealth.quiet,...change}}});
+const silentRow=(id,time,change={})=>row(id,time,'evaluated','SilentSearch',{feature:'P08',detail:{botInstance:'one',silentSearch:{...stealth.silentSearch,...change}}});
+const searchRow=()=>row(1,900,'accepted','Search',{detail:{botInstance:'one',candidates:[{decision:'Search',eligible:true,score:65}]}});
+check('quiet approach is visible without claiming ownership of native Search',()=>{
+ const v=view(ready([quietRow(1,1000)]),1100,'SAIN:Search',900);
+ assert.equal(v.title,'Quiet approach (crouch requested)');assert.equal(v.symbol,'quiet');assert.equal(v.badge,true);
+ assert.equal(v.owner,'SAIN');assert.equal(v.status,'Movement settings applied');assert.match(v.reason,/Heard the enemy looting/);
+ assert.equal(v.score,null);assert.equal(v.destination,null);assert.match(marker(v),/⌁/);assert.match(tip(v),/Quiet approach/);
+});
+check('quiet execution keeps the general plan and its score and is not buried by routine updates',()=>{
+ const r=ready([searchRow(),quietRow(2,1000),row(3,1050,'evaluated','TacticalDevices',{feature:'L02',detail:{botInstance:'one',tacticalDevices:{...fixture('l02-tactical-devices').tacticalDevices,action:'Search'}}})]);
+ const v=view(r,1100,'COMET:Search',950);
+ assert.equal(v.title,'Quiet approach (crouch requested)');assert.equal(v.plan,'Search');assert.equal(v.score,65);
+ assert.equal(v.interventions.length,2);assert.ok(r.events[2].tacticalDevices);
+ assert.equal(v.featureTitle,'Quiet approach');assert.match(marker(v),/rr-comet-aux.*⌁/);
+});
+check('walking approach does not claim crouching or guaranteed silence',()=>{
+ const v=view(ready([quietRow(1,1000,{state:'walk',lootBonus:false})]),1100,'SAIN:MoveToEngage',900);
+ assert.equal(v.title,'Quiet approach (slower movement)');assert.doesNotMatch(v.reason,/looting|inaudible|undetected/);
+});
+check('quiet intentions and refusals never become an executed action or readable history',()=>{
+ for(const q of [{applied:false},{active:false},{state:'normal',applied:false,active:false}]) {
+  const r=ready([quietRow(1,1000,q)]);assert.equal(view(r,1100,'SAIN:Search',900).badge,false);assert.equal(episodes(r).length,0);
+ }
+});
+check('quiet approach expires and is cleared by urgent actions Ghost and handoffs',()=>{
+ const r=ready([quietRow(1,1000)]);
+ for(const [at,decision,sampled,ghost] of [[999,'SAIN:Search',900,false],[2500,'SAIN:Search',900,false],[1100,'SAIN:Reload',1050,false],[1100,'Orbit:Loot',1050,false],[1100,'SAIN:Search',900,true]])
+  assert.equal(view(r,at,decision,sampled,ghost).badge,false);
+ assert.equal(view(ready([quietRow(1,1000),control(2,1050,'orbit')]),1100,'SAIN:Search',900).badge,false);
+ assert.equal(view(ready([quietRow(1,1000),row(2,1050,'selected','Hold',{detail:{botInstance:'two'}})]),1100,'SAIN:Search',900).badge,false);
+});
+check('quiet history groups repeated caps then records release without inventing success',()=>{
+ const r=ready([quietRow(1,1000),quietRow(2,2000),quietRow(3,2200,{state:'normal',active:false,applied:false,reason:'quiet-native-priority'})]);
+ const e=episodes(r);assert.equal(e.length,2);assert.equal(e[0].count,2);assert.equal(e[0].status,'Movement settings applied');assert.equal(e[1].status,'Stopped / released');
+ assert.equal(view(r,2250,'SAIN:Search',900).badge,false);
+ const before=view(r,1100,'SAIN:Search',900);view(r,2400,'SAIN:Reload',2300);assert.deepEqual(view(r,1100,'SAIN:Search',900),before);
+});
+check('observed search after silence surfaces purpose and walking without inventing a path',()=>{
+ const r=ready([silentRow(1,1000)]),v=view(r,1100,'SAIN:Search',1050);
+ assert.equal(v.title,'Walking to the last heard position');assert.equal(v.featureTitle,'Search after silence');assert.match(v.reason,/enemy went quiet for 15/);
+ assert.equal(v.destination,null);assert.equal(v.owner,'SAIN');assert.equal(episodes(r)[0].title,v.title);
+});
+check('search callback alone does not claim observed walking',()=>{
+ const v=view(ready([silentRow(1,1000,{walking:false,movementObserved:false})]),1100,'SAIN:Search',1050);
+ assert.equal(v.title,'Checking the last heard position');
+ assert.equal(view(ready([silentRow(1,1000,{walking:false})]),1100,'SAIN:Search',1050).title,'Searching after the enemy went quiet');
+});
+check('waiting refused and unexecuted searches stay out of Simple',()=>{
+ for(const s of [{state:'waiting',accepted:false,actionObserved:false},{state:'accepted',actionObserved:false},{state:'blocked'},{state:'ended'}]) {
+  const r=ready([silentRow(1,1000,s)]);assert.equal(view(r,1100,'SAIN:Search',1050).badge,false);assert.equal(episodes(r).length,0);
+ }
+});
+check('stale silent search does not label another action as a stealth approach',()=>{
+ const r=ready([silentRow(1,1000)]);
+ for(const [at,decision,sampled,ghost] of [[1100,'SAIN:Reload',1050,false],[1100,'COMET:Shoot',1050,false],[1100,'Orbit:Loot',1050,false],[1100,'SAIN:Search',1050,true],[2500,'SAIN:Search',1050,false]])
+  assert.equal(view(r,at,decision,sampled,ghost).interventions.length,0);
+});
 console.log(`${checks} COMET presentation checks with feature names passed.`);
+
+const measured=fixture('t04-observed-movement');
+const motionRow=(id,time,change={},journal={})=>row(id,time,'evaluated','ControlJournal',{feature:'T04',detail:{botInstance:'one',controlJournal:{...measured.controlJournal,...journal,motion:{...measured.controlJournal.motion,...change}}}});
+check('actual crouch movement remains visible when quiet approach was refused',()=>{
+ const r=ready([searchRow(),quietRow(2,1000,{state:'normal',active:false,applied:false,reason:'quiet-too-far'}),motionRow(3,1050)]);
+ const v=view(r,1100,'COMET:Search',1000);
+ assert.equal(v.title,'Search');assert.equal(v.score,65);assert.equal(v.movement,'Crouch-walking slowly · 0.6 m/s');
+ assert.equal(v.interventions.length,0);assert.match(tip(v),/Observed: Crouch-walking/);
+});
+check('motion alone never grants COMET ownership a badge or an invented intention',()=>{
+ const v=view(ready([motionRow(1,1000)]),1100,'SAIN:Search',900);
+ assert.equal(v.owner,'SAIN');assert.equal(v.badge,false);assert.equal(v.score,null);assert.equal(v.interventions.length,0);
+ assert.match(v.movement,/Crouch-walking/);assert.doesNotMatch(tip(v),/inaudible|undetected|noise|Quiet approach/);
+ assert.equal(episodes(ready([motionRow(1,1000)])).length,0);
+});
+check('motion survives intervening diagnostics but stops at lifecycle ownership and time boundaries',()=>{
+ const motion=motionRow(1,1000),later=row(2,1050,'evaluated','QuietApproach',{feature:'P02',detail:{botInstance:'one',quiet:{...stealth.quiet,applied:false}}});
+ const r=ready([motion,later]);assert.match(view(r,1100,'SAIN:Search',900).movement,/Crouch/);
+ for(const [at,decision,sampled,ghost] of [[999,'SAIN:Search',900,false],[2500,'SAIN:Search',900,false],[1100,'SAIN:Search',900,true],[1100,'Orbit:Loot',1050,false]])assert.equal(view(r,at,decision,sampled,ghost).movement,'');
+ assert.equal(view(ready([motion,control(2,1050,'orbit')]),1100,'SAIN:Search',900).movement,'');
+ assert.equal(view(ready([motion,motionRow(2,1050,{}, {owner:'recovery',motion:null})]),1100,'SAIN:Search',900).movement,'');
+ assert.equal(view(ready([motion,row(2,1050,'selected','Hold',{detail:{botInstance:'two'}})]),1100,'SAIN:Search',900).movement,'');
+ const before=view(r,1100,'SAIN:Search',900);view(r,9000);assert.deepEqual(view(r,1100,'SAIN:Search',900),before);
+});
+console.log(`${checks} COMET presentation checks including observed movement passed.`);

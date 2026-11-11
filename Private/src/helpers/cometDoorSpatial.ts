@@ -7,7 +7,7 @@ export function parseCometDoorSpatial(raw:any):DoorSpatialContext|null {
     if(!['reason','door','doorState','source','blocker','blockerState'].every(k=>typeof raw[k]==='string')||!raw.door)return null
     if(!['margin','validFor','x','y','z'].every(k=>typeof raw[k]==='number'&&Number.isFinite(raw[k])))return null
     if(raw.margin<.25||raw.margin>1.25||raw.validFor<0||raw.validFor>.6||raw.state==='ended'&&raw.validFor!==0)return null
-    if(!['native','waypoints','native-legacy','waypoints-legacy','unknown'].includes(raw.source))return null
+    if(!['native','native-physical-floor','waypoints','native-legacy','waypoints-legacy','unknown'].includes(raw.source))return null
     return {...raw}
 }
 export function cometDoorSpatialSummary(t:DoorSpatialContext):string[] {

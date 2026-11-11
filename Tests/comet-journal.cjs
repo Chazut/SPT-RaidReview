@@ -33,3 +33,22 @@ check('T04 map context survives later T01 event',()=>{const later={...row,id:11,
 check('T04 expiry, Ghost and identity reset',()=>{const r={status:'ready',events:prepare([cr],'pmc')};assert.ok(!state(r,9000,'SAIN:Shoot',8500,false).controlJournal);assert.ok(!state(r,1600,'SAIN:Shoot',1400,true).controlJournal);assert.ok(!state(r,999,'SAIN:Shoot',0,false).controlJournal);const other={...row,id:12,time:1500,feature:'T01',detail:{botInstance:'different',combatJournal:{kind:'context'}}};assert.ok(!state({status:'ready',events:prepare([cr,other],'pmc')},1600,'SAIN:Shoot',1500,false).controlJournal)});
 check('T04 missing pages stays partial',()=>assert.equal(parse(controlPages.slice(1).map(event))[0].complete,false));
 console.log(`Including T04: ${n} report/map checks passed.`);
+const motionFixture=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/t04-observed-movement.json'),'utf8'));
+check('actual C# locomotion payload and standalone movement heartbeat parse',()=>{
+ const ctx=detail(motionFixture,'T04');assert.equal(ctx.motion.pose,.35);assert.equal(ctx.motion.speed,.6);assert.match(ctx.lines.join(' '),/Crouch-walking slowly/);
+ const heartbeat=clone(motionFixture);heartbeat.controlJournal.kind='movement';assert.ok(detail(heartbeat,'T04').motion);
+});
+check('invalid optional locomotion cannot corrupt the control journal',()=>{
+ for(const change of [{pose:2},{pose:-1},{speed:21},{speed:NaN},{prone:'true'},{sprinting:1},{validFor:10},{validFor:0}]){
+  const e=clone(motionFixture);Object.assign(e.controlJournal.motion,change);const v=detail(e,'T04');assert.ok(v);assert.equal(v.motion,undefined);
+ }
+ const e=clone(motionFixture);e.controlJournal.owner='sleep';assert.equal(detail(e,'T04').motion,undefined);
+});
+check('posture labels distinguish crouch prone sprint and stationary native states',()=>{
+ const label=load(path.join(__dirname,'../Private/src/helpers/cometJournal.ts')).observedMotionLabel;
+ const m=motionFixture.controlJournal.motion;
+ assert.equal(label({...m,prone:true}),'Crawling');assert.equal(label({...m,prone:true,speed:0}),'Prone');
+ assert.equal(label({...m,speed:0}),'Crouched');assert.equal(label({...m,pose:1,sprinting:true,speed:5}),'Sprinting');
+ assert.equal(label({...m,pose:1}),'Walking slowly');assert.equal(label({...m,pose:1,speed:0}),'Standing still');
+});
+console.log(`Including locomotion: ${n} report/map checks passed.`);

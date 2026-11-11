@@ -1,0 +1,16 @@
+{
+  "quiet": {
+    "state": "crouch", "reason": "quiet-approach", "target": "enemy", "action": "Search",
+    "source": "heard", "personality": "SnappingTurtle", "active": true, "applied": true,
+    "age": 2, "path": 18, "chance": 0.8, "roll": 0.2, "used": 3, "remaining": 17,
+    "speedCap": 0.3, "poseCap": 0.35, "nativeSpeed": 1, "appliedSpeed": 0.3,
+    "nativePose": 1, "appliedPose": 0.35, "validFor": 1.5, "lootBonus": true
+  },
+  "silentSearch": {
+    "state": "observed", "reason": "silent-search-observed", "target": "enemy",
+    "personality": "Normal", "choice": "Search", "silence": 15, "delay": 15,
+    "remaining": 10, "bonus": 15, "validFor": 1.5, "x": 3, "y": 2, "z": 7,
+    "eligible": true, "reconsider": true, "accepted": true, "actionObserved": true,
+    "movementObserved": true, "walking": true
+  }
+}

@@ -2,7 +2,20 @@ const object=(v:any):v is Record<string,any>=>v!==null&&typeof v==='object'&&!Ar
 const text=(v:any,max=96):v is string=>typeof v==='string'&&v.length<=max
 const number=(v:any)=>typeof v==='number'&&Number.isFinite(v)&&v>=0
 const count=(v:any)=>number(v)&&Number.isSafeInteger(v)
-export type JournalContext={lines:string[];validFor:number}
+export type ObservedMotion={pose:number;speed:number;prone:boolean;sprinting:boolean;validFor:number}
+export type JournalContext={lines:string[];validFor:number;owner?:string;motion?:ObservedMotion}
+export function parseObservedMotion(v:any):ObservedMotion|undefined {
+    if(!object(v)||!number(v.pose)||v.pose>1||!number(v.speed)||v.speed>20||typeof v.prone!=='boolean'||typeof v.sprinting!=='boolean'||!number(v.validFor)||v.validFor<=0||v.validFor>1.5)return undefined
+    return {pose:v.pose,speed:v.speed,prone:v.prone,sprinting:v.sprinting,validFor:v.validFor}
+}
+export function observedMotionLabel(v:ObservedMotion):string {
+    const moving=v.speed>=.12,slow=v.speed<=1
+    if(v.prone)return moving?'Crawling':'Prone'
+    if(v.sprinting&&moving)return 'Sprinting'
+    if(v.pose<=.5)return moving?`Crouch-walking${slow?' slowly':''}`:'Crouched'
+    if(v.pose<.9)return moving?`Moving with a lowered stance${slow?' slowly':''}`:'Lowered stance'
+    return moving?slow?'Walking slowly':'Moving':'Standing still'
+}
 export function parseCometJournal(detail:any,feature:string):JournalContext|null {
     if(!object(detail))return null
     if(feature==='T04')return parseControlJournal(detail.controlJournal)
@@ -87,12 +100,14 @@ export function parseJournalReports(events:unknown):JournalReport[] {
 }
 
 export function parseControlJournal(v:any):JournalContext|null {
-    if(!object(v)||!['baseline','gap','interval','suspended','resumed','combat-ended','takeover','combat-return','incident-start','incident-update','incident-end','long-wait','residual','context'].includes(v.kind))return null
+    if(!object(v)||!['baseline','gap','interval','suspended','resumed','combat-ended','takeover','combat-return','incident-start','incident-update','incident-end','long-wait','residual','context','movement'].includes(v.kind))return null
     if(!['owner','previousOwner','layer','action','feature','blocker','reason','residual'].every(k=>text(v[k],256))||!['elapsed','sampledSeconds','waitSeconds'].every(k=>number(v[k]))||!count(v.cycles)||!count(v.incident)||typeof v.waiting!=='boolean')return null
     const lines=[`Control transition: ${v.kind} - ${v.reason}`,`Layer: ${v.layer||'unknown'} (${v.owner})`,`Observed action: ${v.action||'unobserved'}${v.feature?' - COMET '+v.feature:''}`,`Context: ${v.blocker}`]
     if(v.waiting||v.elapsed>0)lines.push(`${v.waiting?'Pending transition':'Transition observation'}: ${v.elapsed.toFixed(1)} s`)
     if(v.incident>0)lines.push(`Possible repeated-transition incident #${v.incident} - ${v.cycles} rapid round trips`)
     if(v.residual)lines.push(`COMET records: ${v.residual}. A record alone does not prove a native command is still executing.`)
     if(v.kind==='long-wait')lines.push('Review this wait; medical, recovery or unknown reasons are not automatically a bug.')
-    return {lines,validFor:7}
+    const motion=v.owner==='combat'?parseObservedMotion(v.motion):undefined
+    if(motion)lines.push(`Observed movement: ${observedMotionLabel(motion)} - ${motion.speed.toFixed(1)} m/s; pose ${motion.pose.toFixed(2)}. Native state, not proof of COMET ownership or inaudible footsteps.`)
+    return {lines,validFor:7,owner:v.owner,motion}
 }

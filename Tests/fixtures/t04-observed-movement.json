@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "session": "i02-controlled",
+  "sequence": 1,
+  "feature": "T04",
+  "stage": "evaluated",
+  "decision": "ControlJournal",
+  "reason": "observed-baseline",
+  "profileId": "2df4e69e-18a9-4a9c-bf5a-e7dd16de4092",
+  "name": "PMC",
+  "botInstance": "da995cad-42d3-4663-9fb6-92f339ebdddf",
+  "personality": "Normal",
+  "realtime": 500.0,
+  "configRevision": 42,
+  "controlJournal": {
+    "kind": "baseline",
+    "owner": "combat",
+    "previousOwner": "combat",
+    "layer": "SAIN : Combat Layer",
+    "action": "SearchAction",
+    "feature": "",
+    "blocker": "combat-active",
+    "reason": "observed-baseline",
+    "residual": "",
+    "elapsed": 0.0,
+    "sampledSeconds": 0.0,
+    "waitSeconds": 0.0,
+    "waiting": false,
+    "cycles": 0,
+    "incident": 0,
+    "motion": {
+      "pose": 0.35,
+      "speed": 0.6,
+      "prone": false,
+      "sprinting": false,
+      "validFor": 1.5
+    }
+  }
+}

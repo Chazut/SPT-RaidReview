@@ -3,9 +3,10 @@ import { formatDecisionLabel, getDecisionSource } from './botBehavior'
 import { squadEventTitle, CrossfireContext } from './cometCrossfire'
 import { cometTacticalDeviceLabel, TacticalDevicesContext } from './cometTacticalDevices'
 import { cometFeatureLabel } from './cometFeatureLabels'
+import { observedMotionLabel } from './cometJournal'
 
 export type CometMode = 'simple' | 'debug'
-export type CometSymbol = 'move' | 'hold' | 'fire' | 'reload' | 'medical' | 'grenade' | 'door' | 'look' | 'light' | 'voice'
+export type CometSymbol = 'move' | 'hold' | 'fire' | 'reload' | 'medical' | 'grenade' | 'door' | 'look' | 'light' | 'voice' | 'quiet'
 type Context = Record<string, unknown>
 type Point = { x: number; y: number; z: number }
 type Rule = { key: string; index: string; title: string; symbol: CometSymbol; observed: (c: Context) => boolean; destination?: (c: Context) => Point | null }
@@ -15,6 +16,7 @@ const rule = (key: string, index: string, title: string, symbol: CometSymbol, ob
 // Some contexts are recorded on a shared decision event. Name the context itself,
 // not the enclosing event (notably the shared context for several squad tactics).
 const activityFeatures: Record<string, string> = {
+    quiet:'P02', silentSearch:'P08',
     postCombat:'H04', medicalChoice:'H01', medicalPosture:'H03', surgeryInterruption:'H02',
     reloadTiming:'W01', quickReload:'W04', pistolSwap:'W02', weaponReturn:'W03', weaponRange:'W05', handsRecovery:'W10',
     grenadeJudgment:'G01', grenadeReaction:'G05', ownGrenadeSafety:'G04', gasExposure:'G08',
@@ -30,9 +32,11 @@ function activityFeature(key: string, c: Context): string {
     return activityFeatures[key] || ''
 }
 
-// These are execution facts, not eligibility/selection/request flags. A diagnostic
-// being available must never light up a marker or replace the observed controller.
+// These are execution facts or explicitly labelled applied movement settings,
+// not eligibility/selection flags. A diagnostic alone must never light up a marker.
 const rules: Rule[] = [
+    rule('quiet', 'quietIndex', 'Quiet approach', 'quiet', c => c.active === true && c.applied === true && ['walk', 'crouch'].includes(String(c.state))),
+    rule('silentSearch', 'silentIndex', 'Checking the last heard position', 'look', c => c.accepted === true && c.actionObserved === true),
     rule('crossfire', 'crossfireIndex', 'Taking another angle with the squad', 'move', yes('applied'), c => point(c, 'goal')),
     rule('postCombat', 'postCombatIndex', 'Recovering after combat', 'medical', yes('applied')),
     rule('medicalChoice', 'medicalChoiceIndex', 'Using medical supplies', 'medical', yes('started')),
@@ -85,6 +89,12 @@ const rules: Rule[] = [
     rule('readyStance', 'readyStanceIndex', 'Keeping the weapon ready', 'hold', yes('observedRaised')),
 ]
 function activityTitle(r: Rule, c: Context): string {
+    // P02 records caps applied to native movement, not measured footsteps or
+    // proof that the opponent did not hear the bot. Do not promise total silence.
+    if (r.key === 'quiet') return c.state === 'crouch' ? 'Quiet approach (crouch requested)' : 'Quiet approach (slower movement)'
+    if (r.key === 'silentSearch') return c.movementObserved === true
+        ? c.walking === true ? 'Walking to the last heard position' : 'Searching after the enemy went quiet'
+        : 'Checking the last heard position'
     if (r.key === 'crossfire') return squadEventTitle(c as unknown as CrossfireContext)
     if (r.key === 'tacticalDevices') {
         const d = c as unknown as TacticalDevicesContext
@@ -95,9 +105,19 @@ function activityTitle(r: Rule, c: Context): string {
     return r.title
 }
 function activityReason(r: Rule, c: Context, event: CometMapEvent): string {
+    if (r.key === 'quiet') return `Reducing movement noise while approaching a known contact.${c.lootBonus === true ? ' Heard the enemy looting.' : ''}`
+    if (r.key === 'silentSearch') return `The enemy went quiet${typeof c.silence === 'number' ? ` for ${c.silence.toFixed(1)} s` : ''}; checking the last heard location.`
     if (r.key === 'retreatWeave') return `Movement/gaze commands applied. Observed head pitch: ${Number(c.observedPitch).toFixed(0)}°; turn: ${Number(c.observedYaw).toFixed(0)}°.`
     if (r.key === 'tacticalDevices') return `COMET applied ${c.source === 'SAIN' ? "SAIN's requested" : 'the holstered weapon'} state; confirmed on the weapon.`
     return cometReason(String(c.reason || event.reason))
+}
+function activityStatus(r: Rule): string {
+    if (r.key === 'quiet') return 'Movement settings applied'
+    return r.key === 'retreatWeave' ? 'Movement/gaze commands applied' : 'Observed intervention'
+}
+function activityEnded(r: Rule, c: Context): boolean {
+    return ['ended', 'released', 'completed', 'failed'].includes(String(c.state))
+        || (r.key === 'quiet' && c.state === 'normal' && c.active !== true)
 }
 export function cometEventAt(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
     const events = record?.events || []
@@ -125,7 +145,7 @@ export function actionSymbol(action: string): CometSymbol {
     if (/hold|cover|freeze/i.test(action)) return 'hold'
     return 'move'
 }
-export const symbolText: Record<CometSymbol, string> = { move: '↗', hold: '◇', fire: '⌖', reload: '↻', medical: '+', grenade: '●', door: '⇥', look: '◉', light: '☼', voice: '♪' }
+export const symbolText: Record<CometSymbol, string> = { move: '↗', hold: '◇', fire: '⌖', reload: '↻', medical: '+', grenade: '●', door: '⇥', look: '◉', light: '☼', voice: '♪', quiet: '⌁' }
 type Activity = { title: string; featureTitle: string; reason: string; symbol: CometSymbol; event?: CometMapEvent; destination: Point | null; status: string }
 export type CometPresentation = {
     owner: string; title: string; status: string; reason: string; badge: boolean; symbol: CometSymbol | null;
@@ -133,6 +153,7 @@ export type CometPresentation = {
     interventions: Activity[]; score: number | null; factors: { label: string; delta: number }[];
     alternatives: { label: string; eligible: boolean; score: number | null; reason: string }[];
     contact: string; selection: string; featureTitle: string; plan: string; planSymbol: CometSymbol | null;
+    movement: string;
 }
 export function cometPresentation(record: CometMapRecord | undefined, at: number, sampledDecision = '', sampledAt = 0, ghost = false, names: Record<string, string> = {}, resolved?: ReturnType<typeof cometMapState>): CometPresentation {
     const state = resolved || cometMapState(record, at, sampledDecision, sampledAt, ghost)
@@ -145,16 +166,23 @@ export function cometPresentation(record: CometMapRecord | undefined, at: number
     const boundary = Math.max(handedOff, outsideCombat ? sampledAt : -Infinity)
     const life = indexed(record, last, 'lifecycleIndex')
     const stopped = ghost || !!(life && life.lifecycle?.state !== 'resumed')
+    const motionEvent = indexed(record, last, 'motionIndex')
+    const motion = motionEvent?.controlJournal?.motion
+    const movement = !stopped && motion && motionEvent && motionEvent.time > boundary && at >= motionEvent.time && at-motionEvent.time < motion.validFor*1000
+        ? `${observedMotionLabel(motion)}${motion.speed>=.12?` · ${motion.speed.toFixed(1)} m/s`:''}` : ''
     const interventions: Activity[] = []
     if (!stopped) for (const r of rules) {
         const c = (state as unknown as Record<string, unknown>)[r.key] as Context | undefined
         const event = indexed(record, last, r.index)
         if (!c || !event || event.time <= boundary || !r.observed(c)) continue
+        if (r.key === 'silentSearch' && sampledAt >= event.time && !['SAIN:Search', 'COMET:Search'].includes(sampledDecision)) continue
         if (['ended', 'released', 'failed', 'completed', 'refused', 'unavailable'].includes(String(c.state))) continue
         const destination = r.destination?.(c) || null
-        interventions.push({ title: activityTitle(r,c), featureTitle: cometFeatureLabel(activityFeature(r.key,c)), reason: activityReason(r,c,event), symbol: r.symbol, event, destination, status: r.key === 'retreatWeave' ? 'Movement/gaze commands applied' : 'Observed intervention' })
+        interventions.push({ title: activityTitle(r,c), featureTitle: cometFeatureLabel(activityFeature(r.key,c)), reason: activityReason(r,c,event), symbol: r.symbol, event, destination, status: activityStatus(r) })
     }
-    interventions.sort((a, b) => (b.event?.time || 0) - (a.event?.time || 0))
+    // An active quiet approach is useful context throughout its short lease;
+    // routine stance/device updates must not continually hide it.
+    interventions.sort((a, b) => Number(b.symbol === 'quiet') - Number(a.symbol === 'quiet') || (b.event?.time || 0) - (a.event?.time || 0))
     const currentCore = !stopped && state.actionActive && (!state.event || state.event.time > handedOff)
     const observedCore = currentCore && (sampledDecision === state.decision || !!state.crossfire?.applied || !!state.postCombat?.applied)
     const core: Activity | null = currentCore ? { title: state.crossfire ? squadEventTitle(state.crossfire) : formatDecisionLabel(state.decision), featureTitle: cometFeatureLabel(state.crossfire ? activityFeature('crossfire',state.crossfire as unknown as Context) : state.event?.feature), reason: state.crossfire ? cometReason(state.crossfire.reason) : state.event ? cometReason(state.event.choiceReason || state.event.reason) : 'Recorded in the bot\'s behavior.', symbol: actionSymbol(state.decision), event: state.event, destination: null, status: observedCore ? 'In progress' : 'Chosen · execution not yet observed' } : null
@@ -191,7 +219,7 @@ export function cometPresentation(record: CometMapRecord | undefined, at: number
         else if (hearing && at-hearing.time < 2000 && hearing.hearing?.outcome==='heard') signal={glyph:'?',title:'Movement heard'}
     }
     return { owner, title: primary?.title || (ghost ? ghostObjective || 'Sleeping' : formatDecisionLabel(state.decision) || (owner==='ORBIT'?'Following an objective':'No COMET action observed')), featureTitle: primary?.featureTitle || '', plan, planSymbol: observedCore ? core!.symbol : null, status: primary?.status || 'Current behavior', reason: primary?.reason || '', badge: !!observedCore || interventions.length>0, symbol: interventions[0]?.symbol || (observedCore ? core!.symbol : null), signal,
-        destination: interventions.find(a=>a.destination)?.destination || null, event, interventions, score: chosen?.score ?? null, factors, alternatives, contact:contactText, selection }
+        destination: interventions.find(a=>a.destination)?.destination || null, event, interventions, score: chosen?.score ?? null, factors, alternatives, contact:contactText, selection, movement }
 }
 
 const escape = (s: string) => s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
@@ -206,7 +234,7 @@ export function cometMarkerHtml(view: CometPresentation, role = ''): string {
         + (role ? `<span class="rr-comet-role">${escape(role)}</span>` : '')
 }
 export function cometSimpleTooltip(view: CometPresentation): string {
-    return `<div class="rr-comet-brief"><b>${escape(view.owner)}</b> · ${escape(cometActionText(view))}${view.plan?`<div>Plan: ${escape(view.plan)}</div>`:''}${view.status.startsWith('Chosen')?`<div>${escape(view.status)}</div>`:''}${view.reason?`<div>${escape(view.reason)}</div>`:''}${view.interventions.filter(a=>a.title!==view.title).slice(0,2).map(a=>`<div>${symbolText[a.symbol]} ${escape(cometActionText(a))}</div>`).join('')}${view.score!=null?`<div>${view.plan?'Plan':'Decision'} score: ${view.score.toFixed(1)}</div>`:''}<small>Click the bot for details</small></div>`
+    return `<div class="rr-comet-brief"><b>${escape(view.owner)}</b> · ${escape(cometActionText(view))}${view.plan?`<div>Plan: ${escape(view.plan)}</div>`:''}${view.status.startsWith('Chosen')?`<div>${escape(view.status)}</div>`:''}${view.movement?`<div>Observed: ${escape(view.movement)}</div>`:''}${view.reason?`<div>${escape(view.reason)}</div>`:''}${view.interventions.filter(a=>a.title!==view.title).slice(0,2).map(a=>`<div>${symbolText[a.symbol]} ${escape(cometActionText(a))}</div>`).join('')}${view.score!=null?`<div>${view.plan?'Plan':'Decision'} score: ${view.score.toFixed(1)}</div>`:''}<small>Click the bot for details</small></div>`
 }
 
 export type CometEpisode = { start: number; end: number; count: number; title: string; featureTitle: string; status: string; event: CometMapEvent }
@@ -242,7 +270,7 @@ export function cometEpisodes(record?: CometMapRecord): CometEpisode[] {
         } else {
             const ended = rules.find(r => {
                 const c = (event as unknown as Context)[r.key] as Context | undefined
-                return c && ['ended','released','completed','failed'].includes(String(c.state)) && observedActions.has(`${event.cometSession}:${event.instance}:${r.key}`)
+                return c && activityEnded(r,c) && observedActions.has(`${event.cometSession}:${event.instance}:${r.key}`)
             })
             const match = rules.find(r => {
                 const c = (event as unknown as Context)[r.key] as Context | undefined
@@ -256,7 +284,7 @@ export function cometEpisodes(record?: CometMapRecord): CometEpisode[] {
             }
             else if (match) {
                 feature = activityFeature(match.key,(event as unknown as Context)[match.key] as Context)
-                title = activityTitle(match, (event as unknown as Context)[match.key] as Context); status = match.key === 'retreatWeave' ? 'Movement/gaze commands applied' : 'Observed intervention'
+                title = activityTitle(match, (event as unknown as Context)[match.key] as Context); status = activityStatus(match)
                 observedActions.add(`${event.cometSession}:${event.instance}:${match.key}`)
             }
             else continue

@@ -46,6 +46,7 @@ export default function CometSquadPanel({ members, records, roles, samples, time
                     <span className="rr-comet-member-action">{!sample?.present ? 'Not present' : view && <>{view.symbol && `${symbolText[view.symbol]} `}{view.title}</>}</span>
                     {view?.featureTitle && view.featureTitle !== view.title && <span>{view.featureTitle}</span>}
                     {view?.plan && <span>Plan: {view.plan}</span>}
+                    {view?.movement && <span className="rr-comet-motion" title="Observed posture and speed, independent of plan ownership.">Observed: {view.movement}</span>}
                     {view && r && <span>Squad: {r.role} · {r.status}</span>}
                     {view && view.status && (mode==='debug' || !['In progress','Current behavior'].includes(view.status)) && <span>{view.status}</span>}
                 </button>
