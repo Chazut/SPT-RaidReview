@@ -9,7 +9,8 @@ export function parseCometHandsRecovery(r:any):HandsRecoveryContext|null {
   ||['reason','held','targetWeapon','targetSlot','operation','action','contact'].some(k=>typeof r[k]!=='string')||!r.held
   ||['confirmedSeconds','requiredSeconds','retryRemaining','requestAge','validFor'].some(k=>typeof r[k]!=='number'||!Number.isFinite(r[k])||r[k]<0)
   ||r.validFor>6||r.requiredSeconds<1||r.requiredSeconds>20
-  ||!Number.isSafeInteger(r.attempts)||r.attempts<0||r.attempts>3||!Number.isSafeInteger(r.limit)||r.limit<1||r.limit>3
+  ||!Number.isSafeInteger(r.attempts)||r.attempts<0||!Number.isSafeInteger(r.limit)||r.limit<0||r.limit>3
+  ||r.kind==='grenade'&&(r.attempts>3||r.limit<1)
   ||['reloadFlag','nativeReload','accepted','inHands','ready'].some(k=>typeof r[k]!=='boolean')
   ||['recovered','ended'].includes(r.state)!==(r.validFor===0)
   ||r.ready&&(!r.inHands||r.kind!=='grenade'||r.state!=='recovered')
@@ -25,7 +26,7 @@ export function parseCometHandsRecovery(r:any):HandsRecoveryContext|null {
 export function cometHandsRecoverySummary(t:HandsRecoveryContext):string[] {
  return [`${t.kind==='reload'?'Stale reload flag':'Abandoned grenade'} · ${t.state} · ${t.reason.replace(/-/g,' ')}`,
   `Hands: ${t.held} · Native operation: ${t.operation}`,
-  `Confirmed inactivity: ${t.confirmedSeconds.toFixed(1)} / ${t.requiredSeconds.toFixed(1)} s · Attempts: ${t.attempts}/${t.limit}`,
+  `Confirmed inactivity: ${t.confirmedSeconds.toFixed(1)} / ${t.requiredSeconds.toFixed(1)} s · Attempts: ${t.attempts}${t.limit>0?`/${t.limit}`:''}`,
   `Native reload: ${t.nativeReload?'active':'inactive'} · Reload flag: ${t.reloadFlag?'set':'clear'}`,
   ...(t.kind==='grenade'?[`Existing weapon: ${t.targetWeapon||'unavailable'} · In hands: ${t.inHands?'yes':'no'} · Ready: ${t.ready?'yes':'no'}`]:[]),
   `Request accepted: ${t.accepted?'yes':'no'} · Result: ${t.state==='recovered'?'observed recovery':'not confirmed'}`,

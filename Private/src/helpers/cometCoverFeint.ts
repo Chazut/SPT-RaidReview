@@ -7,7 +7,7 @@ export type CoverFeintContext = {
     alternatives:string[];
 }
 export function parseCometCoverFeint(r:any):CoverFeintContext|null {
-    if(!r||Array.isArray(r)||!['planning','out-pending','out','show','back-pending','back','pause','mag-pending','mag-check','hold','ended'].includes(r.state)
+    if(!r||Array.isArray(r)||!['planning','out-pending','out','show','back-pending','back','pause','final-hold','mag-pending','mag-check','hold','ended'].includes(r.state)
         ||!['peek','magazine',''].includes(r.kind)||['reason','target','source','action','soundEvent'].some(k=>typeof r[k]!=='string')||!r.target||r.source!=='personal-vision'||r.action!=='Freeze'
         ||['episode','completedPeeks','moveRequests','jumpsAccepted','soundEvents','playbackSubmissions'].some(k=>!Number.isSafeInteger(r[k])||r[k]<0)
         ||['validFor','elapsed','contactAge','peekChance','magazineChance','peekRoll','magazineRoll','orderRoll','peekWeight','magazineWeight','exposure','hold','pause','speed','distanceMoved','x','y','z','knownX','knownY','knownZ','goalX','goalY','goalZ'].some(k=>typeof r[k]!=='number'||!Number.isFinite(r[k]))
@@ -19,8 +19,7 @@ export function parseCometCoverFeint(r:any):CoverFeintContext|null {
         ||r.magazineAccepted&&!r.magazineRequested||r.animationObserved&&!r.magazineAccepted||r.playbackSubmissions>0&&!r.magazineAccepted
         ||r.state==='ended'&&r.validFor!==0||r.state!=='ended'&&(r.validFor<=0||!r.kind||!r.requested)
         ||['mag-pending','mag-check','hold'].includes(r.state)&&r.kind!=='magazine'
-        ||['out-pending','out','show','back-pending','back','pause'].includes(r.state)&&r.kind!=='peek'
-        ||r.state==='hold'&&(!r.animationObserved||!r.weaponReady))return null;
+        ||['out-pending','out','show','back-pending','back','pause','final-hold'].includes(r.state)&&r.kind!=='peek')return null;
     return {...r,alternatives:Array.isArray(r.alternatives)?r.alternatives.filter((v:any)=>typeof v==='string').slice(0,8):[]};
 }
 export function cometCoverFeintSummary(t:CoverFeintContext):string[] {
@@ -30,7 +29,7 @@ export function cometCoverFeintSummary(t:CoverFeintContext):string[] {
         `Peek: ${t.peekChance}% chance / ${t.peekRoll.toFixed(1)} roll · Magazine: ${t.magazineChance}% / ${t.magazineRoll.toFixed(1)} · Order weights ${t.peekWeight.toFixed(1)} / ${t.magazineWeight.toFixed(1)}`,
         `Requested / accepted / movement / returned: ${[t.requested,t.accepted,t.movementObserved,t.returnedObserved].map(yn).join(' / ')}`,
         `Peeks completed: ${t.completedPeeks} · Exposure after arrival: ${t.exposure.toFixed(2)} s · Exposed observed: ${yn(t.exposedObserved)} · Jumps accepted: ${t.jumpsAccepted}`,
-        `Magazine requested / accepted / animation / weapon ready: ${[t.magazineRequested,t.magazineAccepted,t.animationObserved,t.weaponReady].map(yn).join(' / ')} · Hold after readiness: ${t.hold.toFixed(1)} s`,
+        `Magazine requested / accepted / animation / weapon ready: ${[t.magazineRequested,t.magazineAccepted,t.animationObserved,t.weaponReady].map(yn).join(' / ')} · Hold duration: ${t.hold.toFixed(1)} s`,
         `Native sound events: ${t.soundEvents} (${t.soundEvent||'none'}) · Playback submissions: ${t.playbackSubmissions} · Enemy hearing not confirmed`,
         `Observed incoming fire: ${yn(t.drewFire)} · Observed approach: ${yn(t.approachObserved)} · These observations do not prove the feint caused them`,
         `Actual movement ${t.distanceMoved.toFixed(1)} m · Speed ${t.speed.toFixed(1)} m/s · Elapsed ${t.elapsed.toFixed(1)} s`,...t.alternatives];

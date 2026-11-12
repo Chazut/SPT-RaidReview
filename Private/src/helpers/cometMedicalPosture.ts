@@ -14,8 +14,7 @@ export function parseCometMedicalPosture(t:any):MedicalPostureContext|null {
  ||['waiting-weapon','centering','settling','resumed'].includes(t.state)&&(t.using||t.medicineHands)
  ||t.state==='waiting-weapon'&&t.weaponReady
  ||t.state==='centering'&&(!t.weaponReady||t.neutral)
- ||['settling','resumed'].includes(t.state)&&(!t.weaponReady||!t.neutral)
- ||t.state==='resumed'&&t.stableFor+1e-6<t.resumeDelay
+ ||t.state==='settling'&&(!t.weaponReady||!t.neutral)
  ||!Array.isArray(t.alternatives)||t.alternatives.length>4||t.alternatives.some((a:any)=>!text(a)))return null;
  return t;
 }

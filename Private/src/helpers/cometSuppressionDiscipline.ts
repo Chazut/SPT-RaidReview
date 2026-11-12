@@ -10,16 +10,15 @@ export function parseCometSuppressionDiscipline(r:any):SuppressionDisciplineCont
  if(!r||Array.isArray(r)||!['waiting','firing','paused','ended','rejected'].includes(r.state)
   ||['reason','target','weapon','mode','source','action','supportPlan'].some(k=>typeof r[k]!=='string')
   ||['episode','loaded','capacity','reserve','burstLimit','burstShots','actualShots'].some(k=>!Number.isSafeInteger(r[k])||r[k]<0)
-  ||r.burstLimit<1||r.burstLimit>15||r.burstShots>r.actualShots||r.reserve>r.capacity
+  ||r.burstLimit<1||r.burstLimit>15||r.reserve>r.capacity
   ||['contactAge','elapsed','remaining','pauseRemaining','validFor'].some(k=>typeof r[k]!=='number'||!Number.isFinite(r[k])||r[k]<0)
   ||r.validFor>.3||r.remaining>15||r.pauseRemaining>10.4
   ||['knownX','knownY','knownZ','aimX','aimY','aimZ'].some(k=>typeof r[k]!=='number'||!Number.isFinite(r[k]))
   ||['requested','accepted','clear','allySafe','aligned'].some(k=>typeof r[k]!=='boolean')
   ||r.accepted&&!r.requested||r.burstShots>0&&!r.requested
-  ||inactive&&r.validFor!==0||!inactive&&(r.validFor<=0||r.episode<1||!r.weapon||!r.target||r.loaded>r.capacity
-    ||!['personal-vision','personal-incoming'].includes(r.source))
-  ||r.state==='firing'&&(!r.clear||!r.allySafe||!r.aligned||r.pauseRemaining>0)
-  ||r.state==='paused'&&(r.pauseRemaining<=0||r.burstShots<r.burstLimit))return null;
+  ||inactive&&r.validFor!==0||!inactive&&(r.validFor<=0||r.episode<1||!r.weapon||!r.target||r.loaded>r.capacity)
+  ||r.state==='firing'&&r.pauseRemaining>0
+  ||r.state==='paused'&&r.pauseRemaining<=0)return null;
  return {...r,alternatives:Array.isArray(r.alternatives)?r.alternatives.filter((v:any)=>typeof v==='string').slice(0,8):[]};
 }
 export function cometSuppressionDisciplineSummary(t:SuppressionDisciplineContext):string[] {

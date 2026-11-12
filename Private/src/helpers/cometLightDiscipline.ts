@@ -17,8 +17,8 @@ export function parseCometLightDiscipline(r:any):LightDisciplineContext|null {
         ||r.observedOff!==(r.devices>0&&r.activeDevices===0)
         ||r.validFor>0&&r.state!=='dark'
         ||!Array.isArray(r.modes)||r.modes.length>16||r.modes.some((v:any)=>typeof v!=='string')
-        ||r.state==='dark'&&(!r.observedOff||!r.contact||!r.known||!['personal-hearing','personal-vision'].includes(r.source)
-            ||r.contactAge===null||r.distance===null||r.speed===null||!r.weapon||!r.tactic||r.modes.length!==r.devices))return null;
+        ||r.state==='dark'&&(!r.contact||!['personal-hearing','personal-vision','seen','heard'].includes(r.source)
+            ||!r.weapon||!r.tactic||r.modes.length!==r.devices))return null;
     return {...r,alternatives:Array.isArray(r.alternatives)?r.alternatives.filter((v:any)=>typeof v==='string').slice(0,8):[]};
 }
 export function cometLightDisciplineSummary(t:LightDisciplineContext):string[] {

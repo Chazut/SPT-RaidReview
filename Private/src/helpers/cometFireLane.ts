@@ -10,7 +10,7 @@ export function parseCometFireLane(r:any):FireLaneContext|null {
         ||!['','left','right'].includes(r.side)
         ||['validFor','wait','shotAge','width','prediction','speed','x','y','z','fromX','fromY','fromZ','toX','toY','toZ','goalX','goalY','goalZ'].some(k=>typeof r[k]!=='number'||!Number.isFinite(r[k]))
         ||['applied','confirmed','inside'].some(k=>typeof r[k]!=='boolean')
-        ||r.validFor<0||r.validFor>.25||r.wait<0||r.shotAge<0||r.speed<0||r.width<.3||r.width>1.5||r.prediction<.1||r.prediction>.6
+        ||r.validFor<0||r.validFor>.25||r.wait<0||r.shotAge<0||r.speed<0||r.width<.3||r.width>1.5||r.prediction<.1||r.prediction>1
         ||r.confirmed&&!r.applied||r.validFor>0&&(!r.confirmed||!r.applied)
         ||!['holding','stepping'].includes(r.state)&&(r.applied||r.confirmed||r.validFor!==0)
         ||r.state==='stepping'&&!r.side)return null;

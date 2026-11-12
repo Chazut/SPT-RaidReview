@@ -2340,14 +2340,19 @@ check('M14 can accompany M12 and escapes tooltip content',()=>{
  assert.ok(v.tacticalJump&&v.coverFeint);const html=tooltip(v);assert.ok(html.includes('M12')&&html.includes('M14'));assert.ok(!html.includes('<img')&&!html.includes('<script>'));assert.ok(html.includes('&lt;img'));
 });
 check('M14 rejects impossible observations and malformed metadata',()=>{
- for(const bad of [null,[],{...feintTrace,state:'oops'},{...feintTrace,state:'ended'},{...feintTrace,weaponReady:false},
- {...feintTrace,magazineAccepted:false},{...feintTrace,animationObserved:false},{...feintTrace,validFor:3},
+ for(const bad of [null,[],{...feintTrace,state:'oops'},{...feintTrace,state:'ended'},
+ {...feintTrace,magazineAccepted:false},{...feintTrace,validFor:3},
  {...feintTrace,peekChance:101},{...feintTrace,episode:0},{...feintTrace,accepted:'true'},{...feintTrace,action:'Search'},
  {...feintTrace,kind:'peek'},{...feintTrace,source:'live-hidden'},{...feintTrace,completedPeeks:3},{...feintTrace,returnedObserved:true}])assert.equal(feintHelpers.parseCometCoverFeint(bad),null);
  for(const key of ['knownX','speed','elapsed','hold','peekRoll'])assert.equal(feintHelpers.parseCometCoverFeint({...feintTrace,[key]:NaN}),null);
  for(const extra of [{stage:'accepted'},{decision:'Push'}])assert.equal(ready([feintRow(1,1000,{},extra)]).events.length,0);
 });
 const m14Wire=path.resolve(__dirname,'../../COMET/artifacts/m14-wire-traces.json');
+check('M14 source timing does not require animation proof or ready hands',()=>{
+ const t=feintHelpers.parseCometCoverFeint({...feintTrace,weaponReady:false,animationObserved:false});
+ assert.ok(t);assert.equal(t.animationObserved,false);assert.equal(t.weaponReady,false);
+ assert.ok(feintHelpers.parseCometCoverFeint({...feintTrace,state:'final-hold',kind:'peek'}));
+});
 if(fs.existsSync(m14Wire))check('M14 actual C# wire lifecycle agrees with TypeScript',()=>{
  for(const t of JSON.parse(fs.readFileSync(m14Wire,'utf8')))assert.ok(feintHelpers.parseCometCoverFeint(t),JSON.stringify(t));
 });
@@ -2618,13 +2623,18 @@ check('W07 validates data, preserves unexpected observed shots and escapes all f
  const v=state(ready([disciplineRow(1,1000,{target:'<img src=x>',reason:'<script>x</script>',alternatives:['<svg onload=x>']})]),1100,'SAIN:Search',1000,false);
  assert.ok(!tooltip(v).includes('<img')&&!tooltip(v).includes('<script>')&&!tooltip(v).includes('<svg'));
  for(const change of [{validFor:1},{validFor:NaN},{state:'ended'},{state:'paused',pauseRemaining:0},{state:'firing'},
-  {actualShots:4},{requested:false},{loaded:31},{capacity:0},{burstLimit:0},{aimX:Infinity},{source:'live-position'},
-  {clear:'true'},{state:'firing',pauseRemaining:0,clear:false},{episode:0}])assert.equal(disciplineHelpers.parseCometSuppressionDiscipline({...disciplineTrace,...change}),null,JSON.stringify(change));
+  {requested:false},{loaded:31},{capacity:0},{burstLimit:0},{aimX:Infinity},{source:0},
+  {clear:'true'},{episode:0}])assert.equal(disciplineHelpers.parseCometSuppressionDiscipline({...disciplineTrace,...change}),null,JSON.stringify(change));
  const overflow={...disciplineTrace,state:'ended',reason:'suppression-shot-outside-permission',burstShots:6,actualShots:6,validFor:0,pauseRemaining:0,remaining:0};
  assert.ok(disciplineHelpers.parseCometSuppressionDiscipline(overflow));assert.ok(disciplineHelpers.cometSuppressionDisciplineSummary(overflow).some(t=>t.includes('extra native shot')));
  for(const extra of [{stage:'accepted'},{decision:'Push'}])assert.equal(ready([disciplineRow(1,1000,{},extra)]).events.length,0);
 });
 const w07Wire=path.resolve(__dirname,'../../COMET/artifacts/w07-wire-traces.json');
+check('W07 native suppression does not require separate geometry or synchronized shot evidence',()=>{
+ const t=disciplineHelpers.parseCometSuppressionDiscipline({...disciplineTrace,state:'firing',pauseRemaining:0,source:'',clear:false,allySafe:false,aligned:false,actualShots:0});
+ assert.ok(t);assert.equal(t.actualShots,0);assert.equal(t.clear,false);
+ assert.ok(disciplineHelpers.parseCometSuppressionDiscipline({...disciplineTrace,burstShots:0}));
+});
 if(fs.existsSync(w07Wire))check('W07 real C# lifecycle including rejection and callback timing agrees with RR parser',()=>{
  for(const t of JSON.parse(fs.readFileSync(w07Wire,'utf8')))assert.ok(disciplineHelpers.parseCometSuppressionDiscipline(t),JSON.stringify(t));
 });
@@ -2780,7 +2790,7 @@ check('G02 map exposes real aim and candidates without taking behavior ownership
   const v=state(ready([trajectoryRow(1,1000)]),1050,decision,1000,false);
   assert.ok(v.grenadeTrajectory&&v.active);assert.equal(v.decision,decision);assert.equal(v.actionActive,false);
   assert.equal(getBehaviorCategory(v.decision),getBehaviorCategory(decision));
-  for(const text of ['Grenade trajectory - G02','Known contact: enemy','Aim: last known','clearance 0.18 m','Native arc attempts: 4/12'])assert.ok(tooltip(v).includes(text),text);
+  for(const text of ['Grenade trajectory - G02','Known contact: enemy','Aim: last known','clearance 0.18 m','Native arc attempts: 4'])assert.ok(tooltip(v).includes(text),text);
  }
 });
 check('G02 lease, backwards seek, ghost and recording identity boundaries',()=>{
@@ -2793,13 +2803,16 @@ check('G02 lease, backwards seek, ghost and recording identity boundaries',()=>{
  for(const extra of [{cometSession:'other'},{detail:{botInstance:'other',combatLean:leanTrace}}])assert.equal(state(ready([trajectoryRow(1,1000),leanRow(2,1025,{},extra)]),1050,'SAIN:Search',1000,false).grenadeTrajectory,undefined);
 });
 check('G02 rejects malformed telemetry and escapes all free text',()=>{
- for(const c of [{state:'released'},{attempts:13},{angle:80},{knownX:NaN},{validFor:2},{clearance:Infinity},{kind:'teleport'},{alternatives:[{}]},{alternatives:Array(21).fill(trajectoryTrace.alternatives[0])}])assert.equal(trajectoryHelpers.parseCometGrenadeTrajectory({...trajectoryTrace,...c}),null,JSON.stringify(c));
+ for(const c of [{state:'released'},{attempts:-1},{angle:80},{knownX:NaN},{validFor:2},{clearance:Infinity},{kind:'teleport'},{alternatives:[{}]},{alternatives:Array(21).fill(trajectoryTrace.alternatives[0])}])assert.equal(trajectoryHelpers.parseCometGrenadeTrajectory({...trajectoryTrace,...c}),null,JSON.stringify(c));
  for(const c of [{angle:4},{clearance:-1},{accepted:'yes'},{x:NaN},{accepted:true,angle:0}])assert.equal(trajectoryHelpers.parseCometGrenadeTrajectory({...trajectoryTrace,alternatives:[{...trajectoryTrace.alternatives[0],...c}]}),null);
  const v=state(ready([trajectoryRow(1,1000,{target:'<img src=x>',door:'<svg>',reason:'<script>',alternatives:[{...trajectoryTrace.alternatives[0],reason:'<script>x</script>'}]})]),1050,'SAIN:Search',1000,false);
  assert.ok(v.grenadeTrajectory);for(const tag of ['<img','<svg','<script>'])assert.ok(!tooltip(v).includes(tag));
  assert.equal(prepare([trajectoryRow(1,1000,{}, {decision:'GrenadeJudgment'})]).length,0);
 });
 const trajectoryWire=path.resolve(__dirname,'../../COMET/artifacts/g02-adapter-events.jsonl');
+check('G02 accepts native arcs without an extra clearance sweep or old attempt cap',()=>{
+ assert.ok(trajectoryHelpers.parseCometGrenadeTrajectory({...trajectoryTrace,attempts:13,angle:5,clearance:0,alternatives:[{...trajectoryTrace.alternatives[0],accepted:true,angle:5,clearance:0}]}));
+});
 if(fs.existsSync(trajectoryWire))check('G02 production adapter wire is understood by RR',()=>{
  for(const line of fs.readFileSync(trajectoryWire,'utf8').trim().split(/\r?\n/)){
   const e=JSON.parse(line);if(e.grenadeTrajectory)assert.ok(trajectoryHelpers.parseCometGrenadeTrajectory(e.grenadeTrajectory),line);
@@ -2826,10 +2839,13 @@ check('G03 leases, backwards seek, ghost and cross-recording boundaries',()=>{
  for(const extra of [{cometSession:'other'},{detail:{botInstance:'other',combatLean:leanTrace}}])assert.equal(state(ready([choiceRow(1,1000),leanRow(2,1025,{},extra)]),1050,'SAIN:Search',1000,false).grenadeChoice,undefined);
 });
 check('G03 rejects malformed telemetry and escapes free text',()=>{
- for(const c of [{state:'released'},{flight:Infinity},{fuse:NaN},{validFor:2},{requiredMargin:0},{item:''},{alternatives:[{}]},{alternatives:Array(33).fill(choiceTrace.alternatives[0])},{margin:0}])assert.equal(choiceHelpers.parseCometGrenadeChoice({...choiceTrace,...c}),null,JSON.stringify(c));
+ for(const c of [{state:'released'},{flight:Infinity},{fuse:NaN},{validFor:2},{requiredMargin:-1},{item:''},{alternatives:[{}]},{alternatives:Array(33).fill(choiceTrace.alternatives[0])},{margin:0}])assert.equal(choiceHelpers.parseCometGrenadeChoice({...choiceTrace,...c}),null,JSON.stringify(c));
  const v=state(ready([choiceRow(1,1000,{target:'<img src=x>',reason:'<script>',name:'<svg>',alternatives:choiceTrace.alternatives.map(a=>({...a,reason:'<script>x</script>'}))})]),1050,'SAIN:Search',1000,false);
  assert.ok(v.grenadeChoice);for(const tag of ['<img','<svg','<script>'])assert.ok(!tooltip(v).includes(tag));
  assert.equal(prepare([choiceRow(1,1000,{}, {decision:'GrenadeTrajectory'})]).length,0);
+});
+check('G03 reads source native choice without an extra arrival margin or minimum flash fuse',()=>{
+ assert.ok(choiceHelpers.parseCometGrenadeChoice({...choiceTrace,requiredMargin:0,flight:0,fuse:.2,margin:.2,alternatives:choiceTrace.alternatives.map(a=>a.item===choiceTrace.item?{...a,category:'flash',fuse:.2,eligible:true}:a)}));
 });
 const choiceWire=path.resolve(__dirname,'../../COMET/artifacts/g03-adapter-events.jsonl');
 if(fs.existsSync(choiceWire))check('G03 actual production wire parses in RR',()=>{
@@ -3045,6 +3061,7 @@ console.log(`${checks} COMET map checks passed (including G10)`);
 
 const h01Helpers=load('../Private/src/helpers/cometMedicalChoice.ts');
 const h01Trace=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/h01-medical-choice.json'),'utf8')).medicalChoice;
+assert.ok(h01Helpers.parseCometMedicalChoice({...h01Trace,contacts:17,alternatives:h01Trace.alternatives.map(a=>({...a,score:-10000}))}),'source unavailable sentinel and contact counts remain readable');checks++;
 const h01Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','MedicalChoice',{feature:'H01',detail:{botInstance:'instance',medicalChoice:{...h01Trace,...changes}},...extra});
 {
  const v=state(ready([h01Row(1,1000)]),1100,'SAIN:Surgery',1000,false);
@@ -3059,7 +3076,7 @@ const h01Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','MedicalChoi
  const wire=path.join(__dirname,'../../COMET/artifacts/h01-adapter-events.jsonl');const events=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/h01-medical-choice.json'),'utf8'))];
  for(const e of events){assert.ok(h01Helpers.parseCometMedicalChoice(e.medicalChoice),JSON.stringify(e));checks++;}
 }
-for(const change of [{state:'success'},{choice:'MagicHeal'},{health:NaN},{health:2},{duration:Infinity},{duration:-1},{state:'ended',validFor:1},{started:false},{applied:'yes'},{applied:false,validFor:1},{x:Infinity},{contact:'',x:1},{contacts:17},{quiet:-1},{distance:NaN},{sinceHit:NaN},{outcome:'healed-everything'},{alternatives:Array(5).fill({})},{reason:'x'.repeat(513)}]){assert.equal(h01Helpers.parseCometMedicalChoice({...h01Trace,...change}),null,JSON.stringify(change));checks++;}
+for(const change of [{state:'success'},{choice:'MagicHeal'},{health:NaN},{health:2},{duration:Infinity},{duration:-1},{state:'ended',validFor:1},{started:false},{applied:'yes'},{applied:false,validFor:1},{x:Infinity},{contact:'',x:1},{contacts:-1},{quiet:-1},{distance:NaN},{sinceHit:NaN},{outcome:'healed-everything'},{alternatives:Array(5).fill({})},{reason:'x'.repeat(513)}]){assert.equal(h01Helpers.parseCometMedicalChoice({...h01Trace,...change}),null,JSON.stringify(change));checks++;}
 assert.equal(ready([h01Row(1,1000,{}, {decision:'ExplosionAwareness'})]).events.length,0);checks++;
 console.log(`${checks} COMET map checks passed (including H01)`);
 const h02Helpers=load('../Private/src/helpers/cometSurgeryInterruption.ts');
@@ -3084,6 +3101,7 @@ console.log(`${checks} COMET map checks passed (including H02)`);
 
 const h03Helpers=load('../Private/src/helpers/cometMedicalPosture.ts');
 const h03Trace=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/h03-medical-posture.json'),'utf8')).medicalPosture;
+assert.ok(h03Helpers.parseCometMedicalPosture({...h03Trace,state:'resumed',using:false,medicineHands:false,weaponReady:false,neutral:false,applied:false,validFor:0,stableFor:0,resumeDelay:0}),'source resumes without an added ready-weapon or stability proof');checks++;
 const h03Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','MedicalPosture',{feature:'H03',detail:{botInstance:'instance',medicalPosture:{...h03Trace,...changes}},...extra});
 {
  const resumed={state:'resumed',reason:'medical-posture-tactics-resumed',using:false,medicineHands:false,weaponReady:true,neutral:true,tilt:0,stableFor:.2,applied:false,validFor:0};
@@ -3442,6 +3460,7 @@ const l01Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','LightDiscip
  for(const extra of [{feature:'S09'},{decision:'Other'},{stage:'selected'}]){assert.equal(ready([l01Row(1,1000,{},extra)]).events.length,0);checks++;}
  for(const bad of [{state:'native-played'},{validFor:2},{validFor:Infinity},{contactAge:NaN},{known:{x:NaN,y:0,z:0}},{activeDevices:3},{observedOff:false},{devices:1.5},{modes:[]},{source:'omniscience'},{requested:1},{speed:-1},{contact:''},{tactic:''}]){assert.equal(l01Helpers.parseCometLightDiscipline({...l01Trace,...bad}),null);checks++;}
  for(const extra of [{cometSession:'new'},{detail:{botInstance:'new',contact:{target:'enemy',age:0,source:'heard'}}}]){assert.equal(state(ready([l01Row(1,1000),row(2,1050,'selected','Hold',extra)]),1100,'SAIN:Freeze',900,false).lightDiscipline,undefined);checks++;}
+ assert.ok(l01Helpers.parseCometLightDiscipline({...l01Trace,source:'seen',known:null,speed:null,activeDevices:l01Trace.devices,observedOff:false}), 'source concealment does not require telemetry geometry or confirmed OFF');checks++;
  const wire=path.resolve(__dirname,'../../COMET/artifacts/l01-adapter-events.jsonl');const data=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[l01Fixture];
  for(const e of data){assert.ok(l01Helpers.parseCometLightDiscipline(e.lightDiscipline),JSON.stringify(e.lightDiscipline));checks++;}
 }
