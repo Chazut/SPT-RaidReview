@@ -7,7 +7,7 @@ export type CoverMateContext={mate:string;mateName:string;operation:string;treat
 
 export type StormContext={plan:string;state:string;status:string;reason:string;observer:string;cue:string;score:number;threshold:number;roll:number;chance:number;ammo:number;remaining:number;evidenceAge:number;departure:number;eta:number;ready:number;required:number;confirmed:boolean;evidence:string[];members:string[]}
 
-export type CrossfireContext={storm?:StormContext|null;trade?:TradeContext|null;coverMate?:CoverMateContext|null;maneuver?:ManeuverContext|null;entrance?:EntranceContext|null;state:string;reason:string;execution:string;contact:string;source:string;support:string;supportName:string;episode:number;applied:boolean;reserved:boolean;validFor:number;contactAge:number;remaining:number;angle:number;pathLength:number;roll:number;chance:number;x:number;y:number;z:number;goalX:number|null;goalY:number|null;goalZ:number|null;candidates:number;alternatives:string[]}
+export type CrossfireContext={outcome?:string;sightPose?:string;searchPass?:string;revalidations?:number;revalidation?:string;storm?:StormContext|null;trade?:TradeContext|null;coverMate?:CoverMateContext|null;maneuver?:ManeuverContext|null;entrance?:EntranceContext|null;state:string;reason:string;execution:string;contact:string;source:string;support:string;supportName:string;episode:number;applied:boolean;reserved:boolean;validFor:number;contactAge:number;remaining:number;angle:number;pathLength:number;roll:number;chance:number;x:number;y:number;z:number;goalX:number|null;goalY:number|null;goalZ:number|null;candidates:number;alternatives:string[]}
 
 const text=(v:any)=>typeof v==='string'&&v.length<=512
 
@@ -15,7 +15,7 @@ const num=(v:any,min:number,max:number)=>Number.isFinite(v)&&v>=min&&v<=max
 
 function validManeuver(m:any):boolean{
 
- return !!m&&!Array.isArray(m)&&['preparing','active','ended'].includes(m.state)&&['flank','support','rear'].includes(m.role)
+ return !!m&&!Array.isArray(m)&&['preparing','active','converging','ended'].includes(m.state)&&['flank','support','rear'].includes(m.role)
 
  &&['plan','reason','support','supportName','fireState'].every(k=>text(m[k]))&&m.plan.length>0
 
@@ -90,7 +90,9 @@ export function parseCometCrossfire(t:any):CrossfireContext|null{
  ||t.coverMate!=null&&(!validCoverMate(t.coverMate)||t.entrance!=null||t.maneuver!=null)
  ||t.applied&&t.coverMate&&(t.state==='moving'?t.coverMate.status!=='moving':t.coverMate.status!=='covering'||!t.coverMate.confirmed)
 
- ||!Number.isInteger(t.candidates)||!num(t.candidates,0,t.entrance?48:28)||!num(t.validFor,0,1)
+ ||['outcome','sightPose','searchPass','revalidation'].some(k=>t[k]!=null&&!text(t[k]))
+ ||t.revalidations!=null&&(!Number.isSafeInteger(t.revalidations)||!num(t.revalidations,0,100000))
+ ||!Number.isInteger(t.candidates)||!num(t.candidates,0,t.entrance?48:72)||!num(t.validFor,0,1)
 
  ||!num(t.contactAge,0,86400)||!num(t.remaining,0,t.coverMate?90:t.entrance?48:40)||!num(t.angle,0,180)||!num(t.pathLength,0,60)
 
@@ -160,6 +162,11 @@ export function cometCrossfireSummary(t:CrossfireContext):string[]{return[
  `Known contact: ${t.contact || 'none'} · ${t.source || 'no source'} · ${t.contactAge.toFixed(1)} s old · (${t.x.toFixed(1)}, ${t.y.toFixed(1)}, ${t.z.toFixed(1)})`,
 
  `Angle ${t.angle.toFixed(0)}° · route ${t.pathLength.toFixed(1)} m · ${t.candidates} candidates checked`,
+
+ ...(t.outcome?[`Outcome: ${t.outcome.replace(/-/g,' ')} (positioning result, not a confirmed hit)`]:[]),
+ ...(t.sightPose?[`Firing position: ${t.sightPose.replace(/-/g,' ')}`]:[]),
+ ...(t.searchPass?[`Search: ${t.searchPass.replace(/-/g,' ')}`]:[]),
+ ...(t.revalidations?[`Context rechecks: ${t.revalidations} · ${(t.revalidation||'').replace(/-/g,' ')}`]:[]),
 
  t.goalX!=null&&t.goalY!=null&&t.goalZ!=null?`Position (${t.goalX.toFixed(1)}, ${t.goalY.toFixed(1)}, ${t.goalZ.toFixed(1)}) · ${t.reserved?'reserved':'released'}`:'No position selected',
 

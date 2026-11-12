@@ -3167,7 +3167,7 @@ const s01Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','Crossfire',
  const observed=data.filter(e=>e.crossfire);assert.ok(observed.length>0,'crossfire adapter trace contains observations');
  for(const e of observed){assert.ok(s01Helpers.parseCometCrossfire(e.crossfire),JSON.stringify(e));checks++;}
 }
-for(const change of [{state:'teleported'},{applied:'yes'},{reserved:false},{validFor:2},{validFor:0},{remaining:NaN},{angle:181},{pathLength:61},{roll:-1},{chance:101},{candidates:29},{x:Infinity},{goalY:null},{state:'ended'},{state:'ready'},{applied:false,validFor:1},{episode:0},{alternatives:Array(9).fill('x')},{supportName:'x'.repeat(513)}]){assert.equal(s01Helpers.parseCometCrossfire({...s01Trace,...change}),null,JSON.stringify(change));checks++;}
+for(const change of [{state:'teleported'},{applied:'yes'},{reserved:false},{validFor:2},{validFor:0},{remaining:NaN},{angle:181},{pathLength:61},{roll:-1},{chance:101},{candidates:73},{x:Infinity},{goalY:null},{state:'ended'},{state:'ready'},{applied:false,validFor:1},{episode:0},{alternatives:Array(9).fill('x')},{supportName:'x'.repeat(513)}]){assert.equal(s01Helpers.parseCometCrossfire({...s01Trace,...change}),null,JSON.stringify(change));checks++;}
 assert.equal(ready([s01Row(1,1000,{}, {decision:'PostCombat'})]).events.length,0);checks++;
 const s02Fixture=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/s02-secondary-entrance.json'),'utf8'));
 const s02Trace=s02Fixture.crossfire;
@@ -3356,7 +3356,12 @@ const s07Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','FireLane',{
  }
  const wire=path.resolve(__dirname,'../../COMET/artifacts/s07-adapter-events.jsonl');
  const data=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[s07Fixture];
- for(const e of data){assert.ok(s07Helpers.parseCometFireLane(e.fireLane),JSON.stringify(e.fireLane));checks++;}
+ for(const e of data){
+  // Opportunity diagnostics are not applied actions and must not create a replay overlay.
+  if(e.fireLane.opportunityOnly)assert.equal(s07Helpers.parseCometFireLane(e.fireLane),null);
+  else assert.ok(s07Helpers.parseCometFireLane(e.fireLane),JSON.stringify(e.fireLane));
+  checks++;
+ }
 }
 console.log(`${checks} COMET map checks passed (including S07)`);
 

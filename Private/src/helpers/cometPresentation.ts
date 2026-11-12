@@ -254,7 +254,9 @@ export function cometEpisodes(record?: CometMapRecord): CometEpisode[] {
         if (c && (c.applied || c.reserved || c.maneuver?.plan || c.storm?.plan || squadPlans.has(planKey))) {
             feature = activityFeature('crossfire',c as unknown as Context)
             title = squadEventTitle(c)
-            status = c.state === 'ended' || c.maneuver?.state === 'ended' || c.storm?.state === 'ended' ? 'Ended / interrupted' : c.applied ? 'Execution confirmed' : 'Planned · not yet executed'
+            status = c.outcome === 'engaged-from-new-angle' ? 'Firing angle reached · engaging'
+                : c.outcome === 'contact-engaged' ? 'Contact acquired · engaging'
+                : c.state === 'ended' || c.maneuver?.state === 'ended' || c.storm?.state === 'ended' ? 'Ended / interrupted' : c.applied ? 'Execution confirmed' : 'Planned · not yet executed'
             squadPlans.add(planKey)
         } else if (['A01','A02','A03'].includes(event.feature) && event.stage === 'accepted') {
             title = formatDecisionLabel('COMET:' + event.decision); status = 'Chosen by COMET'
