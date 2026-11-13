@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 default_name="raid_review"
-default_version="1.1.0"
+default_version="1.11.0-RC1"
 current_dir=$(pwd)
 
 echo "Let's start the deployment process..."
@@ -73,6 +73,7 @@ done
 # config.json that would overwrite a user's ports, retention or other preferences.
 
 # 5. Package client mod
+# Distribution ZIPs contain runtime files only; never include .pdb debug symbols.
 echo ">> Packaging client mod..."
 client_dest="$dist_folder/BepInEx/plugins"
 mkdir -p "$client_dest"

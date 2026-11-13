@@ -22,7 +22,7 @@ using EFT.Interactive;
 
 namespace RAID_REVIEW
 {
-    [BepInPlugin("ekky.raidreview", "Raid Review", "1.10.0")]
+    [BepInPlugin("ekky.raidreview", "Raid Review", "1.11.0")]
     [BepInDependency("me.sol.sain", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.danw.questingbots", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.janky.phobos", BepInDependency.DependencyFlags.SoftDependency)]
@@ -706,7 +706,7 @@ namespace RAID_REVIEW
         void Awake()
         {
             CometIntegration.Bind(message => Logger.LogWarning(message));
-            Logger.LogInfo("RAID_REVIEW :::: INFO :::: Mod Loaded");
+            Logger.LogInfo("RAID_REVIEW :::: INFO :::: Mod Loaded (1.11.0-RC1)");
 
             // Clean up legacy versioned DLLs (e.g. RAID_REVIEW__0.4.0.dll) from older releases
             try

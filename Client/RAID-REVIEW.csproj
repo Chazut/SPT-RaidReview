@@ -7,8 +7,11 @@
 		<AssemblyDescription>A post raid review tool for SPT</AssemblyDescription>
 		<AssemblyCompany>EkkyLLC</AssemblyCompany>
 		<AssemblyProduct>RAID_REVIEW</AssemblyProduct>
-		<Version>1.10.0</Version>
-		<AssemblyVersion>1.10.0</AssemblyVersion>
+		<Version>1.11.0-RC1</Version>
+		<AssemblyVersion>1.11.0.0</AssemblyVersion>
+		<FileVersion>1.11.0.0</FileVersion>
+		<InformationalVersion>1.11.0-RC1</InformationalVersion>
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<Copyright>2024 © Ekky</Copyright>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<OutputPath>C:\Games\SPT-4.1\BepInEx\plugins\</OutputPath>
