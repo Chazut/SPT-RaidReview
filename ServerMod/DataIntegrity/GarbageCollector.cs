@@ -50,7 +50,11 @@ public class GarbageCollector
         _logger.Log("Garbage collector is done deleting old raids.");
     }
 
-    public async Task CollectUnfinishedRaidsAsync()
+    /// <param name="minimumAge">
+    /// Only raids started at least this long ago. Null: every unfinished raid, which is only safe while no raid can be
+    /// running, at server start.
+    /// </param>
+    public async Task CollectUnfinishedRaidsAsync(TimeSpan? minimumAge = null)
     {
         _logger.Debug($"'config.autoDeleteUnfinishedRaids' is set to: '{_config.AutoDeleteUnfinishedRaids}'");
 
@@ -60,11 +64,23 @@ public class GarbageCollector
             return;
         }
 
-        _logger.Log("Garbage collector deleting unfinished raids.");
+        // Unfinished raids have an empty exitStatus (END packet never arrived to update it). A raid still in progress
+        // has none yet either: its row is written at START, so only its age tells an abandoned raid from a running one.
+        var sql = "SELECT raidId FROM raid WHERE importedAt = '' AND (exitStatus = '' OR exitStatus IS NULL)";
+        var parameters = new List<(string, object?)>();
+        if (minimumAge is { } age)
+        {
+            _logger.Log($"Garbage collector deleting unfinished raids started over {age.TotalHours:0.#} hours ago.");
+            // created_at is CURRENT_TIMESTAMP: UTC, in the same 'YYYY-MM-DD HH:MM:SS' form as datetime().
+            sql += " AND created_at < datetime('now', $age)";
+            parameters.Add(("$age", $"-{(long)age.TotalSeconds} seconds"));
+        }
+        else
+        {
+            _logger.Log("Garbage collector deleting unfinished raids.");
+        }
 
-        // Unfinished raids have an empty exitStatus (END packet never arrived to update it)
-        var unfinishedRaids = await _db.QueryAsync(
-            "SELECT raidId FROM raid WHERE importedAt = '' AND (exitStatus = '' OR exitStatus IS NULL)");
+        var unfinishedRaids = await _db.QueryAsync(sql, parameters.ToArray());
 
         var raidCounts = unfinishedRaids
             .Select(r => r["raidId"]?.ToString() ?? "")
