@@ -1,3 +1,4 @@
+import { magazineRecoveryTitle, type MagazineRecoveryContext } from './cometMagazineRecovery'
 import { CometMapEvent, CometMapRecord, cometMapState, cometReason } from './cometMap'
 import { formatDecisionLabel, getDecisionSource } from './botBehavior'
 import { squadEventTitle, CrossfireContext } from './cometCrossfire'
@@ -18,7 +19,7 @@ const rule = (key: string, index: string, title: string, symbol: CometSymbol, ob
 const activityFeatures: Record<string, string> = {
     quiet:'P02', silentSearch:'P08',
     postCombat:'H04', medicalChoice:'H01', medicalPosture:'H03', surgeryInterruption:'H02',
-    reloadTiming:'W01', quickReload:'W04', pistolSwap:'W02', weaponReturn:'W03', weaponRange:'W05', handsRecovery:'W10',
+    magazineRecovery:'W04', reloadTiming:'W01', quickReload:'W04', pistolSwap:'W02', weaponReturn:'W03', weaponRange:'W05', handsRecovery:'W10',
     grenadeJudgment:'G01', grenadeReaction:'G05', ownGrenadeSafety:'G04', gasExposure:'G08',
     doorApproach:'D01', doorJumpPeek:'D02', doorRunBy:'D03', doorStepPeek:'D04', doorFakeGrenade:'D05',
     doorFakeMedical:'D06', doorEntry:'D15', doorRoomClear:'D08', doorAmbush:'D09', doorSupport:'D11', doorEmergency:'D13',
@@ -43,6 +44,7 @@ const rules: Rule[] = [
     rule('medicalPosture', 'medicalPostureIndex', 'Protecting the body while healing', 'medical', c => c.applied === true && c.using === true),
     rule('surgeryInterruption', 'surgeryInterruptionIndex', 'Interrupting surgery', 'medical', yes('nativeCancelled', 'handsReleased')),
     rule('reloadTiming', 'reloadIndex', 'Reloading', 'reload', yes('started')),
+    rule('magazineRecovery', 'magazineRecoveryIndex', 'Recovering a magazine', 'reload', yes('active'), c => point(c)),
     rule('quickReload', 'quickReloadIndex', 'Quick reload', 'reload', yes('started', 'dropped')),
     rule('pistolSwap', 'pistolIndex', 'Drawing the sidearm', 'reload', yes('inHands')),
     rule('weaponReturn', 'weaponReturnIndex', 'Changing weapon', 'reload', yes('inHands')),
@@ -91,6 +93,7 @@ const rules: Rule[] = [
 function activityTitle(r: Rule, c: Context): string {
     // P02 records caps applied to native movement, not measured footsteps or
     // proof that the opponent did not hear the bot. Do not promise total silence.
+    if (r.key === 'magazineRecovery') return magazineRecoveryTitle(c as unknown as MagazineRecoveryContext)
     if (r.key === 'quiet') return c.state === 'crouch' ? 'Quiet approach (crouch requested)' : 'Quiet approach (slower movement)'
     if (r.key === 'silentSearch') return c.movementObserved === true
         ? c.walking === true ? 'Walking to the last heard position' : 'Searching after the enemy went quiet'
@@ -105,6 +108,11 @@ function activityTitle(r: Rule, c: Context): string {
     return r.title
 }
 function activityReason(r: Rule, c: Context, event: CometMapEvent): string {
+    if (r.key === 'magazineRecovery') {
+        if (c.state === 'arrived' || c.state === 'pickup-wait') return 'Reached the magazine. Waiting for the native pickup animation.'
+        if (c.state === 'pickup-started') return 'The native pickup animation has started; inventory transfer is not confirmed yet.'
+        if (c.state === 'pickup-ready') return 'The native animation callback was received. Waiting for the inventory result.'
+    }
     if (r.key === 'quiet') return `Reducing movement noise while approaching a known contact.${c.lootBonus === true ? ' Heard the enemy looting.' : ''}`
     if (r.key === 'silentSearch') return `The enemy went quiet${typeof c.silence === 'number' ? ` for ${c.silence.toFixed(1)} s` : ''}; checking the last heard location.`
     if (r.key === 'retreatWeave') return `Movement/gaze commands applied. Observed head pitch: ${Number(c.observedPitch).toFixed(0)}°; turn: ${Number(c.observedYaw).toFixed(0)}°.`
@@ -116,6 +124,7 @@ function activityStatus(r: Rule): string {
     return r.key === 'retreatWeave' ? 'Movement/gaze commands applied' : 'Observed intervention'
 }
 function activityEnded(r: Rule, c: Context): boolean {
+    if (r.key === 'magazineRecovery') return ['completed','failed','interrupted','unavailable'].includes(String(c.state))
     return ['ended', 'released', 'completed', 'failed'].includes(String(c.state))
         || (r.key === 'quiet' && c.state === 'normal' && c.active !== true)
 }
@@ -179,7 +188,7 @@ export function cometPresentation(record: CometMapRecord | undefined, at: number
         if (r.key === 'silentSearch' && sampledAt >= event.time && !['SAIN:Search', 'COMET:Search'].includes(sampledDecision)) continue
         if (['ended', 'released', 'failed', 'completed', 'refused', 'unavailable'].includes(String(c.state))) continue
         const destination = r.destination?.(c) || null
-        interventions.push({ title: activityTitle(r,c), featureTitle: cometFeatureLabel(activityFeature(r.key,c)), reason: activityReason(r,c,event), symbol: r.symbol, event, destination, status: activityStatus(r) })
+        interventions.push({ title: activityTitle(r,c), featureTitle: r.key === 'magazineRecovery' ? 'Magazine recovery' : cometFeatureLabel(activityFeature(r.key,c)), reason: activityReason(r,c,event), symbol: r.symbol, event, destination, status: activityStatus(r) })
     }
     // An active quiet approach is useful context throughout its short lease;
     // routine stance/device updates must not continually hide it.
@@ -198,6 +207,7 @@ export function cometPresentation(record: CometMapRecord | undefined, at: number
     const ghostObjective = ghost && sampleSource === 'ORBIT' ? (sampledDecision === 'Orbit:Synthetic' ? 'Patrolling' : formatDecisionLabel(sampledDecision)) : ''
     if (ghost) owner = ghostObjective ? 'Ghost / ORBIT' : 'Ghost'
     else if (pbtOwns) owner = 'PBT'
+    else if (primary?.event?.magazineRecovery?.active) owner = 'COMET'
     const event = core?.event || primary?.event || interventions[0]?.event
     const chosen = event?.candidates.find(c => c.decision === (core ? state.decision.replace(/^COMET:/, '') : event.decision))
     const factorKeys = [['loadoutDelta','Equipment'],['opponentDelta','Opponent'],['opportunityDelta','Opportunity'],['coverResponseDelta','Cover / exposure'],['fearDelta','Fear / pressure'],['progressDelta','Progress']] as const
@@ -293,7 +303,7 @@ export function cometEpisodes(record?: CometMapRecord): CometEpisode[] {
             }
             else continue
         }
-        const featureTitle = cometFeatureLabel(feature)
+        const featureTitle = event.magazineRecovery ? 'Magazine recovery' : cometFeatureLabel(feature)
         const key = [event.cometSession, event.instance, planKey, feature, title, status, event.contact?.target, event.reason].join('|')
         const prev = episodes[episodes.length-1]
         if (prev && key === previousKey && event.time - prev.end <= 5000) {

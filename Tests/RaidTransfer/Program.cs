@@ -512,3 +512,6 @@ Check(await target.QuerySingleAsync("SELECT * FROM raid WHERE raidId=$id", ("$id
 Check(!Directory.EnumerateDirectories(Path.Combine(targetData, "transfers")).Any(), "Transfer workspaces cleaned");
 checks += await PbtCaptureTests.Run(root);
 Console.WriteLine($"PASS RaidTransfer: {checks} checks. Isolated data: {root}");
+
+var magazineProjection=RaidReview.Http.CometMapEvent.Project(new Dictionary<string,object?>{{"stage","arrived"},{"detail","{\"magazineRecovery\":{\"magazine\":\"original-mag\",\"x\":1}}"}});
+Check(((Dictionary<string,object?>)magazineProjection["detail"]!).ContainsKey("magazineRecovery"),"compact map preserves magazine recovery payload");

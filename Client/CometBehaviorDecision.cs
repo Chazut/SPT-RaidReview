@@ -2,6 +2,8 @@ namespace RAID_REVIEW
 {
     internal static class CometBehaviorDecision
     {
+        internal static string ResolveMagazineRecovery(string layer,string native,bool ghost)
+            => !ghost && layer=="COMET : Recover magazine" ? "COMET:RecoverMagazine" : native;
         internal static string ResolveCrossfire(string label,string layer,string native,bool ghost)
         {
             return !ghost && layer=="COMET : Crossfire" && (label=="COMET:CrossfireMoving" || label=="COMET:CrossfireHolding"

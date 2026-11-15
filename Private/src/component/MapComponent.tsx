@@ -27,6 +27,8 @@ import { participantMarkerHtml } from '../helpers/participantMarkers'
 import { DEFAULT_PLAYER_COLOR, readPlayerColor, savePlayerColor } from '../helpers/playerColor'
 import { getIsbDisplayName } from '../helpers/isb'
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from '../helpers/botBehavior'
+import { droppedLootAt } from '../helpers/cometMagazineRecovery'
+import { useMagazineDrops } from './useMagazineDrops'
 import { cometMapState } from '../helpers/cometMap'
 import { cometPresentation, cometMarkerHtml, cometSimpleTooltip } from '../helpers/cometPresentation'
 import { useCometMapEvents } from './useCometMapEvents'
@@ -1860,6 +1862,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         return n
     }, [orbitMainObjectivesData, timeEndLimit])
 
+    const magazineDrops = useMagazineDrops(raidId, showLooseLoot)
+    const droppedItems = useMemo(() => droppedLootAt(raidData.looting || [], magazineDrops, Number(timeEndLimit)), [raidData.looting, magazineDrops, timeEndLimit])
+
     // Loose Loot: render / update markers on map (timeline-aware + container grouping)
     useEffect(() => {
         if (!MAP || MAP !== mapRef.current || !mapIsReady) return
@@ -1870,7 +1875,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             looseLootLayerRef.current = null
         }
 
-        if (!showLooseLoot || looseLootData.length === 0) return
+        if (!showLooseLoot) return
 
         const group = L.layerGroup()
 
@@ -1948,26 +1953,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
         // Render dropped items (from looting events with added=false and position data)
         if (raidData?.looting && looseLootFilter !== 'container') {
-            // Build set of itemIds that were picked back up before current timeline
-            const rePickedIds = new Set<string>()
-            for (const loot of raidData.looting) {
-                const isAdded = loot.added === 'True' || loot.added === 'true' || loot.added === '1'
-                if (isAdded && Number(loot.time) <= timeEndLimit) {
-                    const iid = loot.itemId || loot.id
-                    if (iid) rePickedIds.add(iid)
-                }
-            }
-
-            for (const loot of raidData.looting) {
-                const added = loot.added === 'True' || loot.added === 'true' || loot.added === '1'
-                if (added) continue
-                if (Number(loot.time) > timeEndLimit) continue
-                // Skip if this item was picked back up before current time
-                const iid = loot.itemId || loot.id
-                if (iid && rePickedIds.has(iid)) continue
+            for (const loot of droppedItems) {
                 if (!onFloor(loot)) continue
                 const lx = Number(loot.x), lz = Number(loot.z)
-                if (!lx && !lz) continue // no position data (old raids)
                 const tp = (Number(loot.price) || 0) * (Number(loot.qty) || 1)
                 if (tp < looseLootMinPrice) continue
                 const color = getLootPriceColor(tp)
@@ -1998,7 +1986,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 looseLootLayerRef.current = null
             }
         }
-    }, [MAP, mapIsReady, showLooseLoot, looseLootData, looseLootMinPrice, looseLootFilter, raidData?.looting, lootProgress, onFloor])
+    }, [MAP, mapIsReady, showLooseLoot, looseLootData, looseLootMinPrice, looseLootFilter, raidData?.looting, lootProgress, droppedItems, onFloor])
 
     // Bot Quests: always fetch data (panel visibility depends on data existing)
     useEffect(() => {

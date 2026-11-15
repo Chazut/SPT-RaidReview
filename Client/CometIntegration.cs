@@ -119,6 +119,8 @@ namespace RAID_REVIEW
         }
         internal static string Resolve(string profileId, string layer, string decision, bool ghost)
         {
+            if(layer == "COMET : Recover magazine")
+                return CometBehaviorDecision.ResolveMagazineRecovery(layer,decision,ghost);
             if(!ghost && layer == "COMET : Crossfire")
                 try { return CometBehaviorDecision.ResolveCrossfire(crossfire?.Invoke(profileId),layer,decision,ghost); } catch { return decision; }
             if(!ghost && layer == "COMET : Post-combat")

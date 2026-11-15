@@ -221,3 +221,7 @@ for(int i=0;i<10;i++)cleanupCapture.Remember(i.ToString(),"profile",i);
 if(cleanupCapture.Take("0",out _) || !cleanupCapture.Take("9",out _))throw new Exception("C13 bounded ended raid metadata");
 cleanupCapture.Clear();if(cleanupCapture.Take("8",out _))throw new Exception("C13 detach clears metadata");
 Console.WriteLine("C13 cleanup capture: exact session, once-only, bounded history and teardown passed.");
+
+if(CometBehaviorDecision.ResolveMagazineRecovery("COMET : Recover magazine","9000",false)!="COMET:RecoverMagazine")throw new Exception("recovery layer missing");
+foreach(var layer in new[]{"SAIN : Combat Layer","OrbitBrainLayer",null})if(CometBehaviorDecision.ResolveMagazineRecovery(layer,"native",false)!="native")throw new Exception("foreign layer attributed to recovery");
+if(CometBehaviorDecision.ResolveMagazineRecovery("COMET : Recover magazine","native",true)!="native")throw new Exception("ghost recovery attributed");

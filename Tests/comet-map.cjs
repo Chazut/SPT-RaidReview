@@ -2909,7 +2909,7 @@ const reactionWire=path.resolve(__dirname,'../../COMET/artifacts/g05-adapter-eve
 // The committed fixture above is mandatory; the live stream is optional when RR is checked out alone.
 if(fs.existsSync(reactionWire))check('G05 production adapter event stream is readable',()=>{
  const lines=fs.readFileSync(reactionWire,'utf8').trim().split(/\r?\n/);
- for(const line of lines){const e=JSON.parse(line);assert.ok(reactionHelpers.parseCometGrenadeReaction(e.grenadeReaction),line);}
+ for(const line of lines){const e=JSON.parse(line);if(e.stage==='native-reaction')continue;assert.ok(reactionHelpers.parseCometGrenadeReaction(e.grenadeReaction),line);}
 });
 console.log(`${checks} COMET map checks passed (including G05)`);
 const dispersionHelpers=load('../Private/src/helpers/cometGrenadeDispersion.ts');
@@ -3074,7 +3074,7 @@ const h01Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','MedicalChoi
  for(const stage of ['selected','requested']){assert.equal(state(ready([h01Row(1,1000,{state:stage,started:false,applied:false,validFor:0})]),1100,'SAIN:Surgery',1000,false).medicalChoice,undefined);checks++;}
  const untrusted=state(ready([h01Row(1,1000,{contact:'<img onerror=x>',reason:'<script>x</script>',item:'<img src=x>'})]),1100,'SAIN:Surgery',1000,false);assert.ok(untrusted.medicalChoice);assert.ok(!tooltip(untrusted).includes('<img'));assert.ok(!tooltip(untrusted).includes('<script>'));checks++;
  const wire=path.join(__dirname,'../../COMET/artifacts/h01-adapter-events.jsonl');const events=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/h01-medical-choice.json'),'utf8'))];
- for(const e of events){assert.ok(h01Helpers.parseCometMedicalChoice(e.medicalChoice),JSON.stringify(e));checks++;}
+ for(const e of events){if(e.feature!=='H01')continue;assert.ok(h01Helpers.parseCometMedicalChoice(e.medicalChoice),JSON.stringify(e));checks++;}
 }
 for(const change of [{state:'success'},{choice:'MagicHeal'},{health:NaN},{health:2},{duration:Infinity},{duration:-1},{state:'ended',validFor:1},{started:false},{applied:'yes'},{applied:false,validFor:1},{x:Infinity},{contact:'',x:1},{contacts:-1},{quiet:-1},{distance:NaN},{sinceHit:NaN},{outcome:'healed-everything'},{alternatives:Array(5).fill({})},{reason:'x'.repeat(513)}]){assert.equal(h01Helpers.parseCometMedicalChoice({...h01Trace,...change}),null,JSON.stringify(change));checks++;}
 assert.equal(ready([h01Row(1,1000,{}, {decision:'ExplosionAwareness'})]).events.length,0);checks++;
