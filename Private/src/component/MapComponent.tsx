@@ -27,6 +27,7 @@ import { participantMarkerHtml } from '../helpers/participantMarkers'
 import { DEFAULT_PLAYER_COLOR, readPlayerColor, savePlayerColor } from '../helpers/playerColor'
 import { getIsbDisplayName } from '../helpers/isb'
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from '../helpers/botBehavior'
+import { isMobileViewport } from '../helpers/useMediaQuery'
 
 import 'leaflet/dist/leaflet.css';
 
@@ -288,6 +289,14 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [calculatedLayerInfo, setCalculatedLayerInfo] = useState({})
     const [playerFocus, setPlayerFocus] = useState<string | null>(null)
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(['SCAV']))
+    // Phones: the legend and the options are bottom sheets over a full-screen map.
+    const [mobilePanel, setMobilePanel] = useState<null | 'legend' | 'options'>(null)
+    useEffect(() => {
+        if (!mobilePanel) return
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobilePanel(null) }
+        document.addEventListener('keydown', onKey)
+        return () => document.removeEventListener('keydown', onKey)
+    }, [mobilePanel])
     const [proportionalScale, setProportionalScale] = useState(0)
     const [MAP, SET_MAP] = useState(null)
     const [mapHeight, setMapHeight] = useState(600)
@@ -3033,13 +3042,18 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                             )
                         )}
                     </div>
-                    <Link to={`/raid/${raidId}`} className="text-sm p-2 py-1 text-sm cursor-pointer border border-eft text-eft mb-2 ml-auto">
+                    <Link to={`/raid/${raidId}`} className="map-close text-sm p-2 py-1 text-sm cursor-pointer border border-eft text-eft mb-2 ml-auto">
                         Close
                     </Link>
                 </nav>
-                <aside className="sidebar border border-eft mr-3 p-3 overflow-x-auto">
+                {mobilePanel && <div className="map-sheet-backdrop md:hidden" onClick={() => setMobilePanel(null)} aria-hidden="true" />}
+                <aside id="map-sheet-legend" aria-label="Players and legend" className={`sidebar border border-eft mr-3 p-3 overflow-x-auto ${mobilePanel === 'legend' ? 'is-open' : ''}`}>
+                    <div className="map-sheet-header md:hidden">
+                        <strong>Players &amp; legend</strong>
+                        <button type="button" onClick={() => setMobilePanel(null)} aria-label="Close players and legend">✕</button>
+                    </div>
                     <div className="playerfeed text-eft">
-                        <strong>Legend</strong>
+                        <strong className="max-md:hidden">Legend</strong>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs py-2" aria-label="Participant marker key">
                             {([['player', 'Players', playerColor], ['pmc', 'PMCs', '#4E9BFF'], ['scav', 'Scavs', '#33FF57'], ['other', 'Other bots', '#FF7B00']] as const).map(([kind, label, color]) => (
                                 <span key={kind} className="inline-flex items-center gap-1">
@@ -3116,6 +3130,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                                     onClick={() => {
                                                                         setFollowPlayer(followPlayer === player.profileId ? null : player.profileId)
                                                                         setFollowPlayerZoomed(false)
+                                                                        if (isMobileViewport()) setMobilePanel(null)
                                                                     }}
                                                                 >
                                                                     <div className={`flex flex-row items-center ${playerIsDead(player.profileId, timeEndLimit) ? 'line-through opacity-25' : ''}`}>
@@ -3180,6 +3195,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                                     onClick={() => {
                                                                         setFollowPlayer(followPlayer === player.profileId ? null : player.profileId)
                                                                         setFollowPlayerZoomed(false)
+                                                                        if (isMobileViewport()) setMobilePanel(null)
                                                                     }}
                                                                 >
                                                                     <div className={`flex flex-row items-center ${playerIsDead(player.profileId, timeEndLimit) ? 'line-through opacity-25' : ''}`}>
@@ -3227,6 +3243,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                                         onClick={() => {
                                                             setFollowPlayer(followPlayer === player.profileId ? null : player.profileId)
                                                             setFollowPlayerZoomed(false)
+                                                            if (isMobileViewport()) setMobilePanel(null)
                                                         }}
                                                     >
                                                         <div className={`flex flex-row items-center ${playerIsDead(player.profileId, timeEndLimit) ? 'line-through opacity-25' : ''}`}>
@@ -3318,7 +3335,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     </div>
                     <div id="leaflet-map" ref={onMapContainerRefChange} className={'leaflet-map-container'} />
                 </div>
-                <aside className="sidebar-right border border-eft ml-3 p-3 overflow-x-auto">
+                <aside id="map-sheet-options" aria-label="Map options" className={`sidebar-right border border-eft ml-3 p-3 overflow-x-auto ${mobilePanel === 'options' ? 'is-open' : ''}`}>
+                    <div className="map-sheet-header md:hidden">
+                        <strong>Map options</strong>
+                        <button type="button" onClick={() => setMobilePanel(null)} aria-label="Close map options">✕</button>
+                    </div>
                     <div className="playerfeed text-eft">
                         {/* ── Animations Section ── */}
                         <div>
@@ -3969,24 +3990,37 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         <button className={`text-sm p-2 py-1 text-sm ${!playing ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaying(false)}>
                             ⏹️
                         </button>
-                        <button className={`text-sm p-2 py-1 text-sm ${playbackSpeed === 1 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(1)}>
+                        <button className={`max-md:hidden text-sm p-2 py-1 text-sm ${playbackSpeed === 1 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(1)}>
                             1x
                         </button>
-                        <button className={`text-sm p-2 py-1 text-sm ${playbackSpeed === 2 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(2)}>
+                        <button className={`max-md:hidden text-sm p-2 py-1 text-sm ${playbackSpeed === 2 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(2)}>
                             2x
                         </button>
-                        <button className={`text-sm p-2 py-1 text-sm ${playbackSpeed === 4 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(4)}>
+                        <button className={`max-md:hidden text-sm p-2 py-1 text-sm ${playbackSpeed === 4 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(4)}>
                             4x
                         </button>
-                        <button className={`text-sm p-2 py-1 text-sm ${playbackSpeed === 8 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(8)}>
+                        <button className={`max-md:hidden text-sm p-2 py-1 text-sm ${playbackSpeed === 8 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(8)}>
                             8x
                         </button>
-                        <button className={`text-sm p-2 py-1 mr-4 text-sm ${playbackSpeed === 16 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(16)}>
+                        <button className={`max-md:hidden text-sm p-2 py-1 mr-4 text-sm ${playbackSpeed === 16 ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setPlaybackSpeed(16)}>
                             16x
+                        </button>
+                        <button type="button" aria-label={`Playback speed ${playbackSpeed}x, tap to change`}
+                            className="md:hidden text-sm p-2 py-1 border border-eft bg-eft text-black min-w-[3rem]"
+                            onClick={() => setPlaybackSpeed(([1, 2, 4, 8, 16][([1, 2, 4, 8, 16].indexOf(playbackSpeed) + 1) % 5]))}>
+                            {playbackSpeed}x
                         </button>
                         <button className={`text-sm p-2 py-1 text-sm ${!hideSettings ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setHideSettings(!hideSettings)}>
                             ⚙️
                         </button>
+                        <div className="map-sheet-launchers md:hidden">
+                            <button type="button" aria-controls="map-sheet-legend" aria-expanded={mobilePanel === 'legend'} onClick={() => setMobilePanel('legend')}>
+                                Players
+                            </button>
+                            <button type="button" aria-controls="map-sheet-options" aria-expanded={mobilePanel === 'options'} onClick={() => setMobilePanel('options')}>
+                                Options
+                            </button>
+                        </div>
                         <div className={`w-full border border-eft p-1 flex flex-wrap gap-1 ${hideSettings ? 'invisible' : ''}`}>
                             <button className={`text-xs p-1 text-sm cursor-pointer ${hidePlayers ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => setHidePlayers(!hidePlayers)}>
                                 Hide Players

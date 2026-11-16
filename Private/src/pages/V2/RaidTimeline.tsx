@@ -228,9 +228,9 @@ export default function RaidTimeline() {
 
   return (
       <section className="raid-timeline">
-            <div className="w-full flex flex-row justify-between">
+            <div className="raid-timeline-header w-full flex flex-row justify-between">
               <span className="text-lg font-bold">Timeline</span>
-              <span>Filter by Username or Action</span>
+              <span className="max-md:text-xs max-md:opacity-70">Filter by Username or Action</span>
             </div>
         <table id="raid-timeline" className="mb-2 w-full border border-eft">
             <thead>

@@ -43,3 +43,18 @@ html, body {
     border-radius: 10px;
     border: 3px solid #9a8866;
   }
+/* Phones: overlay scrollbars, no 16px gutters inside scroll areas */
+@media (max-width: 767.98px) {
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border-width: 0;
+  }
+
+  * {
+    scrollbar-width: thin;
+  }
+}

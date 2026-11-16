@@ -41,6 +41,13 @@ export function PlayerSlider({ sliderTimes, events, timeCurrentIndex, setTimeCur
         setIsDragging(true);
     };
 
+    // Touch and pen: scrub from anywhere on the track (the handle is only 5px wide).
+    const handleTrackPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (e.pointerType === 'mouse') return;
+        handleTimelineClick(e);
+        setIsDragging(true);
+    };
+
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent> | MouseEvent) => {
         if (!isDragging) return;
 
@@ -90,23 +97,28 @@ export function PlayerSlider({ sliderTimes, events, timeCurrentIndex, setTimeCur
     
     useEffect(() => {
         if (isDragging) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
+            document.addEventListener('pointermove', handleMouseMove);
+            document.addEventListener('pointerup', handleMouseUp);
+            document.addEventListener('pointercancel', handleMouseUp);
         } else {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('pointermove', handleMouseMove);
+            document.removeEventListener('pointerup', handleMouseUp);
+            document.removeEventListener('pointercancel', handleMouseUp);
         }
 
         return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('pointermove', handleMouseMove);
+            document.removeEventListener('pointerup', handleMouseUp);
+            document.removeEventListener('pointercancel', handleMouseUp);
         };
     }, [isDragging, preserveHistory]);
 
     return (
         <div
             className="timeline-container border border-eft relative mt-7"
+            style={{ touchAction: 'none' }}
             onClick={(e) => handleTimelineClick(e)}
+            onPointerDown={handleTrackPointerDown}
         >
             { events.length > 0 ? events.map(e => 
             <div key={e.time} className='event-marker tooltip event' style={{left: `${(100 - (((findInsertIndex(e.time, sliderTimes) / sliderTimes.length - 1) * 100) * -1)) > 99.7166 ? 99.7166 : (100 - (((findInsertIndex(e.time, sliderTimes) / sliderTimes.length - 1) * 100) * -1))}%`,
@@ -120,7 +132,7 @@ export function PlayerSlider({ sliderTimes, events, timeCurrentIndex, setTimeCur
                     display: preserveHistory ? 'none' : '',
                     left: `${(Math.max(0, timeCurrentIndex - 200) / (sliderTimes.length - 1)) * 100 > 99.7166 ? 99.7166 : (Math.max(0, timeCurrentIndex - 200) / (sliderTimes.length - 1)) * 100}%`,
                 }}
-                onMouseDown={handleMouseDown}
+                onPointerDown={handleMouseDown}
             ></div>   
 
             <div
@@ -129,7 +141,7 @@ export function PlayerSlider({ sliderTimes, events, timeCurrentIndex, setTimeCur
                 style={{
                     left: `${(timeCurrentIndex / (sliderTimes.length - 1)) * 100 > 99.7166 ? 99.7166 : (timeCurrentIndex / (sliderTimes.length - 1)) * 100}%`,
                 }}
-                onMouseDown={handleMouseDown}
+                onPointerDown={handleMouseDown}
             ></div>
         </div>
     );

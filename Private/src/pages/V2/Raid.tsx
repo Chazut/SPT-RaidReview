@@ -1,4 +1,5 @@
-import { Link, Outlet, useLoaderData } from "react-router-dom";
+import { NavLink, Outlet, useLoaderData, useLocation } from "react-router-dom";
+import { useEffect, useRef } from "react";
 
 import api from "../../api/api";
 import ExportRaidButton from "../../component/ExportRaidButton";
@@ -13,23 +14,36 @@ export async function loader(loaderData: any) {
 
     return { raidId, raid, intl }
 }
+
+const TAB_CLASS = 'raid-tab py-1 px-4 bg-eft text-black hover:opacity-75';
+
 export default function Raid() {
 
   const { raidId, raid, intl } = useLoaderData() as any;
+  const location = useLocation();
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  // On phones the tab strip scrolls horizontally: keep the current tab in view.
+  useEffect(() => {
+    const strip = tabsRef.current;
+    const active = strip?.querySelector<HTMLElement>('.raid-tab.active');
+    if (!strip || !active || strip.scrollWidth <= strip.clientWidth) return;
+    strip.scrollLeft = active.offsetLeft - (strip.clientWidth - active.offsetWidth) / 2;
+  }, [location.pathname]);
 
   return (
     <>
-      <div className='flex justify-between my-2'>
-          <div className="flex gap-2">
-              <Link to={`/raid/${raidId}/`} className='py-1 px-4 bg-eft text-black hover:opacity-75'>Overview</Link>
-              <Link to={`/raid/${raidId}/charts`} className='py-1 px-4 bg-eft text-black hover:opacity-75'>Stats</Link>
-              <Link to={`/raid/${raidId}/timeline`} className='py-1 px-4 bg-eft text-black hover:opacity-75'>Timeline</Link>
-              <Link to={`/raid/${raidId}/map`} className='py-1 px-4 bg-eft text-black hover:opacity-75'>Map</Link>
-              <Link to={`/raid/${raidId}/behavior`} className='py-1 px-4 bg-eft text-black hover:opacity-75'>Behavior</Link>
+      <div className='raid-tabs flex justify-between my-2'>
+          <div ref={tabsRef} className="raid-tabs-strip flex gap-2" role="navigation" aria-label="Raid sections">
+              <NavLink end to={`/raid/${raidId}/`} className={TAB_CLASS}>Overview</NavLink>
+              <NavLink to={`/raid/${raidId}/charts`} className={TAB_CLASS}>Stats</NavLink>
+              <NavLink to={`/raid/${raidId}/timeline`} className={TAB_CLASS}>Timeline</NavLink>
+              <NavLink to={`/raid/${raidId}/map`} className={TAB_CLASS}>Map</NavLink>
+              <NavLink to={`/raid/${raidId}/behavior`} className={TAB_CLASS}>Behavior</NavLink>
           </div>
-          <div className="flex gap-2">
+          <div className="raid-tabs-actions flex gap-2">
               <ExportRaidButton raidId={raidId} finished={!!raid?.exitStatus} />
-              <Link to={`/raid/${raidId}/settings`} className='py-1 px-4 bg-eft text-black hover:opacity-75'>Settings</Link>
+              <NavLink to={`/raid/${raidId}/settings`} className={TAB_CLASS}>Settings</NavLink>
           </div>
       </div>
 

@@ -7,6 +7,7 @@ import { msToHMS } from "../../helpers";
 import { createPlayerColorResolver, getLegendIcon, buildPmcIndexMap } from "../../helpers/players";
 import { getBehaviorCategory, BEHAVIOR_CATEGORIES, formatDecisionLabel, getDecisionSource } from "../../helpers/botBehavior";
 import { displayPlayerName } from '../../helpers/playerNames';
+import { useIsMobile } from '../../helpers/useMediaQuery';
 
 export async function loader(loaderData: LoaderFunctionArgs) {
     const positions = await api.getRaidPositionalData(loaderData.params.raidId as string) || [];
@@ -97,6 +98,11 @@ export default function RaidBehaviorTimeline() {
     // Zoom state: viewStart/viewEnd as ms timestamps (null = full range)
     const [viewRange, setViewRange] = useState<{ start: number, end: number } | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const axisRef = useRef<HTMLDivElement>(null);
+    const [axisWidth, setAxisWidth] = useState(0);
+    const isMobile = useIsMobile();
+    // Narrower name column on phones leaves room for the behavior bars.
+    const nameWidth = isMobile ? 112 : 180;
 
     // Build death time lookup from kills data
     const deathTimes = useMemo(() => {
@@ -182,11 +188,23 @@ export default function RaidBehaviorTimeline() {
     // Time axis ticks — adapt interval to zoom level
     const ticks: number[] = []
     const durationSec = viewDuration / 1000
-    const tickInterval = durationSec <= 60 ? 10000 : durationSec <= 300 ? 30000 : 60000
+    const baseInterval = durationSec <= 60 ? 10000 : durationSec <= 300 ? 30000 : 60000
+    // Keep labels (~8 characters) from overlapping on the available axis width.
+    const maxTicks = axisWidth > 0 ? Math.max(2, Math.floor(axisWidth / 64)) : Infinity
+    const tickInterval = [baseInterval, 120000, 300000, 600000, 900000, 1800000, 3600000]
+        .find(interval => interval >= baseInterval && viewDuration / interval <= maxTicks) ?? 3600000
     const firstTick = Math.ceil(effectiveStart / tickInterval) * tickInterval
     for (let t = firstTick; t <= effectiveEnd; t += tickInterval) {
         ticks.push(t)
     }
+
+    useEffect(() => {
+        const el = axisRef.current
+        if (!el || typeof ResizeObserver === 'undefined') return
+        const observer = new ResizeObserver(entries => setAxisWidth(entries[0].contentRect.width))
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [playerRows.length])
 
     // Ensure hatch CSS exists
     useMemo(() => ensureHatchStyles(), [])
@@ -201,11 +219,11 @@ export default function RaidBehaviorTimeline() {
             // Only zoom if cursor is over the timeline area (not the name column)
             const rect = el.getBoundingClientRect()
             const relX = e.clientX - rect.left
-            if (relX < 180) return // over the name column
+            if (relX < nameWidth) return // over the name column
 
             e.preventDefault()
-            const timelineWidth = rect.width - 180
-            const pct = Math.max(0, Math.min(1, (relX - 180) / timelineWidth))
+            const timelineWidth = rect.width - nameWidth
+            const pct = Math.max(0, Math.min(1, (relX - nameWidth) / timelineWidth))
 
             const curStart = viewRange?.start ?? raidStart
             const curEnd = viewRange?.end ?? raidEnd
@@ -238,7 +256,23 @@ export default function RaidBehaviorTimeline() {
         }
         el.addEventListener('wheel', handler, { passive: false })
         return () => el.removeEventListener('wheel', handler)
-    }, [viewRange, raidStart, raidEnd])
+    }, [viewRange, raidStart, raidEnd, nameWidth])
+
+    // Button zoom for touch screens, centered on the current view.
+    const zoomBy = (factor: number) => {
+        const curStart = viewRange?.start ?? raidStart
+        const curEnd = viewRange?.end ?? raidEnd
+        const fullDuration = raidEnd - raidStart
+        const newDuration = (curEnd - curStart) * factor
+        if (newDuration >= fullDuration) { setViewRange(null); return }
+        if (newDuration < 5000) return
+        const center = (curStart + curEnd) / 2
+        let newStart = center - newDuration / 2
+        let newEnd = center + newDuration / 2
+        if (newStart < raidStart) { newEnd += raidStart - newStart; newStart = raidStart }
+        if (newEnd > raidEnd) { newStart -= newEnd - raidEnd; newEnd = raidEnd }
+        setViewRange({ start: Math.max(newStart, raidStart), end: Math.min(newEnd, raidEnd) })
+    }
 
     if (playerRows.length === 0) {
         return (
@@ -254,7 +288,7 @@ export default function RaidBehaviorTimeline() {
     const hasSain = !!raid?.detectedMods?.match(/SAIN/gi)
 
     return (
-        <div ref={containerRef} className="p-4" style={{ overflowX: 'auto' }}>
+        <div ref={containerRef} className="p-4 max-md:px-0 max-md:py-2" style={{ overflowX: 'auto' }}>
             <GhostWakeDiagnostics raidId={raid.raidId} />
             {/* SAIN recommendation banner */}
             {!hasSain && (
@@ -292,21 +326,31 @@ export default function RaidBehaviorTimeline() {
             </div>
 
             {/* Zoom hint */}
-            <div style={{ fontSize: '11px', color: '#666', marginBottom: 4 }}>
-                Scroll to zoom in/out
-            </div>
+            {isMobile ? (
+                <div className="flex items-center gap-2" style={{ fontSize: '11px', color: '#666', marginBottom: 6 }}>
+                    <span className="flex-1">Zoom, then drag the bar below to pan</span>
+                    <button type="button" aria-label="Zoom out" onClick={() => zoomBy(1.5)} className="border border-eft text-eft px-3 text-base leading-6">−</button>
+                    <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1 / 1.5)} className="border border-eft text-eft px-3 text-base leading-6">+</button>
+                </div>
+            ) : (
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: 4 }}>
+                    Scroll to zoom in/out
+                </div>
+            )}
 
             {/* Time axis */}
             <div className="flex" style={{ marginBottom: 2 }}>
-                <div style={{ width: 180, flexShrink: 0 }}></div>
-                <div className="relative flex-1" style={{ height: 16 }}>
+                <div style={{ width: nameWidth, flexShrink: 0 }}></div>
+                <div ref={axisRef} className="relative flex-1" style={{ height: 16 }}>
                     {ticks.map(t => {
                         const left = ((t - effectiveStart) / viewDuration) * 100
                         if (left < 0 || left > 100) return null
                         return (
                             <span key={t} style={{
                                 position: 'absolute', left: `${left}%`, fontSize: '11px',
-                                color: '#9a8866', transform: 'translateX(-50%)', whiteSpace: 'nowrap'
+                                color: '#9a8866', whiteSpace: 'nowrap',
+                                // Keep edge labels inside the axis instead of spilling past it.
+                                transform: left > 92 ? 'translateX(-100%)' : left < 8 ? 'none' : 'translateX(-50%)'
                             }}>
                                 {msToHMS(t)}
                             </span>
@@ -344,7 +388,7 @@ export default function RaidBehaviorTimeline() {
                 return (
                     <div key={row.profileId} className="flex items-center" style={{ height: 28, marginBottom: 1 }}>
                         {/* Player name with icon */}
-                        <div className="flex items-center" style={{ width: 180, flexShrink: 0, fontSize: '13px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        <div className="flex items-center" style={{ width: nameWidth, flexShrink: 0, fontSize: isMobile ? '12px' : '13px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                             {getLegendIcon(row.player, row.color, row.pmcIdx)}
                             <span className="text-eft" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {row.name}
@@ -409,10 +453,10 @@ export default function RaidBehaviorTimeline() {
             {/* Horizontal scroll bar (only when zoomed) */}
             {viewRange && (
                 <div className="flex" style={{ marginTop: 6 }}>
-                    <div style={{ width: 180, flexShrink: 0 }}></div>
-                    <div className="flex-1" style={{ position: 'relative', height: 16 }}>
+                    <div style={{ width: nameWidth, flexShrink: 0 }}></div>
+                    <div className="flex-1" style={{ position: 'relative', height: isMobile ? 28 : 16 }}>
                         {/* Track background showing full raid extent */}
-                        <div style={{ position: 'absolute', top: 6, left: 0, right: 0, height: 4, background: 'rgba(154,136,102,0.15)', borderRadius: 2 }} />
+                        <div style={{ position: 'absolute', top: isMobile ? 12 : 6, left: 0, right: 0, height: 4, background: 'rgba(154,136,102,0.15)', borderRadius: 2 }} />
                         {/* Thumb showing current view window */}
                         {(() => {
                             const fullDuration = raidEnd - raidStart || 1
@@ -425,9 +469,10 @@ export default function RaidBehaviorTimeline() {
                                         left: `${thumbLeft}%`, width: `${thumbWidth}%`,
                                         background: 'rgba(154,136,102,0.5)', cursor: 'grab',
                                         border: '1px solid rgba(154,136,102,0.7)',
-                                        zIndex: 2,
+                                        zIndex: 2, touchAction: 'none',
+                                        ...(isMobile ? { top: 4, height: 20 } : {}),
                                     }}
-                                    onMouseDown={(e) => {
+                                    onPointerDown={(e) => {
                                         if (e.button !== 0) return
                                         e.preventDefault()
                                         const startX = e.clientX
@@ -435,7 +480,7 @@ export default function RaidBehaviorTimeline() {
                                         const parentRect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
                                         const pxPerMs = parentRect.width / fullDuration
 
-                                        const onMove = (me: MouseEvent) => {
+                                        const onMove = (me: PointerEvent) => {
                                             const dx = me.clientX - startX
                                             const dtMs = dx / pxPerMs
                                             let newStart = startRange.start + dtMs
@@ -446,11 +491,13 @@ export default function RaidBehaviorTimeline() {
                                             setViewRange({ start: Math.max(newStart, raidStart), end: Math.min(newEnd, raidEnd) })
                                         }
                                         const onUp = () => {
-                                            document.removeEventListener('mousemove', onMove)
-                                            document.removeEventListener('mouseup', onUp)
+                                            document.removeEventListener('pointermove', onMove)
+                                            document.removeEventListener('pointerup', onUp)
+                                            document.removeEventListener('pointercancel', onUp)
                                         }
-                                        document.addEventListener('mousemove', onMove)
-                                        document.addEventListener('mouseup', onUp)
+                                        document.addEventListener('pointermove', onMove)
+                                        document.addEventListener('pointerup', onUp)
+                                        document.addEventListener('pointercancel', onUp)
                                     }}
                                 />
                             )
@@ -479,7 +526,7 @@ export default function RaidBehaviorTimeline() {
             {hoveredSegment && (
                 <div style={{
                     position: 'fixed',
-                    left: hoveredSegment.x + 12,
+                    left: Math.max(8, Math.min(hoveredSegment.x + 12, window.innerWidth - 328)),
                     top: hoveredSegment.y - 10,
                     background: '#1a1a1a',
                     border: '1px solid #9a8866',

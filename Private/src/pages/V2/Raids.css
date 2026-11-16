@@ -101,3 +101,185 @@ tbody tr:nth-child(even) {
 }
 #raid-timeline tbody tr { transition: background 0.1s; }
 #raid-timeline tbody tr:hover { background: rgba(154,136,102,0.15); }
+
+/* Raid list cards (phones) */
+.raid-card {
+    background: rgba(154, 136, 102, 0.06);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.raid-card:active {
+    background: rgba(154, 136, 102, 0.2);
+}
+
+/* ===== Phone layout ===== */
+@media (max-width: 767.98px) {
+    #raid-overview {
+        font-size: 0.875rem;
+    }
+
+    #raid-overview tbody tr td:nth-of-type(1) {
+        width: 48%;
+    }
+
+    .leaderboard-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px 12px;
+        margin: 4px 0 8px;
+        font-size: 0.875rem;
+    }
+
+    .leaderboard-segmented {
+        display: flex;
+        border: 1px solid #9a8866;
+    }
+
+    .leaderboard-segmented button {
+        padding: 2px 10px;
+    }
+
+    .leaderboard-segmented button + button {
+        border-left: 1px solid #9a8866;
+    }
+
+    .leaderboard-controls select {
+        background: #000;
+        color: #9a8866;
+        border: 1px solid #9a8866;
+        padding: 2px 4px;
+    }
+
+    .leaderboard-sort-dir {
+        border: 1px solid #9a8866;
+        padding: 0 8px;
+        line-height: 1.6;
+    }
+
+    .leaderboard-sort-dir:disabled {
+        opacity: 0.4;
+    }
+
+    .leaderboard-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .leaderboard-card {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        -webkit-tap-highlight-color: transparent;
+        transition: background 0.15s;
+    }
+
+    .leaderboard-card + .leaderboard-card {
+        border-top: 1px dashed rgba(154, 136, 102, 0.5);
+    }
+
+    .leaderboard-card-stats {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+        margin-top: 8px;
+        text-align: center;
+    }
+
+    .leaderboard-card-stats dt {
+        font-size: 10px;
+        text-transform: uppercase;
+        opacity: 0.6;
+    }
+
+    .leaderboard-card-stats dd {
+        font-size: 0.8125rem;
+        white-space: nowrap;
+    }
+}
+
+/* Timeline as a stacked feed (phones) */
+@media (max-width: 767.98px) {
+    .raid-timeline-header {
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0 8px;
+    }
+
+    #raid-timeline,
+    #raid-timeline thead,
+    #raid-timeline tbody {
+        display: block;
+    }
+
+    #raid-timeline thead tr {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    #raid-timeline thead tr::before {
+        content: 'Filter';
+        margin-right: auto;
+        padding: 4px 8px;
+        font-weight: bold;
+    }
+
+    #raid-timeline thead th:first-child,
+    #raid-timeline thead th:last-child {
+        display: none;
+    }
+
+    #raid-timeline thead th {
+        border: 0;
+        padding: 4px 12px;
+    }
+
+    #raid-timeline thead th + th {
+        border-left: 1px solid #000;
+    }
+
+    #raid-timeline .table-toggle {
+        width: 14rem;
+        max-height: 60vh;
+        overflow-y: auto;
+        font-size: 0.875rem;
+    }
+
+    #raid-timeline .table-toggle li {
+        padding: 4px 0;
+    }
+
+    #raid-timeline tbody tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px 6px;
+        padding: 6px 8px;
+        border-top: 1px solid rgba(154, 136, 102, 0.25);
+    }
+
+    #raid-timeline tbody td {
+        display: block;
+        padding: 0;
+        border: 0;
+        text-align: left;
+    }
+
+    #raid-timeline tbody td:nth-child(1) {
+        font-size: 0.75rem;
+        min-width: 4.25rem;
+    }
+
+    #raid-timeline tbody td:nth-child(4) {
+        width: 100%;
+        font-size: 0.875rem;
+        overflow-wrap: anywhere;
+    }
+
+    #raid-timeline tbody td .inline-flex {
+        vertical-align: middle;
+    }
+}
