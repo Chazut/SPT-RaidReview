@@ -122,6 +122,11 @@ tbody tr:nth-child(even) {
         width: 48%;
     }
 
+    /* Never let one long value widen the summary past the screen */
+    #raid-overview tbody tr td:nth-of-type(2) {
+        overflow-wrap: anywhere;
+    }
+
     .leaderboard-controls {
         display: flex;
         flex-wrap: wrap;
@@ -198,6 +203,25 @@ tbody tr:nth-child(even) {
     .leaderboard-card-stats dd {
         font-size: 0.8125rem;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .leaderboard-card-accuracy {
+        height: 3px;
+        margin: 2px auto 0;
+        max-width: 2.5rem;
+        border-radius: 2px;
+        overflow: hidden;
+        background: #333;
+    }
+
+    .leaderboard-card-accuracy > div {
+        height: 100%;
+    }
+
+    .leaderboard-card {
+        overflow-wrap: anywhere;
     }
 }
 

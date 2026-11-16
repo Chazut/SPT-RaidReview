@@ -665,3 +665,21 @@ aside {
     min-height: 36px;
   }
 }
+
+/* Phones: one scroll per sheet, no nested scrolling lists */
+@media (max-width: 767.98px) {
+  .map-container aside .sheet-flat-scroll {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+
+  .bot-inventory-select {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    font-size: 14px;
+    color: #9a8866;
+    background: #111;
+    border: 1px solid rgba(154, 136, 102, 0.6);
+  }
+}

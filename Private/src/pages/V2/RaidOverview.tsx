@@ -56,6 +56,18 @@ function formatCompactNumber(n: number): string {
     if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
     return String(n);
 }
+
+// Phone cards: also compact negative values so they fit their column.
+function formatSignedCompactNumber(n: number): string {
+    return n < 0 ? `-${formatCompactNumber(-n)}` : formatCompactNumber(n);
+}
+
+// The client joins mod names with bare commas: allow a line break after each one.
+function formatModList(mods: string | undefined) {
+    if (!mods) return mods;
+    const names = mods.split(',');
+    return names.map((name, i) => <span key={i}>{name}{i < names.length - 1 ? <>,<wbr /></> : null}</span>);
+}
 type SortDir = 'asc' | 'desc';
 
 export default function RaidOverview() {
@@ -269,8 +281,7 @@ export default function RaidOverview() {
 
       newRaidSummary.push({
         title: 'Detected Mods',
-        // @ts-ignore
-        value: raid.detectedMods
+        value: formatModList(raid.detectedMods)
       });
 
       let positionsTrackedMap = { "COMPILED" : "Available", "RAW" : "Processing", "NOT_AVAILABLE" : "Not Available" }
@@ -588,9 +599,13 @@ export default function RaidOverview() {
                     <dl className="leaderboard-card-stats">
                       <div><dt>Kills</dt><dd>{stats.kills || '-'}</dd></div>
                       <div><dt>Loot</dt><dd className={stats.lootings < 0 ? 'text-red-400' : 'text-green-400'}>{stats.lootings || '-'}</dd></div>
-                      <div><dt>Value</dt><dd className={stats.lootedValue < 0 ? 'text-red-400' : 'text-yellow-400'}>{stats.lootedValue ? formatCompactNumber(stats.lootedValue) : '-'}</dd></div>
-                      <div><dt>Spawn</dt><dd className="text-orange-300">{stats.spawnValue ? formatCompactNumber(stats.spawnValue) : '-'}</dd></div>
-                      <div><dt>Acc.</dt><dd>{renderAccuracy(row)}</dd></div>
+                      <div><dt>Value</dt><dd className={stats.lootedValue < 0 ? 'text-red-400' : 'text-yellow-400'}>{stats.lootedValue ? formatSignedCompactNumber(stats.lootedValue) : '-'}</dd></div>
+                      <div><dt>Spawn</dt><dd className="text-orange-300">{stats.spawnValue ? formatSignedCompactNumber(stats.spawnValue) : '-'}</dd></div>
+                      <div>
+                        <dt>Acc.</dt>
+                        <dd style={{ color: row.accuracy > 0 ? row.accuracyColor : undefined }}>{row.accuracy > 0 ? `${row.accuracy}%` : '-'}</dd>
+                        <div className="leaderboard-card-accuracy" aria-hidden="true"><div style={{ width: `${row.accuracy}%`, background: row.accuracyColor }} /></div>
+                      </div>
                     </dl>
                   )}
                 </div>
@@ -609,7 +624,7 @@ export default function RaidOverview() {
           <table id="raid-overview" className="mb-2 w-full border border-eft">
                   <tbody>
                       {raidSummary && raidSummary.length ? raidSummary.map(rs =>
-                        <tr key={rs.value}>
+                        <tr key={rs.title}>
                           <td className="text-right bg-eft text-black font-bold px-2">{ rs.title }</td>
                           <td className="px-2">{ rs.value }</td>
                         </tr>

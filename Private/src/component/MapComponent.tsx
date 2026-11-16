@@ -3430,7 +3430,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                     </div>
 
                                     {showLooseLoot && looseLootData.length > 0 && (
-                                        <div style={{ maxHeight: '300px', overflowY: 'auto', borderTop: '1px solid rgba(154,136,102,0.2)', paddingTop: '4px' }}>
+                                        <div className="sheet-flat-scroll" style={{ maxHeight: '300px', overflowY: 'auto', borderTop: '1px solid rgba(154,136,102,0.2)', paddingTop: '4px' }}>
                                             {[...looseLootData]
                                                 .filter(item => {
                                                     if (!onFloor(item)) return false
@@ -3501,7 +3501,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                             <span style={{ color: '#FBCFE8', marginRight: '8px' }}>{'\u25CF'} EFT Quest</span>
                                             <span style={{ color: '#D946EF' }}>{'\u25CF'} QB Quest</span>
                                         </div>
-                                        <div style={{ maxHeight: '250px', overflowY: 'auto', borderTop: '1px solid rgba(154,136,102,0.2)', paddingTop: '4px' }}>
+                                        <div className="sheet-flat-scroll" style={{ maxHeight: '250px', overflowY: 'auto', borderTop: '1px solid rgba(154,136,102,0.2)', paddingTop: '4px' }}>
                                             {(() => {
                                                 // Show latest quest per bot at current timeline
                                                 const latestByBot: Record<string, any> = {}
@@ -3592,7 +3592,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                             <span style={{ color: '#22C55E' }}>{'●'} Synthetic</span>
                                             <span style={{ color: '#2DD4BF' }}>{'●'} Exfil</span>
                                         </div>
-                                        <div style={{ maxHeight: '250px', overflowY: 'auto', borderTop: '1px solid rgba(154,136,102,0.2)', paddingTop: '4px' }}>
+                                        <div className="sheet-flat-scroll" style={{ maxHeight: '250px', overflowY: 'auto', borderTop: '1px solid rgba(154,136,102,0.2)', paddingTop: '4px' }}>
                                             {(() => {
                                                 const latestByBot: Record<string, any> = {}
                                                 for (const o of botObjectiveData) {
@@ -3833,8 +3833,22 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                 </div>
                                 {!botInvCollapsed && (
                                     <div style={{ marginTop: '6px', fontSize: '13px' }}>
+                                        {/* Phones: native picker, so the sheet keeps a single scroll */}
+                                        <select
+                                            className="bot-inventory-select md:hidden"
+                                            aria-label="Bot"
+                                            value={selectedBotProfileId}
+                                            onChange={(e) => setSelectedBotProfileId(e.target.value)}
+                                        >
+                                            <option value="">Choose a bot…</option>
+                                            {botsWithInventory.map(bot => (
+                                                <option key={bot.profileId} value={bot.profileId}>
+                                                    {getDisplayName(bot)}{botSpawnValues[bot.profileId] > 0 ? ` · \u20BD${formatCompactNumber(botSpawnValues[bot.profileId])}` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
                                         {/* Bot selector with colored dots */}
-                                        <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid rgba(154,136,102,0.4)', marginBottom: '6px', background: '#111' }}>
+                                        <div className="max-md:hidden" style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid rgba(154,136,102,0.4)', marginBottom: '6px', background: '#111' }}>
                                             {botsWithInventory.map(bot => {
                                                 const bIdx = raidData.players?.indexOf(bot) ?? 0
                                                 const bColor = getPlayerColor(bot, bIdx)
@@ -3865,7 +3879,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                         </div>
 
                                         {selectedBotProfileId && selectedBotInventory.slots.length > 0 && (
-                                            <div style={{ maxHeight: 'calc(100vh - 400px)', overflowY: 'auto' }}>
+                                            <div className="sheet-flat-scroll" style={{ maxHeight: 'calc(100vh - 400px)', overflowY: 'auto' }}>
                                                 {selectedBotInventory.slots.map((group) => {
                                                     const isSlotCollapsed = collapsedSlots[group.name] ?? false
                                                     const attKey = `${group.name}__att`
