@@ -197,6 +197,19 @@ export default function RaidBehaviorTimeline() {
     for (let t = firstTick; t <= effectiveEnd; t += tickInterval) {
         ticks.push(t)
     }
+    // Drop a label that would touch the previous one (edge labels are shifted inwards).
+    const TICK_LABEL_WIDTH = 56
+    let lastLabelRight = -Infinity
+    const visibleTicks = ticks.filter(t => {
+        const pct = ((t - effectiveStart) / viewDuration) * 100
+        if (pct < 0 || pct > 100) return false
+        if (axisWidth <= 0) return true
+        const x = (pct / 100) * axisWidth
+        const labelLeft = pct > 92 ? x - TICK_LABEL_WIDTH : pct < 8 ? x : x - TICK_LABEL_WIDTH / 2
+        if (labelLeft < lastLabelRight + 8) return false
+        lastLabelRight = labelLeft + TICK_LABEL_WIDTH
+        return true
+    })
 
     useEffect(() => {
         const el = axisRef.current
@@ -342,7 +355,7 @@ export default function RaidBehaviorTimeline() {
             <div className="flex" style={{ marginBottom: 2 }}>
                 <div style={{ width: nameWidth, flexShrink: 0 }}></div>
                 <div ref={axisRef} className="relative flex-1" style={{ height: 16 }}>
-                    {ticks.map(t => {
+                    {visibleTicks.map(t => {
                         const left = ((t - effectiveStart) / viewDuration) * 100
                         if (left < 0 || left > 100) return null
                         return (
