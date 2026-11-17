@@ -13,6 +13,7 @@
     <Compile Include="../../ServerMod/FileSystem/DataFileService.cs" Link="DataFileService.cs" />
     <Compile Include="../../ServerMod/PostRaid/RaidPositionCompiler.cs" Link="RaidPositionCompiler.cs" />
     <Compile Include="../../ServerMod/PostRaid/RecordingIdentity.cs" Link="RecordingIdentity.cs" />
+    <Compile Include="../../ServerMod/PostRaid/EnvironmentalDeaths.cs" Link="EnvironmentalDeaths.cs" />
     <Compile Include="../../ServerMod/Models/TrackingModels.cs" Link="TrackingModels.cs" />
     <Compile Include="../../ServerMod/Config/RaidReviewConfig.cs" Link="RaidReviewConfig.cs" />
     <Compile Include="../../ServerMod/Logging/RaidReviewLogger.cs" Link="RaidReviewLogger.cs" />

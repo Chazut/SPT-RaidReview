@@ -127,6 +127,7 @@
   border-radius: 50%;
   cursor: pointer;
 }
+.event-marker.gas-death::after { content: '💥'; background: #ffb24c66; }
 
 /* Timeline Container */
 .timeline-container {

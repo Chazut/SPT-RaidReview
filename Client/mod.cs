@@ -746,6 +746,7 @@ namespace RAID_REVIEW
             new RecordingRegisterPatch().Enable();
             new RecordingUnregisterPatch().Enable();
             new RecordingDeathPatch().Enable();
+            new RecordingGasDeathPatch().Enable();
             new RecordingExtractPatch().Enable();
 
             PlayerTracking = Config.Bind<bool>("Tracking Settings", "Player Tracking", true, "Enables location tracking of players and bots.");

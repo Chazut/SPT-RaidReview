@@ -10,6 +10,7 @@
     <Reference Include="Newtonsoft.Json"><HintPath>../../Client/dependencies/4.1.X/Newtonsoft.Json.dll</HintPath></Reference>
     <Compile Include="../../Client/integrations/FikaRecording.cs" Link="FikaRecording.cs" />
     <Compile Include="../../Client/helpers/RecordingRoster.cs" Link="RecordingRoster.cs" />
+    <Compile Include="../../Client/helpers/RecordingGasDeaths.cs" Link="RecordingGasDeaths.cs" />
     <Compile Include="../../Client/helpers/RecordingInventory.cs" Link="RecordingInventory.cs" />
     <Compile Include="../../Client/helpers/RecordingPlayerIdentity.cs" Link="RecordingPlayerIdentity.cs" />
     <Compile Include="../../Client/patches/player_onItemAddedOrRemovedPatch.cs" Link="LootCapture.cs" />

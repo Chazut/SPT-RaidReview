@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { findInsertIndex } from '../modules/utils';
+import { isGasDeath } from '../helpers/deathEvents';
 
 interface TimelineEvent {
+    type?: string
     time: number
     profileNickname: string
     profileId: string
@@ -109,9 +111,9 @@ export function PlayerSlider({ sliderTimes, events, timeCurrentIndex, setTimeCur
             onClick={(e) => handleTimelineClick(e)}
         >
             { events.length > 0 ? events.map(e => 
-            <div key={e.time} className='event-marker tooltip event' style={{left: `${(100 - (((findInsertIndex(e.time, sliderTimes) / sliderTimes.length - 1) * 100) * -1)) > 99.7166 ? 99.7166 : (100 - (((findInsertIndex(e.time, sliderTimes) / sliderTimes.length - 1) * 100) * -1))}%`,
+            <div key={`${e.time}-${e.killedId}`} className={`event-marker tooltip event ${isGasDeath(e) ? 'gas-death' : ''}`} style={{left: `${(100 - (((findInsertIndex(e.time, sliderTimes) / sliderTimes.length - 1) * 100) * -1)) > 99.7166 ? 99.7166 : (100 - (((findInsertIndex(e.time, sliderTimes) / sliderTimes.length - 1) * 100) * -1))}%`,
                 }} data-e={JSON.stringify(e)}>
-                    <span className="tooltiptext event"><strong>{ e.profileNickname }</strong><br /> killed <br /><strong>{ e.killedNickname }</strong></span>
+                    <span className="tooltiptext event">{isGasDeath(e) ? <><strong>{e.killedNickname}</strong><br />Gas explosion</> : e.profileId === e.killedId ? <><strong>{e.killedNickname}</strong><br />died</> : <><strong>{e.profileNickname}</strong><br />killed<br /><strong>{e.killedNickname}</strong></>}</span>
                 </div>)  : ''}
             <div
                 className="shelf-slider"

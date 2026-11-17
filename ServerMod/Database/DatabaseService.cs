@@ -621,6 +621,9 @@ public class DatabaseService : IDisposable
                 ALTER TABLE player ADD COLUMN ""mod_PBT_personality"" TEXT NOT NULL DEFAULT '';
                 ALTER TABLE player ADD COLUMN ""mod_PBT_cheats"" TEXT NOT NULL DEFAULT '';
             "),
+            ("add_kill_damage_type", @"
+                ALTER TABLE kills ADD COLUMN ""type"" TEXT NOT NULL DEFAULT '';
+            "),
         };
 
         foreach (var (name, sql) in migrations)

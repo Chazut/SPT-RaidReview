@@ -159,6 +159,7 @@ class Program
         RecordingRoster.Reset();
 
         TerminalStatusTests.Run(Check);
+        GasDeathTests.Run(Check);
         await ServerCompatibility();
         Console.WriteLine($"PASS {checks} recording pipeline checks");
     }
@@ -169,6 +170,10 @@ class Program
         async Task Packet(string action,object payload)=>await handler.HandleMessageAsync(Encoding.UTF8.GetBytes(Serialize(action,payload)));
         await Packet("START",new {sessionId="s",profileId="s"});
         Check(sessions.GetProfile("s").RaidId!=null,"server START session");
+        await Packet("KILL", new TrackingRaidKill { sessionId="s",time=100,profileId="gas",killedId="gas",type="HotGases",
+            weapon="Gas explosion",bodyPart="",positionKilled=new JsonPosition(new UnityEngine.Vector3(1,2,3)),positionKiller=new JsonPosition(new UnityEngine.Vector3(1,2,3)) });
+        Check(db.LastArgs.Single(a=>a.Item1=="$type").Item2.ToString()=="HotGases","gas damage type survives KILL serialization and storage");
+        Check(db.LastArgs.Single(a=>a.Item1=="$profileId").Item2.ToString()==db.LastArgs.Single(a=>a.Item1=="$killedId").Item2.ToString(),"environmental death has no fabricated killer");
         foreach (var (stage, time) in new[] { ("selected", 100), ("accepted", 101), ("released", 105) })
         foreach (var feature in new[] { "A01", "A02", "A03", "A07" })
         {

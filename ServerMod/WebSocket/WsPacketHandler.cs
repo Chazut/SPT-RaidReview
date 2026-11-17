@@ -248,7 +248,7 @@ public class WsPacketHandler
                 case "KILL":
                 {
                     await _db.ExecuteAsync(
-                        "INSERT INTO kills (raidId, time, profileId, killedId, weapon, distance, bodyPart, positionKiller, positionKilled) VALUES ($raidId, $time, $profileId, $killedId, $weapon, $distance, $bodyPart, $posKiller, $posKilled)",
+                        "INSERT INTO kills (raidId, time, profileId, killedId, weapon, distance, bodyPart, positionKiller, positionKilled, type) VALUES ($raidId, $time, $profileId, $killedId, $weapon, $distance, $bodyPart, $posKiller, $posKilled, $type)",
                         ("$raidId", raidId!),
                         ("$time", GetString(payload, "time")),
                         ("$profileId", GetString(payload, "profileId")),
@@ -256,6 +256,7 @@ public class WsPacketHandler
                         ("$weapon", ResolveWeaponName(payload)),
                         ("$distance", GetString(payload, "distance")),
                         ("$bodyPart", GetString(payload, "bodyPart")),
+                        ("$type", GetString(payload, "type")),
                         ("$posKiller", GetString(payload, "positionKiller")),
                         ("$posKilled", GetString(payload, "positionKilled")));
                     break;

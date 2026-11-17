@@ -396,6 +396,8 @@ public class RaidReviewWebServer
                 _itemResolver?.ResolveRows(looting);
                 _itemResolver?.ResolveRows(playerInventory);
                 result["kills"] = kills;
+                result["environmental_deaths"] = RaidReview.PostRaid.EnvironmentalDeaths.FromLegacy(
+                    await _db.QueryAsync(RaidReview.PostRaid.EnvironmentalDeaths.LegacyQuery, ("$id", raidId)));
                 result["looting"] = looting;
                 result["players"] = players;
                 result["player_status"] = statuses;

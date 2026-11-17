@@ -19,6 +19,7 @@ import { SwitchOverlay } from './SwitchOverlay';
 import { AirdropOverlay } from './AirdropOverlay';
 import { GhostHearingOverlay } from './GhostHearingOverlay';
 import { playerEndTimes } from '../helpers/playerPresence';
+import { isGasDeath, deathIcon as deathIconUrl, legacyGasKills } from '../helpers/deathEvents';
 import { bodyOrientationAngle, updateBodyOrientation } from '../helpers/bodyOrientation';
 import { createFloorFilter, hasFloors, floorSegments, positionAt, objectivePoint, mainPoint, floorHeatmap } from '../helpers/floorFilter';
 
@@ -706,8 +707,9 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
 
         const newEvents = []
         if (raidData && raidData.players) {
-            for (let i = 0; i < raidData.kills.length; i++) {
-                const kill = raidData.kills[i]
+            const deaths = [...raidData.kills, ...legacyGasKills(raidData.environmental_deaths, positions, raidData.kills)]
+                .sort((a, b) => Number(a.time) - Number(b.time))
+            for (const kill of deaths) {
 
                 const profileNickname = raidData.players.find((p) => p.profileId === kill.profileId)
                 const killedNickname = raidData.players.find((p) => p.profileId === kill.killedId)
@@ -721,6 +723,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                     weapon: kill.weapon,
                     distance: Number(kill.distance),
                     bodyPart: kill.bodyPart,
+                    type: kill.type,
                     source: JSON.parse(kill.positionKiller),
                     target: JSON.parse(kill.positionKilled),
                 })
@@ -728,7 +731,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
         }
 
         setEvents(newEvents)
-    }, [raidData])
+    }, [raidData, positions])
 
     /**
      * Resets the leaflet transform using the values of the current map data
@@ -1404,7 +1407,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 if (!onFloor(kill.source)) MAP.removeLayer(line)
                 line._rr_focusViz = true
                 focusLayersRef.current.push(line)
-                const skullHtml = `<img src="/skull.png" /><span class="tooltiptext event event-map text-sm"><strong>${htmlText(kill.killedNickname)}</strong><br/>${htmlText(intl([kill.weapon.replace('Name', 'ShortName')], intl_dir))}, ${kill.distance.toFixed(0)}m${kill.bodyPart ? ', ' + htmlText(kill.bodyPart) : ''}</span>`
+                const skullHtml = `<img src="${deathIconUrl(kill)}" /><span class="tooltiptext event event-map text-sm"><strong>${htmlText(kill.killedNickname)}</strong><br/>${isGasDeath(kill) ? 'Gas explosion' : htmlText(intl([kill.weapon.replace('Name', 'ShortName')], intl_dir)) + ', ' + kill.distance.toFixed(0) + 'm' + (kill.bodyPart ? ', ' + htmlText(kill.bodyPart) : '')}</span>`
                 const skullIcon = L.divIcon({ className: 'death-icon tooltip event follow-kill-marker', html: skullHtml })
                 const marker = L.marker([kill.target.z, kill.target.x], { icon: skullIcon, interactive: false, zIndexOffset: -1000 }).addTo(MAP)
                 marker._rr_focusViz = true
@@ -1414,6 +1417,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             // Death of the hovered player (if dead) — distinct red-ringed skull
             const deathEvent = events.find(e => e.killedId === playerFocus && e.time < timeEndLimit)
             if (deathEvent && onFloor(deathEvent.target)) {
+                if (deathEvent.profileId !== deathEvent.killedId) {
                 const line = L.polyline(
                     [[deathEvent.source.z, deathEvent.source.x], [deathEvent.target.z, deathEvent.target.x]],
                     { color: 'red', weight: 2, dashArray: [10], dashOffset: 3, opacity: 1, interactive: false }
@@ -1421,7 +1425,8 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                 if (!onFloor(deathEvent.source)) MAP.removeLayer(line)
                 line._rr_focusViz = true
                 focusLayersRef.current.push(line)
-                const ownDeathHtml = `<div class="own-death-ring"><img src="/skull.png" /></div><span class="tooltiptext event event-map text-sm"><strong>${deathEvent.profileNickname}</strong><br/>killed<br/><strong>${deathEvent.killedNickname}</strong><br/>${intl([deathEvent.weapon.replace('Name', 'ShortName')], intl_dir)}, ${deathEvent.distance.toFixed(0)}m${deathEvent.bodyPart ? ', ' + deathEvent.bodyPart : ''}</span>`
+                }
+                const ownDeathHtml = `<div class="own-death-ring"><img src="${deathIconUrl(deathEvent)}" /></div><span class="tooltiptext event event-map text-sm">${isGasDeath(deathEvent) ? `<strong>${htmlText(deathEvent.killedNickname)}</strong><br/>Gas explosion` : `<strong>${htmlText(deathEvent.profileNickname)}</strong><br/>killed<br/><strong>${htmlText(deathEvent.killedNickname)}</strong><br/>${htmlText(intl([deathEvent.weapon.replace('Name', 'ShortName')], intl_dir))}, ${deathEvent.distance.toFixed(0)}m${deathEvent.bodyPart ? ', ' + htmlText(deathEvent.bodyPart) : ''}`}</span>`
                 const ownDeathIcon = L.divIcon({ className: 'death-icon tooltip event follow-kill-marker', html: ownDeathHtml })
                 const marker = L.marker([deathEvent.target.z, deathEvent.target.x], { icon: ownDeathIcon, interactive: false, zIndexOffset: -1000 }).addTo(MAP)
                 marker._rr_focusViz = true
@@ -1466,6 +1471,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             const toBeIndex = findInsertIndex(e.time, sliderTimes);
     
             // Killer marker
+            if (e.profileId !== e.killedId) {
             var killerIcon = L.divIcon({ className: 'killer-icon', html: `<img src="/target.png" />` });
             var killerMarker = L.marker([e.source.z, e.source.x], { icon: killerIcon });
             killerMarker.eventTime = e.time;
@@ -1485,10 +1491,11 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
             polyline.eventType = 'killerLine';
             if (onFloor(e.source) && onFloor(e.target)) polyline.addTo(MAP);
             createdLayers.set(`line-${e.time}-${e.source.z}-${e.source.x}-${e.target.z}`, polyline);
+            }
     
             // Death marker
-            var deathHtml = `<img src="/skull.png" /><span class="tooltiptext event event-map text-sm">${
-                e.profileId === e.killedId ? `<strong>${htmlText(e.profileNickname)}</strong><br/>died` : `<strong>${htmlText(e.profileNickname)}</strong><br/>killed<br/><strong>${htmlText(e.killedNickname)}</strong>`
+            var deathHtml = `<img src="${deathIconUrl(e)}" /><span class="tooltiptext event event-map text-sm">${
+                isGasDeath(e) ? `<strong>${htmlText(e.killedNickname)}</strong><br/>Gas explosion` : e.profileId === e.killedId ? `<strong>${htmlText(e.profileNickname)}</strong><br/>died` : `<strong>${htmlText(e.profileNickname)}</strong><br/>killed<br/><strong>${htmlText(e.killedNickname)}</strong>`
             }</span>`;
             var deathIcon = L.divIcon({ className: 'death-icon tooltip event', html: deathHtml });
             var deathMarker = L.marker([e.target.z, e.target.x], { icon: deathIcon });
@@ -3402,7 +3409,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                                         >
                                             VIEW
                                         </a>
-                                        ] {(() => { const p = raidData.players.find(p => p.profileId === e.profileId); const idx = p ? raidData.players.indexOf(p) : 0; return p ? getLegendIcon(p, getPlayerColor(p, idx), pmcIndexMap[p.profileId]) : null })()}<strong>{e.profileNickname}</strong> killed {(() => { const p = raidData.players.find(p => p.profileId === e.killedId); const idx = p ? raidData.players.indexOf(p) : 0; return p ? getLegendIcon(p, getPlayerColor(p, idx), pmcIndexMap[p.profileId]) : null })()}<strong>{e.killedNickname}</strong> ({intl([e.weapon.replace('Name', 'ShortName')], intl_dir)} - {e.distance.toFixed(0)}m, {e.bodyPart})
+                                        ] {isGasDeath(e) ? <><strong>{e.killedNickname}</strong> died in a gas explosion</> : <>{(() => { const p = raidData.players.find(p => p.profileId === e.profileId); const idx = p ? raidData.players.indexOf(p) : 0; return p ? getLegendIcon(p, getPlayerColor(p, idx), pmcIndexMap[p.profileId]) : null })()}<strong>{e.profileNickname}</strong> killed {(() => { const p = raidData.players.find(p => p.profileId === e.killedId); const idx = p ? raidData.players.indexOf(p) : 0; return p ? getLegendIcon(p, getPlayerColor(p, idx), pmcIndexMap[p.profileId]) : null })()}<strong>{e.killedNickname}</strong> ({intl([e.weapon.replace('Name', 'ShortName')], intl_dir)} - {e.distance.toFixed(0)}m, {e.bodyPart})</>}
                                     </span>
                                 </div>
                             ))}

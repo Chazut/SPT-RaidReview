@@ -36,7 +36,7 @@ namespace EFT
         public void UnregisterPlayer(IPlayer iPlayer) { }
     }
 }
-public enum EDamageType { Undefined, Landmine, Fall }
+public enum EDamageType { Undefined, Landmine, Fall, HotGases }
 public class LeaveBase { protected EFT.BotOwner bot; public LeaveBase(EFT.BotOwner bot) { this.bot=bot; } }
 public class BotLeaveData : LeaveBase { public bool LeaveComplete; public BotLeaveData(EFT.BotOwner bot):base(bot) { } public void RemoveFromMap() { LeaveComplete=true; } }
 namespace EFT.HealthSystem { public class Unused { } }
@@ -56,6 +56,7 @@ namespace RAID_REVIEW
         private static bool captureEnabled = true;
         public static bool CanCapture { get => captureEnabled && !RecordingRoster.IsEnding; set => captureEnabled=value; }
         public static Setting<bool> LootTracking = new() {Value=true};
+        public static Setting<bool> KillTracking = new() {Value=true};
         public static int GetHandbookPrice(EFT.InventoryLogic.Item item) => item.Price;
         public static string sessionId = "session";
         public static System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();

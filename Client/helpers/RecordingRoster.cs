@@ -17,7 +17,7 @@ namespace RAID_REVIEW
         private static readonly List<string> gone = new List<string>();
         internal static bool IsEnding { get; private set; }
 
-        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); confirmed.Clear(); snapshot.Clear(); RecordingInventory.Reset(); PbtIntegration.Reset(); IsEnding = false; }
+        internal static void Reset() { active.Clear(); departed.Clear(); statuses.Clear(); confirmed.Clear(); snapshot.Clear(); RecordingInventory.Reset(); RecordingGasDeaths.Reset(); PbtIntegration.Reset(); IsEnding = false; }
         internal static void Seed(GameWorld world)
         {
             Reset();
@@ -146,6 +146,16 @@ namespace RAID_REVIEW
         private static void Prefix(Player __instance)
         {
             if (RAID_REVIEW.CanCapture) RecordingRoster.Confirm(__instance, PlayerStatus.Dead);
+        }
+    }
+    internal sealed class RecordingGasDeathPatch : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod() => AccessTools.Method(typeof(Player), "OnDead", new[] { typeof(EDamageType) });
+        [PatchPrefix]
+        private static void CaptureGas(Player __instance, EDamageType __0, IPlayer ___LastAggressor)
+        {
+            try { RecordingGasDeaths.Capture(__instance, __0, ___LastAggressor); }
+            catch (Exception ex) { Logger.LogError("Gas death recording: " + ex.Message); }
         }
     }
     internal sealed class RecordingExtractPatch : ModulePatch
