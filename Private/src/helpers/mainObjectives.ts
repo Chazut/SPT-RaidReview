@@ -99,7 +99,7 @@ export function operationDetail(main: any): string {
 }
 export function mainAbandoned(main: any): boolean {
     if (main.campState === 'failed') return true
-    return (main.type === 'MultiStep' || main.type === 'Rush') && main.completed === true && !!main.operationState && !['completed', 'boss seen', 'boss body found', 'boss not found'].includes(main.operationState)
+    return (main.type === 'MultiStep' || main.type === 'Rush') && main.completed === true && !!main.operationState && !['completed', 'boss seen', 'boss body found', 'boss killed by squad', 'boss not found'].includes(main.operationState)
 }
 export function escapeMainText(value: string): string {
     return value.replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]!))
