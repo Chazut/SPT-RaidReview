@@ -1494,343 +1494,343 @@ export function prepareCometMapEvents(rows: unknown[], profileId: string): Comet
 
 
 function latestControl(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if(record?.status !== 'ready') return undefined
+    if(!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0,hi=record.events.length
     while(lo<hi){const mid=(lo+hi)>>>1;if(record.events[mid].time<=at)lo=mid+1;else hi=mid}
     const last=record.events[lo-1]
     return last ? record.events[last.controlIndex] : undefined
 }
 function latestValidity(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.validityIndex] : undefined
 }
 function latestLifecycle(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.lifecycleIndex] : undefined
 }
 function latestFaultIsolation(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.faultIsolationIndex] : undefined
 }
 function latestCoverScan(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.coverScanIndex] : undefined
 }
 function latestMovementRecovery(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.movementRecoveryIndex] : undefined
 }
 function latestDoorClosing(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.doorClosingIndex] : undefined
 }
 function latestDoorMotion(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.doorMotionIndex] : undefined
 }
 function latestDoorSpatial(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.doorSpatialIndex] : undefined
 }
 function latestDoorRecovery(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.doorRecoveryIndex] : undefined
 }
 function latestDoorTransit(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.doorTransitIndex] : undefined
 }
 function latestOutcome(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.outcomeIndex] : undefined
 }
 function latestEncounter(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.encounterIndex] : undefined
 }
 function latestRestLights(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.restLightsIndex] : undefined
 }
 function latestTacticalDevices(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.tacticalDevicesIndex] : undefined
 }
 function latestLightDiscipline(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.lightDisciplineIndex] : undefined
 }
 function latestSquadVoice(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.squadVoiceIndex] : undefined
 }
 function latestSquadFire(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.squadFireIndex] : undefined
 }
 function latestFireLane(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.fireLaneIndex] : undefined
 }
 function latestCrossfire(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.crossfireIndex] : undefined
 }
 function latestPostCombat(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.postCombatIndex] : undefined
 }
 function latestReadyStance(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.readyStanceIndex] : undefined
 }
 function latestMedicalPosture(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.medicalPostureIndex] : undefined
 }
 function latestSurgeryInterruption(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.surgeryInterruptionIndex] : undefined
 }
 function latestMedicalChoice(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.medicalChoiceIndex] : undefined
 }
 function latestExplosionAwareness(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.explosionAwarenessIndex] : undefined
 }
 function latestFlashContinuity(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.flashContinuityIndex] : undefined
 }
 function latestGasExposure(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.gasExposureIndex] : undefined
 }
 function latestGrenadeFilter(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.grenadeFilterIndex] : undefined
 }
 function latestGrenadeDispersion(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.grenadeDispersionIndex] : undefined
 }
 function latestGrenadeReaction(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.grenadeReactionIndex] : undefined
 }
 function latestOwnGrenadeSafety(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.ownGrenadeSafetyIndex] : undefined
 }
 function latestGrenadeChoice(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.grenadeChoiceIndex] : undefined
 }
 function latestGrenadeTrajectory(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.grenadeTrajectoryIndex] : undefined
 }
 function latestGrenadeJudgment(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.grenadeJudgmentIndex] : undefined
 }
 function latestHandsRecovery(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.handsRecoveryIndex] : undefined
 }
 function latestRecoilRecovery(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.recoilRecoveryIndex] : undefined
 }
 function latestShotGeometry(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.shotGeometryIndex] : undefined
 }
 function latestSuppressionDiscipline(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.suppressionDisciplineIndex] : undefined
 }
 function latestWeaponSync(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.weaponSyncIndex] : undefined
 }
 function latestWeaponRange(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.weaponRangeIndex] : undefined
 }
 function latestMagazineRecovery(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.magazineRecoveryIndex] : undefined
 }
 function latestQuickReload(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.quickReloadIndex] : undefined
 }
 function latestJournal(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.journalIndex] : undefined
 }
 function latestControlJournal(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.controlJournalIndex] : undefined
 }
 function latestWeaponReturn(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.weaponReturnIndex] : undefined
 }
 function latestPistolSwap(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.pistolIndex] : undefined
 }
 function latestReloadTiming(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.reloadIndex] : undefined
 }
 function latestCoverFeint(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
@@ -1838,14 +1838,14 @@ function latestCoverFeint(record: CometMapRecord | undefined, at: number): Comet
 }
 
 function latestOutdoorRelocation(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
     return last ? record.events[last.relocationIndex] : undefined
 }
 function latestTacticalJump(record: CometMapRecord | undefined, at: number): CometMapEvent | undefined {
-    if (record?.status !== 'ready') return undefined
+    if (!record || !['ready', 'loading'].includes(record.status)) return undefined
     let lo=0, hi=record.events.length
     while(lo<hi) { const mid=(lo+hi)>>>1; if(record.events[mid].time<=at) lo=mid+1; else hi=mid }
     const last=record.events[lo-1]
@@ -1855,7 +1855,7 @@ function latestTacticalJump(record: CometMapRecord | undefined, at: number): Com
 
 function latestCometEvent(record: CometMapRecord | undefined, at: number, attention: boolean, progressOnly = false, handoffOnly = false, hearingOnly = false, quietOnly = false, gunfireOnly = false, floorOnly = false, closeOnly = false, impactOnly = false, silentOnly = false, abandonmentOnly = false, environmentOnly = false, doorOnly = false, jumpOnly = false, runOnly = false, stepOnly = false, fakeOnly = false, clearOnly = false, ambushOnly = false, holdOnly = false, supportOnly = false, interruptionOnly = false, emergencyOnly = false, reservationOnly = false, entryOnly = false, combatOnly = false, pauseOnly = false, cornerOnly = false, leanOnly = false, chaseOnly = false, prefireOnly = false, angleOnly = false, holdAngleOnly = false, travelOnly = false, adsOnly = false, weaveOnly = false): CometMapEvent | undefined {
 
-    if (record?.status === 'ready') {
+    if ((record?.status === 'ready' || record?.status === 'loading')) {
 
         let lo = 0, hi = record.events.length
 
@@ -2096,7 +2096,7 @@ export function cometMapState(record: CometMapRecord | undefined, at: number, sa
     if (impact?.active && impact.state === 'observed' && impact.actionObserved && impactEvent!.time >= sampledAt
         && (!action.event || impactEvent!.time >= action.event.time))
         action = { active: true, decision: 'COMET:DefendUnknown', event: undefined }
-    else if (action.decision === 'COMET:DefendUnknown' && record?.status === 'ready'
+    else if (action.decision === 'COMET:DefendUnknown' && (record?.status === 'ready' || record?.status === 'loading')
         && (!impact?.active || !impact.actionObserved || impact.state !== 'observed'))
         action = { active: false, decision: '', event: undefined }
     // Equipment maintenance is independent of combat/ORBIT action ownership. It must also be visible while looting.
@@ -2106,7 +2106,7 @@ export function cometMapState(record: CometMapRecord | undefined, at: number, sa
     const postCombat=postRecovery?.applied && postRecoveryAge>=0 && postRecoveryAge<postRecovery.validFor ? postRecovery : undefined
     if(postCombat && (postRecoveryEvent!.time >= sampledAt || sampledDecision?.startsWith('COMET:PostCombat')))
         action={active:true,decision:'COMET:PostCombat'+postCombat.state[0].toUpperCase()+postCombat.state.slice(1),event:undefined}
-    else if(sampledDecision?.startsWith('COMET:PostCombat') && record?.status==='ready')
+    else if(sampledDecision?.startsWith('COMET:PostCombat') && (record?.status === 'ready' || record?.status === 'loading'))
         action={active:false,decision:'',event:undefined}
     const crossfireEvent=ghost?undefined:latestCrossfire(record,at)
     const crossfireDetail=crossfireEvent?.crossfire
@@ -2116,7 +2116,7 @@ export function cometMapState(record: CometMapRecord | undefined, at: number, sa
         ? {...crossfireDetail,storm:crossfireDetail.storm?{...crossfireDetail.storm,remaining:Math.max(0,crossfireDetail.storm.remaining-crossfireAge),evidenceAge:crossfireDetail.storm.evidenceAge+crossfireAge}:undefined,trade:crossfireDetail.trade?{...crossfireDetail.trade,remaining:Math.max(0,crossfireDetail.trade.remaining-crossfireAge),deathAge:crossfireDetail.trade.deathAge+crossfireAge}:undefined,coverMate:crossfireDetail.coverMate?{...crossfireDetail.coverMate,remaining:Math.max(0,crossfireDetail.coverMate.remaining-crossfireAge),operationAge:crossfireDetail.coverMate.operationAge+crossfireAge}:undefined,remaining:Math.max(0,crossfireDetail.remaining-crossfireAge),maneuver:crossfireDetail.maneuver?{...crossfireDetail.maneuver,remaining:Math.max(0,crossfireDetail.maneuver.remaining-crossfireAge),fireState:crossfireAge>=.3&&crossfireDetail.maneuver.fireState==='observed suppression fire'?'holding':crossfireDetail.maneuver.fireState}:undefined,contactAge:crossfireDetail.contactAge+crossfireAge,entrance:crossfireDetail.entrance?{...crossfireDetail.entrance,watchRemaining:Math.max(0,crossfireDetail.entrance.watchRemaining-crossfireAge)}:undefined} : undefined
     if(crossfire && (crossfireEvent!.time>=sampledAt || sampledDecision?.startsWith('COMET:Crossfire')))
         action={active:true,decision:cometCrossfireDecision(crossfire),event:undefined}
-    else if(sampledDecision?.startsWith('COMET:Crossfire') && record?.status==='ready')
+    else if(sampledDecision?.startsWith('COMET:Crossfire') && (record?.status === 'ready' || record?.status === 'loading'))
         action={active:false,decision:'',event:undefined}
     const readyEvent=ghost?undefined:latestReadyStance(record,at)
     const readyDetail=readyEvent?.readyStance

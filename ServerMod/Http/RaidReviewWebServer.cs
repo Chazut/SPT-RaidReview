@@ -576,6 +576,31 @@ public class RaidReviewWebServer
             }
         });
 
+        // Replay streams use a seek cursor. The searchable diagnostics endpoint
+        // below retains its count/offset contract for the paginated table.
+        app.MapGet("/api/raids/{raidId}/comet_map_events", async (HttpContext context, string raidId, string profileId, double? afterTime, long? afterId, int? limit) =>
+        {
+            if (string.IsNullOrWhiteSpace(profileId) || afterTime.HasValue != afterId.HasValue
+                || (afterTime.HasValue && (!double.IsFinite(afterTime.Value) || afterTime.Value < 0 || afterId < 0)))
+            { context.Response.StatusCode = 400; return; }
+            try
+            {
+                int take = Math.Clamp(limit ?? 500, 1, 1000);
+                var rows = await _db.QueryAsync("SELECT * FROM comet_decision WHERE raidId = $raid AND profileId = $profile"
+                    + (afterTime.HasValue ? " AND (time, id) > ($time, $id)" : "")
+                    + " ORDER BY time, id LIMIT $take",
+                    ("$raid", raidId), ("$profile", profileId), ("$time", afterTime ?? 0), ("$id", afterId ?? 0), ("$take", take + 1));
+                bool more = rows.Count > take;
+                if (more) rows.RemoveAt(take);
+                var last = rows.LastOrDefault();
+                await context.Response.WriteAsJsonAsync(new {
+                    events = rows.Select(CometMapEvent.Project).ToList(), hasMore = more,
+                    next = last == null ? null : new { time = Convert.ToDouble(last["time"]), id = Convert.ToInt64(last["id"]) }
+                });
+            }
+            catch (Exception ex) { _logger.Error("[API:COMET_MAP_EVENTS]", ex); context.Response.StatusCode = 500; }
+        });
+
         app.MapGet("/api/raids/{raidId}/comet_decisions", async (HttpContext context, string raidId, int? offset, int? limit, string? search, string? profileId, bool? compact, string? stage) =>
         {
             try

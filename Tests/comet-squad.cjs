@@ -83,4 +83,9 @@ check('evasive retreat commands visible in replay and history',()=>{const r=read
 check('native or unrequested weave is not an executed tactic',()=>{const r=ready([weaveRow(1,1000,{state:'native',validFor:0,yaw:0,pitch:0,moveRequested:false,gazeRequested:false})]);assert.equal(episodes(r).length,0);assert.equal(view(r,1050,'SAIN:Retreat',1000).badge,false)});
 check('role markup escapes display strings',()=>assert.ok(marker(view(record,1100,'COMET:CrossfireManeuverMoving',1000),'<img>').includes('&lt;img&gt;')));
 check('auxiliary glyph does not replace core action glyph',()=>{const v=view(ready([row(1,900),light(2,1000)]),1100,'COMET:Hold',900);assert.ok(marker(v).includes('rr-comet-aux'));assert.ok(marker(v).includes('rr-comet-action'))});
+check('partial stream already exposes confirmed tactics',()=>{
+ const r={...ready([cross(1,1000)]),status:'loading'};
+ assert.equal(roles(squad,{pmc:r},samples,1100).length,1);
+ assert.ok(build(squad,{pmc:r}).length>0);
+});
 console.log(checks+' COMET squad replay checks passed.');

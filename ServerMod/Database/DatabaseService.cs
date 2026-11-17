@@ -562,6 +562,9 @@ public class DatabaseService : IDisposable
                 );
                 CREATE INDEX IF NOT EXISTS idx_comet_decision_raid_time ON comet_decision(""raidId"", ""time"");
             "),
+            ("index_comet_profile_stream", @"
+                CREATE INDEX IF NOT EXISTS idx_comet_raid_profile_time_id ON comet_decision(raidId, profileId, time, id);
+            "),
             ("add_switch_state_table", @"
                 CREATE TABLE IF NOT EXISTS switch_state (
                     ""id"" INTEGER PRIMARY KEY AUTOINCREMENT,

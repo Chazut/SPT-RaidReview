@@ -256,8 +256,9 @@ const api = {
         return response.json();
     },
 
-    getCometMapDecisions: async function(raidId: string, profileId: string, offset: number, signal?: AbortSignal) {
-        const response = await fetch(hostname + `/api/raids/${encodeURIComponent(raidId)}/comet_decisions?profileId=${encodeURIComponent(profileId)}&compact=true&offset=${offset}&limit=200`, { signal });
+    getCometMapDecisions: async function(raidId: string, profileId: string, cursor: { time: number; id: number } | null, signal?: AbortSignal) {
+        const seek = cursor ? `&afterTime=${cursor.time}&afterId=${cursor.id}` : '';
+        const response = await fetch(hostname + `/api/raids/${encodeURIComponent(raidId)}/comet_map_events?profileId=${encodeURIComponent(profileId)}&limit=500${seek}`, { signal });
         if (response.status === 404) return null;
         if (!response.ok) throw new Error('Could not load COMET map details');
         return response.json();

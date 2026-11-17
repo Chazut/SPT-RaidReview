@@ -17,7 +17,7 @@ export function currentSquadRoles(members: SquadMember[], records: Record<string
     const result: SquadRoleView[] = []
     for (const member of members) {
         const sample = samples[member.profileId], record = records[member.profileId]
-        if (!sample?.present || sample.ghost || sample.dormant || record?.status !== 'ready') continue
+        if (!sample?.present || sample.ghost || sample.dormant || !record || !['ready', 'loading'].includes(record.status)) continue
         const last = cometEventAt(record, at)
         if (!last || last.crossfireIndex < 0) continue
         const event = record.events[last.crossfireIndex], c = event?.crossfire

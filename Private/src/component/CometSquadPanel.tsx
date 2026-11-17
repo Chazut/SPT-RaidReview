@@ -26,9 +26,9 @@ export default function CometSquadPanel({ members, records, roles, samples, time
     const missing = members.filter(m => records[m.profileId]?.status === 'error' || records[m.profileId]?.status === 'unavailable')
     return <div className="rr-comet-squad" role="tabpanel" aria-label="Squad tactic">
         <p className="rr-comet-note">{members.length > 1 ? `Squad ${members[0].group} · ${members.length} members` : 'Solo participant'}</p>
-        {loading && <p role="status" className="rr-comet-note">Loading squad events...</p>}
+        {loading && <p role="status" className="rr-comet-note">Loading squad events... {members.reduce((n,m) => n + (records[m.profileId]?.events.length ?? 0), 0).toLocaleString()} loaded</p>}
         {!!missing.length && <p role="status" className="rr-comet-note">Incomplete recording: no COMET details for {missing.map(m=>m.name).join(', ')}. Select another squad and return to retry a failed load.</p>}
-        {!plans.length && <p className="rr-comet-note">No shared tactic recorded.</p>}
+        {!plans.length && !loading && <p className="rr-comet-note">No shared tactic recorded.</p>}
         {plans.map(plan => <div className="rr-comet-plan" key={plan[0].plan}>
             <strong>{plan[0].title}</strong>
             <div className="rr-comet-note">{plan.some(r=>r.confirmed) ? 'In progress' : 'Preparing · execution not yet confirmed'}</div>
