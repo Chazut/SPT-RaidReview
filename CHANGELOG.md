@@ -1,8 +1,9 @@
 # Raid Review 1.11.0 RC2
 
-- Squad tactics load progressively, so you can start reading events sooner on busy raids.
-- The replay shows when a bot goes back for a dropped magazine and removes its map marker once the bot picks it up.
-- Gas deaths now have an explosion icon, and a squad that kills its Boss rush target gets credit for completing the objective.
+- **Read the opening moves sooner.** The **Squad tactic** tab shows the first events as they load, even when a busy raid has thousands more to come.
+- **Follow a dropped magazine from reload to pickup.** The replay shows when a COMET bot goes back for its mag. If the pickup fails, the marker stays on the ground. It disappears on pickup, even if a different bot gets there first.
+- **See why a bot disappeared.** Gas deaths get an explosion icon on the map and timeline. Older recordings can show it too if they captured the final hit.
+- **Boss rush gives credit for the kill.** If a squad kills Reshala in the first of three search areas, the replay now marks the objective as complete.
 
 # Raid Review 1.11.0 RC1
 
