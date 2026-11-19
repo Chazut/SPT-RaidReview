@@ -1,6 +1,6 @@
 # SPT Raid Review
 
-**Raid Review 1.11.0-RC1** - test build with COMET integration. [Full changelog](CHANGELOG.md)
+**Raid Review 1.11.0-RC2** - test build with COMET integration. [Full changelog](CHANGELOG.md)
 
 ![Stars](https://img.shields.io/github/stars/Chazut/SPT-RaidReview?style=flat-square&label=STARS&color=007ec6)
 ![Issues](https://img.shields.io/github/issues/Chazut/SPT-RaidReview?style=flat-square&label=ISSUES&color=44cc11)

@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 default_name="raid_review"
-default_version="1.11.0-RC1"
+default_version="1.11.0-RC2"
 current_dir=$(pwd)
 
 echo "Let's start the deployment process..."

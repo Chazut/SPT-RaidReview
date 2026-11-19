@@ -1,4 +1,10 @@
-# Unreleased
+# Raid Review 1.11.0 RC2
+
+- Squad tactics load progressively, so you can start reading events sooner on busy raids.
+- The replay shows when a bot goes back for a dropped magazine and removes its map marker once the bot picks it up.
+- Gas deaths now have an explosion icon, and a squad that kills its Boss rush target gets credit for completing the objective.
+
+# Raid Review 1.11.0 RC1
 
 - Highlight PBT cheaters in the raid overview, map markers and participant list. Show their PBT personality and assigned cheats in tooltips and the selected bot panel.
 - Record PBT identity without changing its rolls or bot behavior. Keep the identity visible when another layer takes control, while showing PBT as the current controller only when its layer is active.
