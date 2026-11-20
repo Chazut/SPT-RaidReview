@@ -52,11 +52,12 @@ function validCoverMate(c:any):boolean{
 }
 
 function validTrade(d:any):boolean{
+ const associated=d?.confidence==='witnessed attacker association'||d?.confidence==='squad attacker association'
  return !!d&&!Array.isArray(d)&&['death','mate','mateName','evidence','reason'].every(k=>text(d[k]))&&d.death.length>0&&d.mate.length>0
- &&['sector only','witnessed attacker association'].includes(d.confidence)&&['push','watch'].includes(d.choice)
+ &&(d.confidence==='sector only'||associated)&&['push','watch'].includes(d.choice)
  &&['selected','moving','awaiting facing','watching','ended'].includes(d.status)&&typeof d.confirmed==='boolean'
  &&num(d.deathAge,0,86400)&&num(d.delay,0,5)&&num(d.ammo,0,100)&&num(d.remaining,0,30)&&num(d.roll,0,100)&&num(d.chance,0,100)
- &&(!d.confirmed||d.status==='watching')&&(d.choice!=='push'||d.confidence==='witnessed attacker association')
+ &&(!d.confirmed||d.status==='watching')&&(d.choice!=='push'||associated)
 }
 
 function validStorm(s:any):boolean{

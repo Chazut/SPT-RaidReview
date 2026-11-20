@@ -3311,6 +3311,10 @@ const s05Row=(id,time,changes={},extra={})=>row(id,time,'evaluated','Crossfire',
  assert.ok(s01Helpers.parseCometCrossfire(pending));checks++;
  assert.equal(state(ready([s05Row(1,1000,pending)]),1100,'SAIN:Freeze',900,false).crossfire,undefined);checks++;
  const moving={...s05Trace,state:'moving',trade:{...s05Trace.trade,status:'moving',choice:'push',confirmed:false}};
+ const squadPush={...moving,trade:{...moving.trade,confidence:'squad attacker association'}};
+ const squadReplay=ready([s05Row(1,225000,squadPush)]);
+ assert.equal(state(squadReplay,225250,'COMET:CrossfireTradePushing',225100,false).decision,'COMET:CrossfireTradePushing');checks++;
+ assert.equal(state(squadReplay,227000,'SAIN:DogFight',226950,false).crossfire,undefined);checks++;
  assert.equal(state(ready([s05Row(1,1000,moving)]),1100,'SAIN:Freeze',900,false).decision,'COMET:CrossfireTradePushing');checks++;
  assert.equal(s01Helpers.parseCometCrossfire({...moving,trade:{...moving.trade,confidence:'sector only'}}),null);checks++;
  const wire=path.join(__dirname,'../../COMET/artifacts/s05-adapter-events.jsonl');const data=fs.existsSync(wire)?fs.readFileSync(wire,'utf8').trim().split(/\r?\n/).map(JSON.parse):[s05Fixture];
