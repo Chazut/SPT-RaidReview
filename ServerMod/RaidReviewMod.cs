@@ -19,6 +19,14 @@ public class RaidReviewMod : IOnLoad
     private readonly ISptLogger<RaidReviewMod> _sptLogger;
     private readonly SPTarkov.Server.Core.Services.Locales.LocaleService _localeService;
 
+    // The hourly cleanup's timer. Nothing else holds a System.Threading.Timer: kept in a local, it was reclaimed by the
+    // .NET garbage collector and stopped firing, so old raids were only purged when the server started.
+    private Timer? _hourlyCleanup;
+
+    // Past server start, a raid in progress looks unfinished too: the hourly cleanup leaves an unfinished raid alone
+    // until it started longer ago than any raid lasts.
+    private static readonly TimeSpan AbandonedAfter = TimeSpan.FromHours(3);
+
     public RaidReviewMod(ISptLogger<RaidReviewMod> sptLogger,
         SPTarkov.Server.Core.Services.Locales.LocaleService localeService)
     {
@@ -113,10 +121,18 @@ public class RaidReviewMod : IOnLoad
         // Hourly garbage collection if configured
         if (config.AutoDeleteCronJob)
         {
-            var gcTimer = new Timer(async _ =>
+            _hourlyCleanup = new Timer(async _ =>
             {
-                await gc.CollectOldRaidsAsync();
-                await gc.CollectUnfinishedRaidsAsync();
+                // An async timer callback that throws would take the whole server down.
+                try
+                {
+                    await gc.CollectOldRaidsAsync();
+                    await gc.CollectUnfinishedRaidsAsync(AbandonedAfter);
+                }
+                catch (Exception ex)
+                {
+                    logger.Error("Hourly garbage collection failed", ex);
+                }
             }, null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
         }
 
