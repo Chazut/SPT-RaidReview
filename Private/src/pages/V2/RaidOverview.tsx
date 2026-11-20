@@ -56,6 +56,18 @@ function formatCompactNumber(n: number): string {
     if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
     return String(n);
 }
+
+// Phone cards: also compact negative values so they fit their column.
+function formatSignedCompactNumber(n: number): string {
+    return n < 0 ? `-${formatCompactNumber(-n)}` : formatCompactNumber(n);
+}
+
+// The client joins mod names with bare commas: allow a line break after each one.
+function formatModList(mods: string | undefined) {
+    if (!mods) return mods;
+    const names = mods.split(',');
+    return names.map((name, i) => <span key={i}>{name}{i < names.length - 1 ? <>,<wbr /></> : null}</span>);
+}
 type SortDir = 'asc' | 'desc';
 
 export default function RaidOverview() {
@@ -269,8 +281,7 @@ export default function RaidOverview() {
 
       newRaidSummary.push({
         title: 'Detected Mods',
-        // @ts-ignore
-        value: raid.detectedMods
+        value: formatModList(raid.detectedMods)
       });
 
       let positionsTrackedMap = { "COMPILED" : "Available", "RAW" : "Processing", "NOT_AVAILABLE" : "Not Available" }
@@ -401,7 +412,27 @@ export default function RaidOverview() {
         return side || { color: '#6B7280', label: player.team };
       }
 
-      function generatePlayerTable(raid: TrackingRaidData) {
+      type PlayerRow = {
+        p: TrackingRaidDataPlayers
+        index: number
+        groupIndex: number
+        SAIN: string
+        isMainPlayer: boolean
+        lastStatus: ReturnType<ReturnType<typeof finalPlayerStatuses>['get']>
+        isDead: boolean
+        isExtracted: boolean
+        badge: { color: string, label: string }
+        stats: { kills: number, lootings: number, lootedValue: number, spawnValue: number, accuracy: number } | undefined
+        accuracy: number
+        accuracyColor: string
+        killInfo: { killerName: string, weapon: string, distance: string, bodyPart: string } | null | undefined
+        groupBorder: string
+        groupTint: string
+        highlightClass: string
+      }
+
+      // Shared by the desktop table and the phone cards.
+      function buildPlayerRows(raid: TrackingRaidData): PlayerRow[][] | null {
         if (!raid || !groupedBy || groupedBy.length === 0) return null;
 
         const victimIds = selectedProfileId
@@ -447,19 +478,58 @@ export default function RaidOverview() {
               else if (p.profileId === killerOfSelected) highlightClass = 'leaderboard-killer';
             }
 
-            return (
+            return { p, index, groupIndex, SAIN, isMainPlayer, lastStatus, isDead, isExtracted, badge, stats, accuracy, accuracyColor, killInfo, groupBorder, groupTint, highlightClass };
+          });
+        });
+      }
+
+      function renderStatus({ isDead, isExtracted, isMainPlayer, lastStatus }: PlayerRow) {
+        return isDead
+          ? <span className="text-red-500 font-semibold">KIA</span>
+          : isExtracted
+            ? <span className="text-blue-400 font-semibold">Extracted</span>
+            : <span className={`${lastStatus === 'Downed' ? 'text-yellow-400' : lastStatus === 'Alive' || isMainPlayer ? 'text-green-500' : 'text-gray-400'} font-semibold`}>{isMainPlayer && lastStatus !== 'Downed' ? 'Alive' : playerStatusLabel(lastStatus)}</span>
+      }
+
+      function renderBadge(badge: { color: string, label: string }) {
+        return (
+          <span
+            className="inline-block rounded px-2 py-0.5 text-xs font-bold uppercase whitespace-nowrap"
+            style={{ background: badge.color, color: needsDarkText(badge.color) ? '#000' : '#fff' }}
+          >
+            {badge.label}
+          </span>
+        );
+      }
+
+      function renderAccuracy({ accuracy, accuracyColor }: PlayerRow) {
+        return (
+          <div className="flex items-center justify-center gap-1">
+            <div className="w-10 h-1.5 rounded-full overflow-hidden" style={{ background: '#333' }}>
+              <div className="h-full rounded-full" style={{ width: `${accuracy}%`, background: accuracyColor }} />
+            </div>
+            <span className="text-xs">{accuracy > 0 ? `${accuracy}%` : '-'}</span>
+          </div>
+        );
+      }
+
+      function toggleSelected(profileId: string) {
+        setSelectedProfileId(prev => prev === profileId ? null : profileId);
+      }
+
+      function generatePlayerTable(rows: PlayerRow[][] | null) {
+        if (!rows) return null;
+
+        return rows.map(group => group.map(row => {
+          const { p, index, groupIndex, SAIN, isMainPlayer, isDead, badge, stats, killInfo, groupBorder, groupTint, highlightClass } = row;
+          return (
               <tr
                 key={`g${groupIndex}-${index}`}
                 className={`${isDead ? 'opacity-75' : ''} ${groupBorder} ${groupTint} ${isMainPlayer ? 'leaderboard-player-row font-bold' : ''} ${highlightClass}`}
-                onClick={() => setSelectedProfileId(prev => prev === p.profileId ? null : p.profileId)}
+                onClick={() => toggleSelected(p.profileId)}
               >
                 <td className="text-center p-2">
-                  <span
-                    className="inline-block rounded px-2 py-0.5 text-xs font-bold uppercase whitespace-nowrap"
-                    style={{ background: badge.color, color: needsDarkText(badge.color) ? '#000' : '#fff' }}
-                  >
-                    {badge.label}
-                  </span>
+                  {renderBadge(badge)}
                 </td>
                 <td className="text-center p-2 uppercase border-x border-eft">{p.group}</td>
                 <td className="text-center p-2 border-x border-eft">{p.level}</td>
@@ -472,12 +542,7 @@ export default function RaidOverview() {
                   )}
                 </td>
                 <td className="text-center p-2 border-x border-eft">
-                  {isDead
-                    ? <span className="text-red-500 font-semibold">KIA</span>
-                    : isExtracted
-                      ? <span className="text-blue-400 font-semibold">Extracted</span>
-                      : <span className={`${lastStatus === 'Downed' ? 'text-yellow-400' : lastStatus === 'Alive' || isMainPlayer ? 'text-green-500' : 'text-gray-400'} font-semibold`}>{isMainPlayer && lastStatus !== 'Downed' ? 'Alive' : playerStatusLabel(lastStatus)}</span>
-                  }
+                  {renderStatus(row)}
                 </td>
                 <td className="text-right p-2 capitalize">{raid.detectedMods?.match(/SAIN/gi) ? SAIN : ''}</td>
                 <td className="text-center p-2 w-12 border-l border-eft">{stats ? stats.kills || '-' : null}</td>
@@ -489,21 +554,68 @@ export default function RaidOverview() {
                   {stats ? (stats.spawnValue ? formatCompactNumber(stats.spawnValue) : '-') : null}
                 </td>
                 <td className="text-center p-2 w-24">
-                  {stats ? (
-                    <div className="flex items-center justify-center gap-1">
-                      <div className="w-10 h-1.5 rounded-full overflow-hidden" style={{ background: '#333' }}>
-                        <div className="h-full rounded-full" style={{ width: `${accuracy}%`, background: accuracyColor }} />
-                      </div>
-                      <span className="text-xs">{accuracy > 0 ? `${accuracy}%` : '-'}</span>
-                    </div>
-                  ) : null}
+                  {stats ? renderAccuracy(row) : null}
                 </td>
                 <td className="text-right p-2 border-l border-eft">{msToHMS(Number(p.spawnTime))}</td>
               </tr>
-            );
-          });
-        });
+          );
+        }));
       }
+
+      function generatePlayerCards(rows: PlayerRow[][] | null) {
+        if (!rows) return <div className="border border-eft p-3">No Data.</div>;
+        const hasSain = !!raid.detectedMods?.match(/SAIN/gi);
+
+        return rows.map((group, groupIndex) => (
+          <div key={`g${groupIndex}`} className={`leaderboard-group border border-eft ${groupIndex % 2 === 1 ? 'leaderboard-group-alt' : ''}`}>
+            {group.map(row => {
+              const { p, index, SAIN, isMainPlayer, isDead, badge, stats, killInfo, highlightClass } = row;
+              const selected = selectedProfileId === p.profileId;
+              return (
+                <div
+                  key={`g${groupIndex}-${index}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={selected}
+                  className={`leaderboard-card ${isDead ? 'opacity-75' : ''} ${isMainPlayer ? 'leaderboard-player-row' : ''} ${highlightClass}`}
+                  onClick={() => toggleSelected(p.profileId)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSelected(p.profileId); } }}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {renderBadge(badge)}
+                    <span className={`truncate ${isMainPlayer ? 'font-bold' : ''}`}>{displayPlayerName(p.name)}</span>
+                    <span className="ml-auto text-sm whitespace-nowrap">{renderStatus(row)}</span>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-2 text-xs mt-1">
+                    <span className="opacity-70 whitespace-nowrap">Lvl {p.level} · Team {p.group} · {msToHMS(Number(p.spawnTime))}</span>
+                    {hasSain && SAIN && <span className="capitalize opacity-70 truncate text-right">{SAIN}</span>}
+                  </div>
+                  {killInfo && (
+                    <div className="text-xs opacity-50 mt-1 break-words">
+                      by {displayPlayerName(killInfo.killerName)} ({killInfo.weapon}, {Number(killInfo.distance).toFixed(0)}m, {killInfo.bodyPart})
+                    </div>
+                  )}
+                  {stats && (
+                    <dl className="leaderboard-card-stats">
+                      <div><dt>Kills</dt><dd>{stats.kills || '-'}</dd></div>
+                      <div><dt>Loot</dt><dd className={stats.lootings < 0 ? 'text-red-400' : 'text-green-400'}>{stats.lootings || '-'}</dd></div>
+                      <div><dt>Value</dt><dd className={stats.lootedValue < 0 ? 'text-red-400' : 'text-yellow-400'}>{stats.lootedValue ? formatSignedCompactNumber(stats.lootedValue) : '-'}</dd></div>
+                      <div><dt>Spawn</dt><dd className="text-orange-300">{stats.spawnValue ? formatSignedCompactNumber(stats.spawnValue) : '-'}</dd></div>
+                      <div>
+                        <dt>Acc.</dt>
+                        <dd style={{ color: row.accuracy > 0 ? row.accuracyColor : undefined }}>{row.accuracy > 0 ? `${row.accuracy}%` : '-'}</dd>
+                        <div className="leaderboard-card-accuracy" aria-hidden="true"><div style={{ width: `${row.accuracy}%`, background: row.accuracyColor }} /></div>
+                      </div>
+                    </dl>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ));
+      }
+
+      const playerRows = buildPlayerRows(raid);
 
     return (
       <>
@@ -512,7 +624,7 @@ export default function RaidOverview() {
           <table id="raid-overview" className="mb-2 w-full border border-eft">
                   <tbody>
                       {raidSummary && raidSummary.length ? raidSummary.map(rs =>
-                        <tr key={rs.value}>
+                        <tr key={rs.title}>
                           <td className="text-right bg-eft text-black font-bold px-2">{ rs.title }</td>
                           <td className="px-2">{ rs.value }</td>
                         </tr>
@@ -526,9 +638,44 @@ export default function RaidOverview() {
         <section className="mt-4">
             <div className="w-full flex flex-row justify-between items-center">
               <span className="text-lg font-bold">Leaderboard</span>
-              <span className="text-sm opacity-70">Click row to show kills | Sort by Lvl, K, L, V, SV, A%</span>
+              <span className="text-sm opacity-70 max-md:hidden">Click row to show kills | Sort by Lvl, K, L, V, SV, A%</span>
+              <span className="text-xs opacity-70 md:hidden">Tap a player to show kills</span>
             </div>
-            <table id="raid-leaderboard" className="mb-2 w-full border border-eft">
+
+            <div className="leaderboard-controls md:hidden">
+              <div className="flex items-center gap-2">
+                <span className="opacity-70">Group</span>
+                <div className="leaderboard-segmented" role="group" aria-label="Group players by">
+                  {([['TEAM', 'Side'], ['GROUP', 'Squad'], ['', 'None']] as const).map(([value, label]) => (
+                    <button key={label} type="button" aria-pressed={groupedByType === value}
+                      className={groupedByType === value ? 'bg-eft text-black' : ''}
+                      onClick={() => setGroupedByType(value)}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="leaderboard-sort" className="opacity-70">Sort</label>
+                <select id="leaderboard-sort" value={sortKey ?? ''}
+                  onChange={e => { const key = (e.target.value || null) as SortKey; setSortKey(key); setSortDir('desc'); }}>
+                  <option value="">Default</option>
+                  <option value="lvl">Level</option>
+                  <option value="kills">Kills</option>
+                  <option value="lootings">Looted items</option>
+                  <option value="lootedValue">Looted value</option>
+                  <option value="spawnValue">Spawn value</option>
+                  <option value="accuracy">Accuracy</option>
+                </select>
+                <button type="button" disabled={!sortKey} aria-label={sortDir === 'asc' ? 'Ascending, switch to descending' : 'Descending, switch to ascending'}
+                  className="leaderboard-sort-dir"
+                  onClick={() => setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')}>{sortDir === 'asc' ? '▲' : '▼'}</button>
+              </div>
+            </div>
+
+            <div className="leaderboard-cards md:hidden">
+              {generatePlayerCards(playerRows)}
+            </div>
+
+            <table id="raid-leaderboard" className="mb-2 w-full border border-eft max-md:hidden">
                 <thead>
                     <tr className="bg-eft text-black">
                         <th className={`text-center px-2 underline cursor-pointer ${groupedByType === 'TEAM' ? 'bg-black text-eft' : ''}`} onClick={() => setGroupedByType('TEAM')}>Side</th>
@@ -546,7 +693,7 @@ export default function RaidOverview() {
                     </tr>
                 </thead>
                 <tbody>
-                    {generatePlayerTable(raid) || <tr><td colSpan={12}>No Data.</td></tr>}
+                    {generatePlayerTable(playerRows) || <tr><td colSpan={12}>No Data.</td></tr>}
                 </tbody>
             </table>
         </section>

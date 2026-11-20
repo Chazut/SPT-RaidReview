@@ -13,3 +13,50 @@ section.chart-container {
 svg text {
     fill: #9a8866;
 }
+/* ===== Phone layout ===== */
+@media (max-width: 767.98px) {
+    .raid-tabs {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .raid-tabs-strip {
+        overflow-x: auto;
+        scrollbar-width: none;
+        margin: 0 -8px;
+        padding: 0 8px;
+    }
+
+    .raid-tabs-strip::-webkit-scrollbar {
+        display: none;
+    }
+
+    .raid-tabs .raid-tab {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 6px 14px;
+    }
+
+    .raid-tabs .raid-tab.active {
+        background-color: #000;
+        color: #9a8866;
+        box-shadow: inset 0 0 0 1px #9a8866;
+    }
+
+    .raid-tabs-actions {
+        justify-content: flex-end;
+        align-items: flex-start;
+    }
+
+    .raid-tabs-actions .raid-tab,
+    .raid-tabs-actions button {
+        font-size: 0.875rem;
+        padding: 4px 12px;
+    }
+
+    section.chart-container,
+    .chart,
+    .recharts-responsive-container {
+        min-height: 260px;
+    }
+}

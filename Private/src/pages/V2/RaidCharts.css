@@ -31,3 +31,15 @@
 .difficulty-grid svg {
     overflow: visible;
 }
+
+/* ===== Phone layout ===== */
+@media (max-width: 767.98px) {
+    .gauges {
+        grid-template-columns: minmax(0, 1fr);
+        grid-row-gap: 16px;
+    }
+
+    .chart {
+        padding-bottom: 40px;
+    }
+}

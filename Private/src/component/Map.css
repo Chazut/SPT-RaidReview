@@ -403,3 +403,389 @@ aside {
   background-image: url('/heatmap.png');
   background-size: contain;
 }
+
+/* ===== Phone layout: full-screen map, bottom sheets, docked timeline ===== */
+@media (max-width: 767.98px) {
+  .map-container {
+    height: 100vh;
+    height: 100dvh;
+    background-color: #0c0a06;
+  }
+
+  .map-container > div.parent {
+    display: block;
+    position: relative;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    overflow: hidden;
+  }
+
+  /* Top bar: one scrollable row of floor and style chips */
+  .map-container .top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    overflow-x: auto;
+    scrollbar-width: none;
+    white-space: nowrap;
+    background: linear-gradient(rgba(8, 7, 5, 0.95), rgba(8, 7, 5, 0.8));
+    border-bottom: 1px solid rgba(154, 136, 102, 0.35);
+  }
+
+  .map-container .top::-webkit-scrollbar {
+    display: none;
+  }
+
+  .map-container .top > div {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 0;
+  }
+
+  .map-container .top button,
+  .map-container .top label,
+  .map-container .top a {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .map-container .top .map-close {
+    order: -1;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    margin-left: 0;
+    background: #0c0a06;
+    box-shadow: 8px 0 8px -4px #0c0a06;
+  }
+
+  /* Map fills the screen */
+  .map-container .map {
+    position: absolute;
+    inset: 0;
+    border: 0;
+  }
+
+  .map-container .leaflet-control-zoom {
+    display: none;
+  }
+
+  #view-switcher {
+    top: calc(60px + env(safe-area-inset-top));
+    right: 8px;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  #view-switcher button.positional,
+  #view-switcher button.heatmap {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Kill feed: the two latest kills under the top bar */
+  .kill-stream {
+    top: calc(60px + env(safe-area-inset-top));
+    left: 8px;
+    right: 64px;
+    bottom: auto;
+    height: auto;
+    width: auto;
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .kill-stream > div:nth-child(n + 3) {
+    display: none;
+  }
+
+  .kill-stream .tooltiptext.event {
+    position: static;
+    display: block;
+    min-width: 0;
+    transform: none;
+    font-size: 11px;
+    white-space: normal;
+  }
+
+  /* Timeline docked at the bottom */
+  .map-container .dev__time_sliders.timeline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1001;
+    width: auto;
+    margin: 0;
+    padding: 4px 10px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    background-color: rgba(8, 7, 5, 0.92);
+  }
+
+  .dev__time_sliders .timeline-container {
+    margin-top: 24px;
+    height: 40px;
+  }
+
+  .dev__time_sliders .player-slider,
+  .dev__time_sliders .shelf-slider {
+    height: 40px;
+  }
+
+  .dev__time_sliders .event-marker {
+    height: 48px;
+  }
+
+  .dev__time_sliders .event-marker::after {
+    font-size: 11px;
+    left: -12px;
+    top: -21px;
+    padding: 2px;
+  }
+
+  .dev__time_sliders .text-eft.mb-2 {
+    margin: 4px 0 6px;
+    font-size: 0.8125rem;
+  }
+
+  .dev__time_sliders span.invisible,
+  .dev__time_sliders div.invisible {
+    display: none;
+  }
+
+  .dev__time_sliders .flex.flex-wrap.items-center.gap-1 > div.w-full {
+    margin-top: 4px;
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+
+  .map-sheet-launchers {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+
+  .map-sheet-launchers button {
+    border: 1px solid #9a8866;
+    padding: 4px 10px;
+    font-size: 0.875rem;
+    color: #000;
+    background-color: #9a8866;
+  }
+
+  /* Bottom sheets */
+  .map-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .map-container aside.sidebar,
+  .map-container aside.sidebar-right {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10001;
+    max-height: 72vh;
+    max-height: 72dvh;
+    margin: 0;
+    padding: 0 14px calc(14px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-width: 1px 0 0;
+    border-radius: 12px 12px 0 0;
+    background-color: rgba(10, 9, 7, 0.98);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.6);
+    transform: translateY(105%);
+    visibility: hidden;
+    transition: transform 0.25s ease, visibility 0s linear 0.25s;
+  }
+
+  .map-container aside.is-open {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.25s ease;
+  }
+
+  .map-sheet-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 -14px 4px;
+    padding: 18px 14px 10px;
+    background-color: rgba(10, 9, 7, 0.98);
+    border-bottom: 1px solid rgba(154, 136, 102, 0.3);
+    color: #9a8866;
+  }
+
+  .map-sheet-header::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: 2px;
+    background: rgba(154, 136, 102, 0.5);
+  }
+
+  .map-sheet-header button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #9a8866;
+    line-height: 1;
+  }
+
+  .map-container aside .player-legend-item {
+    min-height: 36px;
+  }
+}
+
+/* Phones: one scroll per sheet, no nested scrolling lists */
+@media (max-width: 767.98px) {
+  .map-container aside .sheet-flat-scroll {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+
+  .bot-inventory-select {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    font-size: 14px;
+    color: #9a8866;
+    background: #111;
+    border: 1px solid rgba(154, 136, 102, 0.6);
+  }
+}
+
+/* Replay bar zoom */
+.timeline-zoom {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #9a8866;
+}
+
+.timeline-zoom-hint {
+  flex: 1;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-zoom-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timeline-overview {
+  position: relative;
+  flex: 1;
+  min-width: 40px;
+  height: 10px;
+  background: rgba(154, 136, 102, 0.15);
+  border-radius: 2px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.timeline-overview-window {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 4px;
+  background: rgba(154, 136, 102, 0.55);
+  border: 1px solid #9a8866;
+  border-radius: 2px;
+  cursor: grab;
+}
+
+.timeline-overview-playhead {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: #fff;
+  pointer-events: none;
+}
+
+.timeline-zoom-buttons {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.timeline-zoom-buttons button {
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  line-height: 1;
+  border: 1px solid #9a8866;
+  color: #9a8866;
+}
+
+.timeline-zoom-buttons button:not(:disabled):hover {
+  background: #9a8866;
+  color: #000;
+}
+
+.timeline-zoom-buttons button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* The time row never widens the map column; when the timeline is narrow, the zoom
+   controls move under the times. */
+.timeline-time-row-wrap {
+  container-type: inline-size;
+}
+
+@container (max-width: 560px) {
+  .timeline-time-row {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .timeline-time-row .timeline-zoom {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 767.98px) {
+
+  .timeline-overview {
+    height: 16px;
+  }
+
+  .timeline-zoom-buttons button {
+    min-width: 36px;
+    height: 30px;
+    font-size: 14px;
+  }
+}

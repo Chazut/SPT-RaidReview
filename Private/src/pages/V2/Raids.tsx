@@ -14,6 +14,13 @@ const raidDateFormatter = new Intl.DateTimeFormat(undefined, {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
 });
 
+function exitStatusColor(status: string) {
+    if (/^survived$/i.test(status)) return 'text-green-500';
+    if (/^runner$/i.test(status)) return 'text-yellow-400';
+    if (/^killed$/i.test(status)) return 'text-red-500';
+    return 'text-gray-400';
+}
+
 function formatRaidDate(time: string) {
     const date = new Date(time);
     return time && Number.isFinite(date.getTime()) ? raidDateFormatter.format(date) : 'Unknown';
@@ -79,7 +86,31 @@ export default function Raids() {
             {notice && <p role="status" className="my-2">{notice} {importedRaid &&
                 <Link className="underline" to={`/raid/${importedRaid}`}>Open raid</Link>}</p>}
 
-            <table id="raid-table" className="mt-2 w-full border border-eft">
+            <ul className="raid-cards md:hidden mt-2 flex flex-col gap-2" aria-label="Recent raids">
+                {raids.length > 0 ? raids.map((r) => (
+                    <li key={r.raidId}>
+                        <Link to={`/raid/${r.raidId}`} className="raid-card block border border-eft p-3">
+                            <div className="flex items-baseline justify-between gap-2">
+                                <span className="font-bold text-base truncate">{ getLocationLabel(r.location, r.locationVariant) }</span>
+                                <span className={`text-sm font-semibold whitespace-nowrap ${exitStatusColor(r.exitStatus)}`}>{ r.exitStatus || 'In progress' }</span>
+                            </div>
+                            <div className="flex items-baseline justify-between gap-2 text-sm mt-1">
+                                <span className="truncate" title={r.isHeadless ? 'Recorded by the headless host' : undefined}>
+                                    { r.profileName || profiles[r.profileId]?.info?.username || r.profileId?.substring(0, 8) + '...' }
+                                    <span className="opacity-60"> · { r.type }</span>
+                                </span>
+                                <span className="whitespace-nowrap opacity-80">{ msToHMS(Number(r.timeInRaid)) }</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 text-xs mt-1 opacity-60">
+                                <span>{ formatRaidDate(r.time) }{r.importedAt && <span className="ml-2 border border-eft px-1">Imported</span>}</span>
+                                <span aria-hidden="true">View ›</span>
+                            </div>
+                        </Link>
+                    </li>
+                )) : <li className="border border-eft p-3">No Data...</li>}
+            </ul>
+
+            <table id="raid-table" className="mt-2 w-full border border-eft max-md:hidden">
                 <thead>
                     <tr className="bg-eft text-black">
                         <th className="text-left px-2">Profile</th>
