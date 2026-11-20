@@ -2252,8 +2252,8 @@ export function cometMapState(record: CometMapRecord | undefined, at: number, sa
     const relocationEvent = ghost ? undefined : latestOutdoorRelocation(record, at)
     const reloc = relocationEvent?.outdoorRelocation
     const relocationAge = relocationEvent ? (at-relocationEvent.time)/1000 : Infinity
-    const outdoorRelocation = reloc && relocationAge>=0 && relocationAge<reloc.validFor && ['planning','ready','throwing','moving'].includes(reloc.state)
-        ? {...reloc, elapsed:reloc.elapsed+relocationAge} : undefined
+    const outdoorRelocation = reloc && relocationAge>=0 && relocationAge<reloc.validFor && ['planning','ready','throwing','moving','holding'].includes(reloc.state)
+        ? {...reloc, elapsed:reloc.elapsed+relocationAge, holdElapsed:reloc.state==='holding'?(reloc.holdElapsed??0)+relocationAge:reloc.holdElapsed} : undefined
     const tacticalJumpEvent = ghost ? undefined : latestTacticalJump(record, at)
     const tj = tacticalJumpEvent?.tacticalJump
     const tacticalJumpAge = tacticalJumpEvent ? (at-tacticalJumpEvent.time)/1000 : Infinity

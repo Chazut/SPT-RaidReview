@@ -79,7 +79,8 @@ const rules: Rule[] = [
     rule('holdAngle', 'holdAngleIndex', 'Adjusting the firing angle', 'look', yes('arrived'), c => point(c)),
     rule('adsTravel', 'adsIndex', 'Lowering sights while moving', 'move', c => c.requestedOff === true && c.observedADS === false),
     rule('tacticalJump', 'tacticalJumpIndex', 'Tactical jump', 'move', yes('takeoffObserved')),
-    rule('outdoorRelocation', 'relocationIndex', 'Relocating to another position', 'move', yes('movementObserved'), c => point(c, 'destination')),
+    rule('outdoorRelocation', 'relocationIndex', 'Relocating to another position', 'move', c => c.state==='moving' && c.movementObserved===true, c => point(c, 'destination')),
+    rule('outdoorRelocation', 'relocationIndex', 'Holding the new cover', 'hold', c => c.state==='holding' && c.holdApplied===true, c => point(c, 'destination')),
     rule('coverFeint', 'feintIndex', 'Baiting a reaction from cover', 'hold', yes('movementObserved', 'animationObserved', 'exposedObserved'), c => point(c, 'goal')),
     rule('fireLane', 'fireLaneIndex', 'Clearing a teammate\'s firing line', 'move', c => c.state === 'stepping' && c.confirmed === true, c => point(c, 'goal')),
     rule('squadFire', 'squadFireIndex', 'Holding fire for a teammate', 'hold', yes('startPrevented', 'stopped')),
@@ -124,6 +125,7 @@ function activityStatus(r: Rule): string {
     return r.key === 'retreatWeave' ? 'Movement/gaze commands applied' : 'Observed intervention'
 }
 function activityEnded(r: Rule, c: Context): boolean {
+    if (r.key === 'outdoorRelocation' && c.state === 'arrived') return true
     if (r.key === 'magazineRecovery') return ['completed','failed','interrupted','unavailable'].includes(String(c.state))
     return ['ended', 'released', 'completed', 'failed'].includes(String(c.state))
         || (r.key === 'quiet' && c.state === 'normal' && c.active !== true)
@@ -294,6 +296,14 @@ export function cometEpisodes(record?: CometMapRecord): CometEpisode[] {
                 const context = (event as unknown as Context)[ended.key] as Context
                 feature = activityFeature(ended.key,context)
                 title = activityTitle(ended,context); status = context.state === 'completed' ? 'Completed' : 'Stopped / released'
+                if (ended.key === 'outdoorRelocation' && context.state === 'arrived') {
+                    title = 'Reached the new cover'
+                    if (!context.holdSeconds) status = 'Completed'
+                    if (context.holdApplied && context.reason === 'relocate-hold-complete') {
+                        title = 'Finished holding the new cover'
+                        status = 'Completed'
+                    }
+                }
                 observedActions.delete(`${event.cometSession}:${event.instance}:${ended.key}`)
             }
             else if (match) {

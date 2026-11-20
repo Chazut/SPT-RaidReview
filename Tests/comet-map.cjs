@@ -2309,6 +2309,18 @@ check('M13 malformed or impossible observations are rejected',()=>{
  for(const extra of [{stage:'accepted'},{decision:'Push'}])assert.equal(ready([relocRow(1,1000,{},extra)]).events.length,0);
 });
 const m13Wire=path.resolve(__dirname,'../../COMET/artifacts/m13-wire-traces.json');
+check('M13 holds from arrival until expiry or an earlier interruption',()=>{
+ const hold={state:'holding',arrived:true,holdApplied:true,holdElapsed:0,holdSeconds:6,validFor:6};
+ const sample=at=>state(ready([relocRow(1,1000,hold)]),at,'SAIN:SeekCover',1000,false);
+ assert.equal(sample(4500).outdoorRelocation.holdElapsed,3.5);
+ assert.ok(tooltip(sample(4500)).includes('3.5 / 6.0 s'));
+ assert.equal(sample(7000).outdoorRelocation,undefined);
+ const stopped=ready([relocRow(1,1000,hold),relocRow(2,2000,{...hold,state:'arrived',reason:'relocate-visible-threat',validFor:0})]);
+ assert.equal(state(stopped,2100,'SAIN:SeekCover',1000,false).outdoorRelocation,undefined);
+ assert.equal(state(stopped,1900,'SAIN:SeekCover',1000,false).outdoorRelocation.state,'holding');
+ for(const bad of [{holdSeconds:11},{validFor:7},{holdElapsed:-1},{action:'Freeze'}])
+  assert.equal(relocHelpers.parseCometOutdoorRelocation({...relocTrace,...hold,...bad}),null);
+});
 if(fs.existsSync(m13Wire))check('M13 real C# wire lifecycle agrees with TypeScript',()=>{
  for(const t of JSON.parse(fs.readFileSync(m13Wire,'utf8')))assert.ok(relocHelpers.parseCometOutdoorRelocation(t),t.state);
 });

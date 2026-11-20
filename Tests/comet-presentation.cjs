@@ -31,6 +31,18 @@ const control=(id,time,owner)=>row(id,time,'evaluated','ControlHandoff',{feature
 let checks=0;
 function check(name,run){try{run();checks++}catch(e){e.message=name+': '+e.message;throw e}}
 const history=ready([row(1,1000,'selected'),row(2,1100),row(3,4000,'released')]);
+check('M13 reports holding only when applied and distinguishes interruption from completion',()=>{
+ const m13=(id,time,change)=>row(id,time,'evaluated','OutdoorRelocation',{feature:'M13',detail:{botInstance:'one',
+  outdoorRelocation:{...fixture('m13-outdoor-relocation').outdoorRelocation,state:'holding',holdSeconds:7,holdElapsed:0,validFor:7,arrived:true,...change}}});
+ const pending=m13(1,1000,{holdApplied:false}), applied=m13(2,1100,{holdApplied:true});
+ const active=view(ready([pending,applied]),4000,'SAIN:SeekCover',1000);
+ assert.deepEqual(Array.from(active.interventions,v=>v.title),['Holding the new cover']);
+ assert.equal(view(ready([pending]),1050,'SAIN:SeekCover',1000).interventions.length,0);
+ for(const [reason,status] of [['relocate-hold-complete','Completed'],['relocate-native-priority','Stopped / released']]){
+  const end=m13(3,8200,{state:'arrived',reason,holdApplied:true,validFor:0});
+  assert.equal(episodes(ready([applied,end])).at(-1).status,status);
+ }
+});
 check('selection does not imply execution',()=>assert.equal(view(history,1050,'SAIN:Search',900).badge,false));
 check('accepted plan is explicitly pending until observed',()=>{const v=view(history,1150,'SAIN:Search',900);assert.equal(v.badge,false);assert.match(v.status,/not yet observed/);assert.equal(v.owner,'SAIN')});
 check('observed action retains score, alternatives, factors and contact age in seconds',()=>{const v=view(history,2200,'COMET:Hold',2000);assert.equal(v.badge,true);assert.equal(v.score,70);assert.equal(v.factors[0].delta,5);assert.equal(v.alternatives.length,2);assert.match(v.contact,/3.1 s old/);assert.match(v.owner,/COMET/)});
