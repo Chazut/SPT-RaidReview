@@ -565,12 +565,6 @@ aside {
     display: none;
   }
 
-  .dev__time_sliders .text-eft.mb-2 > span:nth-child(2) {
-    font-size: 10px;
-    text-align: center;
-    padding: 0 4px;
-  }
-
   .dev__time_sliders .flex.flex-wrap.items-center.gap-1 > div.w-full {
     margin-top: 4px;
     max-height: 30vh;
@@ -681,5 +675,117 @@ aside {
     color: #9a8866;
     background: #111;
     border: 1px solid rgba(154, 136, 102, 0.6);
+  }
+}
+
+/* Replay bar zoom */
+.timeline-zoom {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #9a8866;
+}
+
+.timeline-zoom-hint {
+  flex: 1;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-zoom-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timeline-overview {
+  position: relative;
+  flex: 1;
+  min-width: 40px;
+  height: 10px;
+  background: rgba(154, 136, 102, 0.15);
+  border-radius: 2px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.timeline-overview-window {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 4px;
+  background: rgba(154, 136, 102, 0.55);
+  border: 1px solid #9a8866;
+  border-radius: 2px;
+  cursor: grab;
+}
+
+.timeline-overview-playhead {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: #fff;
+  pointer-events: none;
+}
+
+.timeline-zoom-buttons {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.timeline-zoom-buttons button {
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  line-height: 1;
+  border: 1px solid #9a8866;
+  color: #9a8866;
+}
+
+.timeline-zoom-buttons button:not(:disabled):hover {
+  background: #9a8866;
+  color: #000;
+}
+
+.timeline-zoom-buttons button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* The time row never widens the map column; when the timeline is narrow, the zoom
+   controls move under the times. */
+.timeline-time-row-wrap {
+  container-type: inline-size;
+}
+
+@container (max-width: 560px) {
+  .timeline-time-row {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .timeline-time-row .timeline-zoom {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 767.98px) {
+
+  .timeline-overview {
+    height: 16px;
+  }
+
+  .timeline-zoom-buttons button {
+    min-width: 36px;
+    height: 30px;
+    font-size: 14px;
   }
 }

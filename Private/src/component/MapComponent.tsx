@@ -14,7 +14,8 @@ import { msToHMS, intl, stripUnityRichText } from '../helpers/index.js';
 import { findInsertIndex } from '../modules/utils.js'
 import { useMapImages } from '../modules/maps-index.js';
 import { TrackingPositionalData, TrackingLooseLootItem, TrackingPlayerInventoryItem } from '../types/api_types.js';
-import { PlayerSlider } from './MapPlayerSlider.js';
+import { PlayerSlider, TimelineZoomControls } from './MapPlayerSlider.js';
+import { useTimelineZoom } from '../helpers/useTimelineZoom';
 import { SwitchOverlay } from './SwitchOverlay';
 import { AirdropOverlay } from './AirdropOverlay';
 import { GhostHearingOverlay } from './GhostHearingOverlay';
@@ -309,6 +310,7 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
     const [timeEndLimit, setTimeEndLimit] = useState(0)
     const [dropOffIndex, setDropOffIndex] = useState(200)
     const [sliderTimes, setSliderTimes] = useState([])
+    const replayZoom = useTimelineZoom(sliderTimes.length - 1, timeCurrentIndex)
     const [hideSettings, setHideSettings] = useState(true)
     const [hidePlayers, setHidePlayers] = useState(false)
     const [showBehavior, setShowBehavior] = useState(!!raidData?.detectedMods?.match(/SAIN/gi))
@@ -3989,14 +3991,20 @@ export default function MapComponent({ raidData, raidId, positions, intl_dir }) 
                         setTimeEndLimit={setTimeEndLimit}
                         preserveHistory={preserveHistory}
                         playerFocus={playerFocus}
+                        zoom={replayZoom}
                     />
-                    <div className="text-eft mb-2 flex justify-between">
-                        <span>{msToHMS(timeEndLimit)}</span>
-                        <span className={`${hideNerdStats ? 'invisible' : ''}`}>
-                            {((timeCurrentIndex / sliderTimes.length) * 100).toFixed(0)}% | 24fps · {playbackSpeed}x | Frame: {timeCurrentIndex} / {sliderTimes.length - 1} | Cut In/Out (ms): {timeStartLimit} / {timeEndLimit}
-                        </span>
-                        <span>{msToHMS(sliderTimes.length > 0 ? sliderTimes[sliderTimes.length - 1] : 0)}</span>
+                    <div className="timeline-time-row-wrap">
+                        <div className="timeline-time-row text-eft mb-2 flex justify-between items-center gap-3">
+                            <span>{msToHMS(timeEndLimit)}</span>
+                            <TimelineZoomControls zoom={replayZoom} sliderTimes={sliderTimes} timeCurrentIndex={timeCurrentIndex} />
+                            <span>{msToHMS(sliderTimes.length > 0 ? sliderTimes[sliderTimes.length - 1] : 0)}</span>
+                        </div>
                     </div>
+                    {!hideNerdStats && (
+                        <div className="timeline-debug text-eft text-xs text-center mb-2">
+                            {((timeCurrentIndex / sliderTimes.length) * 100).toFixed(0)}% | 24fps · {playbackSpeed}x | Frame: {timeCurrentIndex} / {sliderTimes.length - 1} | Cut In/Out (ms): {timeStartLimit} / {timeEndLimit}
+                        </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-1">
                         <button className={`text-sm p-2 py-1 text-sm ${playing ? 'bg-eft text-black ' : 'cursor-pointer text-eft'} border border-eft`} onClick={() => playPositions()}>
                             {playing ? '⏸️' : '▶️'}
