@@ -3,6 +3,7 @@
   <ItemGroup><Compile Include="../../Client/CometSummaryCapture.cs" Link="CometSummaryCapture.cs" />
     <PackageReference Include="HarmonyX" Version="2.16.0" />
     <Compile Include="../../Client/helpers/OrderedPacketSender.cs" Link="OrderedPacketSender.cs" />
+    <Compile Include="../../Client/helpers/ReconnectSchedule.cs" Link="ReconnectSchedule.cs" />
     <Compile Include="../../Client/helpers/RecordingRoster.cs" Link="RecordingRoster.cs" />
     <Compile Include="../../Client/helpers/RecordingGasDeaths.cs" Link="RecordingGasDeaths.cs" />
     <Compile Include="../../ServerMod/PostRaid/EnvironmentalDeaths.cs" Link="EnvironmentalDeaths.cs" />

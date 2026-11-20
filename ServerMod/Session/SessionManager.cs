@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using RaidReview.Config;
 
 namespace RaidReview.Session;
@@ -18,7 +19,7 @@ public class SessionManagerPlayer
 
 public class SessionManager
 {
-    private readonly Dictionary<string, SessionManagerRaid> _raids = new();
+    private readonly ConcurrentDictionary<string, SessionManagerRaid> _raids = new();
     private readonly Dictionary<string, SessionManagerPlayer> _profiles = new();
     private readonly Dictionary<string, System.Timers.Timer> _timeoutTimers = new();
     private readonly RaidReviewLogger _logger;
@@ -71,7 +72,7 @@ public class SessionManager
                 RemovePlayerFromRaid(raidId, playerId);
         }
 
-        _raids.Remove(raidId);
+        _raids.TryRemove(raidId, out _);
         _logger.Log($"Deregistered raid '{raidId}', REASON: {removalReason}");
     }
 

@@ -23,8 +23,7 @@ public class RaidReviewMod : IOnLoad
     // .NET garbage collector and stopped firing, so old raids were only purged when the server started.
     private Timer? _hourlyCleanup;
 
-    // Past server start, a raid in progress looks unfinished too: the hourly cleanup leaves an unfinished raid alone
-    // until it started longer ago than any raid lasts.
+    // Hourly cleanup also gives unfinished, unregistered raids a grace period.
     private static readonly TimeSpan AbandonedAfter = TimeSpan.FromHours(3);
 
     public RaidReviewMod(ISptLogger<RaidReviewMod> sptLogger,
@@ -77,7 +76,7 @@ public class RaidReviewMod : IOnLoad
         var compiler = new RaidPositionCompiler(fileService, logger);
 
         // Garbage collector
-        var gc = new GarbageCollector(db, fileService, logger, config);
+        var gc = new GarbageCollector(db, fileService, logger, config, sessionManager);
         await gc.CollectOldRaidsAsync();
         await gc.CollectUnfinishedRaidsAsync();
 

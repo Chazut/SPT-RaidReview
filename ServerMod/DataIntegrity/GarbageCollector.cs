@@ -1,6 +1,7 @@
 using RaidReview.Config;
 using RaidReview.Database;
 using RaidReview.FileSystem;
+using RaidReview.Session;
 
 namespace RaidReview.DataIntegrity;
 
@@ -10,14 +11,17 @@ public class GarbageCollector
     private readonly DataFileService _fileService;
     private readonly RaidReviewLogger _logger;
     private readonly RaidReviewConfig _config;
+    private readonly SessionManager _sessions;
+    private const string Unfinished = "importedAt = '' AND (exitStatus = '' OR exitStatus IS NULL)";
     private const string ActiveVersion = "V4";
 
-    public GarbageCollector(DatabaseService db, DataFileService fileService, RaidReviewLogger logger, RaidReviewConfig config)
+    public GarbageCollector(DatabaseService db, DataFileService fileService, RaidReviewLogger logger, RaidReviewConfig config, SessionManager sessions)
     {
         _db = db;
         _fileService = fileService;
         _logger = logger;
         _config = config;
+        _sessions = sessions;
     }
 
     public async Task CollectOldRaidsAsync()
@@ -30,10 +34,11 @@ public class GarbageCollector
             return;
         }
 
-        _logger.Log($"Garbage collector deleting old raids, only keeping data for the last '{_config.AutoDeleteLimit}' raids.");
+        _logger.Log($"Garbage collector retaining the latest '{_config.AutoDeleteLimit}' eligible completed raids.");
 
         var oldRaids = await _db.QueryAsync(
-            $"SELECT * FROM raid WHERE timeInRaid > 10 AND importedAt = '' ORDER BY created_at DESC LIMIT 1000000 OFFSET {_config.AutoDeleteLimit}");
+            "SELECT raidId FROM raid WHERE importedAt = '' AND exitStatus <> '' AND CAST(timeInRaid AS INTEGER) > 10 " +
+            "ORDER BY created_at DESC, id DESC LIMIT 1000000 OFFSET $keep", ("$keep", _config.AutoDeleteLimit));
 
         if (oldRaids.Count == 0)
         {
@@ -51,8 +56,7 @@ public class GarbageCollector
     }
 
     /// <param name="minimumAge">
-    /// Only raids started at least this long ago. Null: every unfinished raid, which is only safe while no raid can be
-    /// running, at server start.
+    /// Minimum age of an unregistered, unfinished raid. The startup pass omits the age limit.
     /// </param>
     public async Task CollectUnfinishedRaidsAsync(TimeSpan? minimumAge = null)
     {
@@ -64,9 +68,7 @@ public class GarbageCollector
             return;
         }
 
-        // Unfinished raids have an empty exitStatus (END packet never arrived to update it). A raid still in progress
-        // has none yet either: its row is written at START, so only its age tells an abandoned raid from a running one.
-        var sql = "SELECT raidId FROM raid WHERE importedAt = '' AND (exitStatus = '' OR exitStatus IS NULL)";
+        var sql = "SELECT raidId FROM raid WHERE " + Unfinished;
         var parameters = new List<(string, object?)>();
         if (minimumAge is { } age)
         {
@@ -93,15 +95,20 @@ public class GarbageCollector
             return;
         }
 
-        _logger.Log($"Found '{raidCounts.Count}' raids to delete.");
+        _logger.Log($"Checking '{raidCounts.Count}' unfinished raids for abandoned recordings.");
         foreach (var raidId in raidCounts)
-            await DeleteRaidDataAsync(raidId);
+            await DeleteRaidDataAsync(raidId, unfinishedOnly: true);
 
         _logger.Log("Garbage collector is done deleting unfinished raids.");
     }
 
-    private async Task DeleteRaidDataAsync(string raidId)
+    private async Task DeleteRaidDataAsync(string raidId, bool unfinishedOnly = false)
     {
+        // START registers a fresh ID before inserting its row. END updates the row before deregistering it.
+        if (_sessions.GetRaid(raidId) != null) return;
+        if (unfinishedOnly && await _db.QuerySingleAsync("SELECT raidId FROM raid WHERE raidId = $id AND " + Unfinished,
+                ("$id", raidId)) == null) return;
+
         var tables = new[] { "kills", "looting", "player", "player_status", "ballistic", "loose_loot", "player_inventory", "bot_quest", "bot_objective", "phobos_field", "orbit_field", "orbit_bot_objective", "orbit_main_objectives", "orbit_ghost_fight", "orbit_ghost_hearing", "orbit_ghost_wake", "airdrop_landing", "airdrop_flight", "switch_state", "comet_decision", "raid" };
 
         // FK enforcement off during GC: legacy DBs can carry orphan rows

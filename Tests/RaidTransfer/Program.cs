@@ -504,9 +504,47 @@ if (args.Length == 2 && args[0] == "--real-data")
     Console.WriteLine("Real round-trip: " + realId);
 }
 
-var gc = new RaidReview.DataIntegrity.GarbageCollector(target, targetFiles, logger,
-    new RaidReview.Config.RaidReviewConfig { AutoDelete = true, AutoDeleteLimit = 0, AutoDeleteUnfinishedRaids = true });
+var cleanupConfig = new RaidReview.Config.RaidReviewConfig { AutoDelete = true, AutoDeleteLimit = 1, AutoDeleteUnfinishedRaids = true };
+var cleanupSessions = new RaidReview.Session.SessionManager(logger, cleanupConfig);
+var gc = new RaidReview.DataIntegrity.GarbageCollector(target, targetFiles, logger, cleanupConfig, cleanupSessions);
+var cleanupHandler = new RaidReview.WebSocket.WsPacketHandler(target, cleanupSessions, targetFiles, logger, null!);
+async Task<string> StartCleanupRaid(string profile, string age)
+{
+    var payload = JsonSerializer.Serialize(new { sessionId = profile, profileId = profile, location = "factory", time = "12:00", type = "PMC", timeInRaid = 2 });
+    await cleanupHandler.HandleMessageAsync(JsonSerializer.SerializeToUtf8Bytes(new { Action = "START", Payload = payload }));
+    var id = cleanupSessions.GetProfile(profile)!.RaidId!;
+    await target.ExecuteAsync("UPDATE raid SET created_at=datetime('now',$age) WHERE raidId=$id", ("$age", age), ("$id", id));
+    targetFiles.WriteFile("positions", "", "", id + "_positions", "raw");
+    targetFiles.WriteFile("positions", "", "", id + "_V4_positions.json", "[]");
+    return id;
+}
+async Task CheckCleanupRaid(string id, bool retained)
+{
+    var row = await target.QuerySingleAsync("SELECT raidId FROM raid WHERE raidId=$id", ("$id", id));
+    Check((row != null) == retained, $"Cleanup row retention for {id} should be {retained}");
+    foreach (var suffix in new[] { "_positions", "_V4_positions.json" })
+        Check(targetFiles.FileExists("positions", "", "", id + suffix) == retained, $"Cleanup file retention for {id}{suffix} should be {retained}");
+}
+var activeRaid = await StartCleanupRaid("long-running", "-215 minutes");
+var oldOrphan = await StartCleanupRaid("old-orphan", "-215 minutes");
+var recentOrphan = await StartCleanupRaid("recent-orphan", "-30 minutes");
+cleanupSessions.RemoveRaid(oldOrphan, "simulated timeout");
+cleanupSessions.RemoveRaid(recentOrphan, "simulated timeout");
 await gc.CollectOldRaidsAsync();
+Check(await target.QuerySingleAsync("SELECT raidId FROM raid WHERE raidId=$id", ("$id", localRaidId)) != null,
+    "Newer unfinished raids do not consume the completed-raid quota");
+cleanupConfig.AutoDeleteLimit = 0;
+await gc.CollectOldRaidsAsync();
+await CheckCleanupRaid(activeRaid, true);
+await CheckCleanupRaid(recentOrphan, true);
+await gc.CollectUnfinishedRaidsAsync(TimeSpan.FromHours(3));
+await CheckCleanupRaid(activeRaid, true);
+await CheckCleanupRaid(oldOrphan, false);
+await CheckCleanupRaid(recentOrphan, true);
+await gc.CollectUnfinishedRaidsAsync();
+await CheckCleanupRaid(activeRaid, true);
+await CheckCleanupRaid(recentOrphan, false);
+cleanupSessions.RemoveRaid(activeRaid, "end of test");
 Check(await target.QuerySingleAsync("SELECT * FROM raid WHERE raidId=$id", ("$id", raidId)) != null, "Imported raid retained by automatic cleanup");
 Check(await target.QuerySingleAsync("SELECT * FROM raid WHERE raidId=$id", ("$id", localRaidId)) == null, "Normal raid retention still works");
 Check(!Directory.EnumerateDirectories(Path.Combine(targetData, "transfers")).Any(), "Transfer workspaces cleaned");

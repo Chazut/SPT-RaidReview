@@ -17,11 +17,30 @@ class Program
         checks++;
     }
     static void Wait(Func<bool> condition) => Check(SpinWait.SpinUntil(condition, 5000), "worker timed out");
+    static void TestReconnects()
+    {
+        var schedule = new ReconnectSchedule();
+        var now = TimeSpan.Zero;
+        foreach (var location in new[] { "factory4_day", "RezervBase", "", null })
+            Check(!schedule.TrySchedule(true, location, now, out _), "No retry in a raid or loading world, even without a recording");
+        foreach (var (at, expected) in new[] { (0,5), (5,10), (15,20), (35,40), (75,60), (135,60) })
+        {
+            now = TimeSpan.FromSeconds(at);
+            Check(schedule.TrySchedule(false, null, now, out var delay) && delay == expected, "Menu retry uses capped backoff");
+            Check(!schedule.TrySchedule(false, null, now, out _), "Menu tick cannot retry before its deadline");
+        }
+        schedule.Connected(now);
+        Check(!schedule.TrySchedule(true, "hideout", now + TimeSpan.FromSeconds(4), out _), "Quick disconnect observes the minimum delay");
+        Check(schedule.TrySchedule(true, "hideout", now + TimeSpan.FromSeconds(5), out var reset) && reset == 5,
+            "Successful connection clears the old 60-second deadline and resets the next delay");
+    }
+
     static string Serialize(string action, object payload) => JsonConvert.SerializeObject(new WsPayload
         { Action=action, Payload=JsonConvert.SerializeObject(payload) });
 
     static async Task Main()
     {
+        TestReconnects();
         CometCounterCaptureTests.Run(Check);
         FikaRecordingTests.Run(Check);
         InventoryTests.Run(Check);

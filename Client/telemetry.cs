@@ -4,6 +4,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BepInEx.Logging;
+using Comfort.Common;
+using EFT;
 using EFT.Communications;
 
 namespace RAID_REVIEW
@@ -21,11 +23,9 @@ namespace RAID_REVIEW
         // Reconnect state. The socket used to be opened once at game start only, so after
         // a server restart (deploy, crash) every later raid was lost until the game was
         // relaunched. TryReconnect retries between raids with a growing delay.
-        private const double ReconnectMinDelaySeconds = 5;
-        private const double ReconnectMaxDelaySeconds = 60;
         private static string host;
-        private static DateTime nextReconnectAt = DateTime.MinValue;
-        private static double reconnectDelaySeconds = ReconnectMinDelaySeconds;
+        private static readonly ReconnectSchedule reconnect = new ReconnectSchedule();
+        private static readonly System.Diagnostics.Stopwatch reconnectClock = System.Diagnostics.Stopwatch.StartNew();
         // set while a reconnect attempt is in flight: its failures are logged, not shown
         private static volatile bool quietFailures;
 
@@ -57,9 +57,9 @@ namespace RAID_REVIEW
             socket.OnOpen += (s, e) =>
             {
                 if (ws != socket) return;
+                reconnect.Connected(reconnectClock.Elapsed);
                 RAID_REVIEW.WebSocketConnected = true;
                 quietFailures = false;
-                reconnectDelaySeconds = ReconnectMinDelaySeconds;
                 Logger.LogInfo("[RAID-REVIEW] WebSocket connected.");
                 Interlocked.Exchange(ref notification, "Raid Review Server Connected");
                 StartKeepAlive(socket);
@@ -74,20 +74,16 @@ namespace RAID_REVIEW
             Task.Run(() => { try { socket.Connect(); } catch (Exception ex) { queue.Abort(ex.Message); } });
         }
 
-        // Called from the capture loop. Only acts outside a raid: a raid that started while
-        // disconnected is already finalized as RECORDING_INCOMPLETE, and reconnecting mid-raid
-        // would hand the server a recording with a hole in it.
-        internal static void TryReconnect(bool inRaid)
+        internal static void TryReconnect()
         {
-            if (inRaid || host == null) return;
+            if (host == null || RAID_REVIEW.inRaid) return;
             if (RAID_REVIEW.AutoReconnect != null && !RAID_REVIEW.AutoReconnect.Value) return;
             if (!Faulted) return; // connected, or the current attempt is still in progress
 
-            var now = DateTime.UtcNow;
-            if (now < nextReconnectAt) return;
-            nextReconnectAt = now.AddSeconds(reconnectDelaySeconds);
-            Logger.LogInfo($"[RAID-REVIEW] connection to {host} lost, reconnecting (next try in {reconnectDelaySeconds:0}s if this fails).");
-            reconnectDelaySeconds = Math.Min(reconnectDelaySeconds * 2, ReconnectMaxDelaySeconds);
+            // An offline start or interrupted recording leaves inRaid false while the player is still in the raid.
+            var world = RAID_REVIEW.MapLoaded() ? Singleton<GameWorld>.Instance : null;
+            if (!reconnect.TrySchedule(world != null, world?.LocationId, reconnectClock.Elapsed, out var delay)) return;
+            Logger.LogInfo($"[RAID-REVIEW] connection to {host} lost, reconnecting (next try in {delay}s if this fails).");
 
             quietFailures = true;
             Connect(host);

@@ -804,7 +804,7 @@ namespace RAID_REVIEW
             {
                 yield return interval;
                 Telemetry.PumpNotification();
-                try { Telemetry.TryReconnect(inRaid); }
+                try { Telemetry.TryReconnect(); }
                 catch (Exception ex) { Logger.LogError("RAID_REVIEW :::: RECONNECT :::: " + ex.Message); }
 
                 try
