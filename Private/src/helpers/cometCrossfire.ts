@@ -15,7 +15,8 @@ const num=(v:any,min:number,max:number)=>Number.isFinite(v)&&v>=min&&v<=max
 
 function validManeuver(m:any):boolean{
 
- return !!m&&!Array.isArray(m)&&['preparing','active','converging','ended'].includes(m.state)&&['flank','support','rear'].includes(m.role)
+ return !!m&&!Array.isArray(m)&&['preparing','active','converging','ended'].includes(m.state)
+ &&(['flank','support','rear'].includes(m.role)||(m.role==='unassigned'&&m.state==='ended'&&m.confirmed===false))
 
  &&['plan','reason','support','supportName','fireState'].every(k=>text(m[k]))&&m.plan.length>0
 
@@ -83,7 +84,7 @@ export function parseCometCrossfire(t:any):CrossfireContext|null{
  ||t.applied&&t.storm&&(!t.storm.confirmed||t.state!=='moving')
  ||t.trade!=null&&(!validTrade(t.trade)||t.coverMate!=null||t.maneuver!=null||t.entrance!=null)
  ||t.applied&&t.trade&&(t.state==='moving'?t.trade.status!=='moving':t.trade.status!=='watching'||!t.trade.confirmed)
- ||t.maneuver!=null&&!validManeuver(t.maneuver)
+ ||t.maneuver!=null&&(!validManeuver(t.maneuver)||t.maneuver.role==='unassigned'&&t.state!=='ended')
 
  ||t.applied&&t.maneuver&&(!t.maneuver.confirmed||t.maneuver.state==='ended')
 
@@ -144,9 +145,9 @@ export function cometCrossfireSummary(t:CrossfireContext):string[]{return[
  ]:[]),
  ...(t.maneuver?[`Plan ${t.maneuver.plan}: ${t.maneuver.state} - ${t.maneuver.remaining.toFixed(1)} s remaining`,
 
- `Role: ${t.maneuver.role} - ${t.maneuver.confirmed?'confirmed':'awaiting execution'} - ${t.maneuver.reason.replace(/-/g,' ')}`,
+ t.maneuver.role==='unassigned' ? 'No role assigned' : `Role: ${t.maneuver.role} - ${t.maneuver.confirmed?'confirmed':'awaiting execution'} - ${t.maneuver.reason.replace(/-/g,' ')}`,
 
- `Support: ${t.maneuver.supportName||t.maneuver.support} - ${t.maneuver.supportReady?'ready':'not confirmed'}`,
+ `Support: ${t.maneuver.supportName||t.maneuver.support||'none'} - ${t.maneuver.supportReady?'ready':'not confirmed'}`,
 
  `Fire: ${t.maneuver.fireState} - ${t.maneuver.shots} actual shots`,
 
@@ -158,7 +159,7 @@ export function cometCrossfireSummary(t:CrossfireContext):string[]{return[
 
  `Execution: ${t.execution} · episode ${t.episode} · ${t.remaining.toFixed(1)} s remaining`,
 
- ...(!t.coverMate&&!t.trade&&!t.storm?[`Supporting teammate: ${t.supportName || t.support || 'none'} · independent choice ${t.roll.toFixed(1)} / ${t.chance.toFixed(0)}%`]:[]),
+ ...(!t.maneuver&&!t.coverMate&&!t.trade&&!t.storm?[`Supporting teammate: ${t.supportName || t.support || 'none'} · independent choice ${t.roll.toFixed(1)} / ${t.chance.toFixed(0)}%`]:[]),
 
  `Known contact: ${t.contact || 'none'} · ${t.source || 'no source'} · ${t.contactAge.toFixed(1)} s old · (${t.x.toFixed(1)}, ${t.y.toFixed(1)}, ${t.z.toFixed(1)})`,
 
@@ -195,7 +196,7 @@ export function squadTacticTitle(c: CrossfireContext): string {
         : c.entrance ? 'Use another entrance' : 'Create a crossfire'
 }
 export function squadRole(c: CrossfireContext): string {
-    if (c.maneuver) return c.maneuver.role === 'support' ? 'Support' : c.maneuver.role === 'rear' ? 'Rear guard' : 'Flank'
+    if (c.maneuver) return c.maneuver.role === 'unassigned' ? 'No role assigned' : c.maneuver.role === 'support' ? 'Support' : c.maneuver.role === 'rear' ? 'Rear guard' : 'Flank'
     if (c.storm) return 'Assault'
     if (c.coverMate) return 'Cover teammate'
     if (c.trade) return c.trade.choice === 'push' ? 'Push' : 'Watch angle'

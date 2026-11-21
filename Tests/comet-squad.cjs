@@ -54,6 +54,17 @@ const planning=ready([cross(1,1000,planned)]);
 check('plan is never presented as executed',()=>{const r=roles(squad,{pmc:planning},samples,1100);assert.equal(r[0].confirmed,false);assert.match(r[0].status,/not confirmed/)});
 const stopped={...planned,state:'ended',reason:'crossfire-contact-changed',maneuver:{...planned.maneuver,state:'ended'}};
 const stopRecord=ready([cross(1,1000),cross(2,1200,stopped)]);
+check('S03 can decline without assigning or executing a role',()=>{
+    const {parseCometCrossfire, squadRole, cometCrossfireSummary} = load('../Private/src/helpers/cometCrossfire.ts');
+    const declined = {...stopped, maneuver:{...stopped.maneuver, role:'unassigned', support:'', supportName:'', confirmed:false}};
+    assert.ok(parseCometCrossfire(declined));
+    assert.equal(squadRole(declined),'No role assigned');
+    assert.ok(cometCrossfireSummary(declined).includes('No role assigned'));
+    assert.ok(!cometCrossfireSummary(declined).some(line=>line.includes('independent choice')));
+    assert.equal(parseCometCrossfire({...declined,state:'moving'}),null);
+    assert.equal(parseCometCrossfire({...declined,maneuver:{...declined.maneuver,confirmed:true}}),null);
+    assert.equal(roles(squad,{pmc:ready([cross(1,1000,declined)])},samples,1100).length,0);
+});
 check('ending cancels squad immediately',()=>assert.equal(roles(squad,{pmc:stopRecord},samples,1200).length,0));
 check('nested ended plan never claims execution in history',()=>{const r=ready([cross(1,1000),cross(2,1200,{...planned,maneuver:{...planned.maneuver,state:'ended'}})]);assert.ok(r.events[1].crossfire);assert.equal(roles(squad,{pmc:r},samples,1200).length,0);assert.equal(episodes(r)[1].status,'Ended / interrupted')});
 check('history retains stopped reason and does not invent success',()=>{const h=build(squad,{pmc:stopRecord});assert.equal(h.length,2);assert.match(h[1].status,/interrupted/);assert.equal(h[1].event.crossfire.reason,'crossfire-contact-changed')});
