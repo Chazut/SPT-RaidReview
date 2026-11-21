@@ -1,3 +1,18 @@
+# Raid Review 1.11.0 RC3
+
+Changes since RC2.
+
+## COMET replays
+
+- **Squad roles.** If a squad considers a maneuver and nobody takes the job, the replay shows "No role assigned".
+- **Reactions to a teammate's death.** The replay now shows a survivor pushing or watching the enemy that the squad linked to the loss.
+- **Holding new cover.** After an outdoor relocation, the replay shows when the bot actually starts holding its new position and whether it finished the hold or was interrupted.
+
+## Recording fixes
+
+- **Reconnect between raids.** If Raid Review loses its connection, it retries automatically from the menu or hideout so it's ready to record the next raid.
+- **Hourly cleanup.** Automatic cleanup now runs on schedule and protects raids that are still recording. Imported raids are also kept.
+
 # Raid Review 1.11.0 RC2
 
 ## Features
