@@ -1,3 +1,23 @@
+# Raid Review 1.11.0
+
+## Features
+
+- **Follow COMET fights.** See who held an angle, broke off to flank or reacted to a squadmate's death. The replay shows when a maneuver was declined or interrupted.
+- **Track dropped magazines.** Follow a bot back to its discarded mag. The map marker stays on the ground until someone picks it up.
+- **Spot PBT cheaters.** Recognize them on the map and in the participant list, and inspect their personality and assigned cheats. These details travel with exported raids.
+- **Recognize gas deaths.** An explosion icon marks the death on both the map and the timeline.
+
+## Changes
+
+- **Open busy squad replays sooner.** The Squad Tactic tab shows the first events while the rest load.
+
+## Fixes
+
+- Raid Review reconnects between raids. Scheduled cleanup protects active recordings and keeps imported raids.
+- ORBIT boss rushes show success when the squad kills its target. Replays also recover missing participants more reliably.
+
+Update the client and server together. With Fika, update the raid host or headless and the playing clients.
+
 # Raid Review 1.11.0 RC3
 
 Changes since RC2.

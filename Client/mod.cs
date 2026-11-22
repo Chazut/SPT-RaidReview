@@ -708,7 +708,7 @@ namespace RAID_REVIEW
         void Awake()
         {
             CometIntegration.Bind(message => Logger.LogWarning(message));
-            Logger.LogInfo("RAID_REVIEW :::: INFO :::: Mod Loaded (1.11.0-RC3)");
+            Logger.LogInfo("RAID_REVIEW :::: INFO :::: Mod Loaded (1.11.0)");
 
             // Clean up legacy versioned DLLs (e.g. RAID_REVIEW__0.4.0.dll) from older releases
             try
