@@ -60,6 +60,8 @@ public class RaidReviewLogger
         AppendToLogFile(message);
     }
 
+    internal bool DebugPacketsEnabled => _config.EnableDebugLogs;
+
     public void Debug(string message)
     {
         if (_config.EnableDebugLogs)

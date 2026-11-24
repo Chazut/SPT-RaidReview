@@ -2,6 +2,7 @@ namespace RaidReview
 {
     public class RaidReviewLogger
     {
+        public bool DebugPacketsEnabled => false;
         public List<Exception> Errors = new();
         public void Log(string text) { }
         public void Debug(string text) { }
@@ -15,7 +16,22 @@ namespace RaidReview.Database
         public List<string> Sql = new();
         public (string, object)[] LastArgs;
         public Task ExecuteAsync(string sql, params (string, object)[] args) { Sql.Add(sql); LastArgs=args; return Task.CompletedTask; }
-        public void QueueWrite(string sql, params (string, object)[] args) { Sql.Add(sql); }
+        public Task FlushWritesAsync(CancellationToken token) => Task.CompletedTask;
+        public Task<Dictionary<string,object>> QuerySingleAsync(string sql, params (string,object)[] args) =>
+            Task.FromResult(new Dictionary<string,object> { ["n"] = 0 });
+        public void QueueWrite(string sql, params (string, object)[] args)
+        {
+            Sql.Add(sql);
+            LastArgs = args;
+            // Existing feature fixtures inspect the complete public detail column.
+            // The RaidTransfer harness independently round-trips real SQLite rows.
+            if (sql == CometDecisionStorage.Insert)
+            {
+                int index = Array.FindIndex(args, p => p.Item1 == "$detail");
+                LastArgs[index] = ("$detail", string.Concat(args[index].Item2,
+                    args.Single(p => p.Item1 == "$config").Item2, args.Single(p => p.Item1 == "$tail").Item2));
+            }
+        }
         public Task ExecuteBatchAsync(string sql, IEnumerable<(string,object)[]> args) { Sql.Add(sql); return Task.CompletedTask; }
         public Task<List<Dictionary<string,object>>> QueryAsync(string sql, params (string,object)[] args) => Task.FromResult(new List<Dictionary<string,object>>());
     }

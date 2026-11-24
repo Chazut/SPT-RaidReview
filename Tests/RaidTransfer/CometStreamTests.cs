@@ -5,6 +5,18 @@ internal static class CometStreamTests
 {
     internal static async Task Run(HttpClient client, DatabaseService db, string raidId, Action<bool,string> check)
     {
+        foreach (string detail in new[] {
+            """{"name":"Енот","weaponConfig":{"text":"}💫","nested":[1.00,null]},"after":42}""",
+            """{ "firstConfig" : {"v":1}, "secondConfig" : {"v":2} }""",
+            """{"weaponConfig":null,"noConfig":{"changed":true}}""",
+            """{"nested":{"weaponConfig":{"other":true}}}""",
+            "legacy opaque detail"
+        })
+        {
+            var parts = CometDecisionStorage.Split(detail);
+            check(parts.Prefix + parts.Config + parts.Tail == detail, "config splitting preserves every character");
+        }
+
         const string profile = "cursor-test";
         for (int i = 0; i < 7; i++)
             await db.ExecuteAsync("INSERT INTO comet_decision (raidId,time,cometSession,sequence,profileId,name,feature,decision,stage,reason,detail) VALUES ($raid,$time,'cursor-fixture',$n,$profile,'Test','S01','Crossfire','evaluated','test','{}')",
@@ -35,6 +47,15 @@ internal static class CometStreamTests
             check((int)(await client.GetAsync(path + invalid)).StatusCode == 400, "invalid cursor rejected");
         var plan = await db.QueryAsync("EXPLAIN QUERY PLAN SELECT * FROM comet_decision WHERE raidId=$raid AND profileId=$profile AND (time,id)>($time,$id) ORDER BY time,id LIMIT 3", ("$raid",raidId),("$profile",profile),("$time",123.5),("$id",1));
         check(plan.Any(row => row.Values.Any(value => value?.ToString()?.Contains("idx_comet_raid_profile_time_id") == true)), "seek uses the profile index");
+        foreach (var (seq,feature,stage) in new[]{(10,"T01","summary"),(11,"T02","summary"),(12,"T03","summary"),
+                     (13,"T04","summary"),(14,"T01","evaluated"),(15,"X99","summary")})
+            await db.ExecuteAsync("INSERT INTO comet_decision (raidId,time,cometSession,sequence,profileId,name,feature,decision,stage,reason,detail) VALUES ($raid,100,'cursor-fixture',$seq,'','T01',$feature,'test',$stage,'test','{}')",
+                ("$raid",raidId),("$seq",seq),("$feature",feature),("$stage",stage));
+        using var summaries = JsonDocument.Parse(await client.GetStringAsync($"/api/raids/{raidId}/comet_summaries"));
+        var selected = summaries.RootElement.GetProperty("events").EnumerateArray()
+            .Where(row => row.GetProperty("cometSession").GetString()=="cursor-fixture")
+            .Select(row => row.GetProperty("sequence").GetInt32());
+        check(selected.SequenceEqual(new[]{10,11,12,13}), "report endpoint returns only supported summary pages and preserves timestamp ties");
         await db.ExecuteAsync("DELETE FROM comet_decision WHERE cometSession='cursor-fixture'");
     }
 }

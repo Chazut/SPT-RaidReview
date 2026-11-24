@@ -235,17 +235,10 @@ const api = {
         return parseAirdrops(await response.json());
     },
 
-    getCometJournal: async function(raidId: string, feature: string, signal?: AbortSignal) {
-        const response = await fetch(hostname + `/api/raids/${encodeURIComponent(raidId)}/comet_decisions?limit=200&search=${encodeURIComponent(feature)}&stage=summary`, { signal });
+    getCometSummaries: async function(raidId: string, signal?: AbortSignal) {
+        const response = await fetch(hostname + `/api/raids/${encodeURIComponent(raidId)}/comet_summaries`, { signal });
         if (response.status === 404) return null;
-        if (!response.ok) throw new Error("Could not load COMET report");
-        return response.json();
-    },
-
-    getCometCounters: async function(raidId: string, signal?: AbortSignal) {
-        const response = await fetch(hostname + `/api/raids/${encodeURIComponent(raidId)}/comet_decisions?limit=200&search=T02`, { signal });
-        if (response.status === 404) return null;
-        if (!response.ok) throw new Error('Could not load COMET counters');
+        if (!response.ok) throw new Error("Could not load COMET reports");
         return response.json();
     },
 

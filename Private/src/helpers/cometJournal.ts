@@ -67,7 +67,7 @@ export function groupJournalRows(report:JournalReport,group:string,filter:string
 export function parseJournalReports(events:unknown):JournalReport[] {
     if(!Array.isArray(events))return []
     const groups=new Map<string,Map<number,any>>()
-    for(const event of events.slice(0,400)) {
+    for(const event of events) {
         if(!object(event)||!['T01','T03','T04'].includes(event.feature)||event.stage!=='summary')continue
         let data:any;try{data=typeof event.detail==='string'?JSON.parse(event.detail):event.detail}catch{continue}
         if(!object(data)||data.feature!==event.feature)continue

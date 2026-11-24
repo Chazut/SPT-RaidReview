@@ -356,12 +356,15 @@ internal sealed class RaidArchiveService(
     private static async Task<Dictionary<string, Column>> SchemaAsync(DbConnection conn, string table, CancellationToken ct)
     {
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = $"PRAGMA table_info({Q(table)})";
+        // The public COMET view reconstructs complete detail strings. Its storage
+        // table retains the column types and NOT NULL constraints for validation.
+        cmd.CommandText = $"PRAGMA table_info({Q(table == "comet_decision" ? "comet_decision_row" : table)})";
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         var result = new Dictionary<string, Column>(StringComparer.Ordinal);
         while (await reader.ReadAsync(ct))
         {
             string name = reader["name"].ToString()!;
+            if (table == "comet_decision" && name is "configBlock" or "detailTail") continue;
             if (PortableColumn(name)) result.Add(name, new(reader["type"].ToString()!,
                 Convert.ToInt64(reader["notnull"]) != 0 && reader["dflt_value"] is DBNull,
                 Convert.ToInt64(reader["notnull"]) != 0));

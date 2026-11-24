@@ -33,9 +33,9 @@ export default function CometJournalSummary({raidId}:{raidId:string}) {
     useEffect(()=>{
         if(!open)return
         const controller=new AbortController();setReports([]);setStatus('Loading combat, weapon and control reports...')
-        Promise.all(['T01','T03','T04'].map(f=>api.getCometJournal(raidId,f,controller.signal))).then(data=>{
+        api.getCometSummaries(raidId,controller.signal).then(data=>{
             if(controller.signal.aborted)return
-            const parsed=parseJournalReports(data.flatMap(x=>x?.events??[]));setReports(parsed)
+            const parsed=parseJournalReports(data?.events??[]);setReports(parsed)
             setStatus(parsed.length?'':'No journal summary recorded. Reports are available after raid cleanup with the journal enabled.')
         }).catch(()=>{if(!controller.signal.aborted)setStatus('Could not load reports. Close and reopen to retry.')})
         return()=>controller.abort()

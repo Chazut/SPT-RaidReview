@@ -13,6 +13,7 @@ check('out of order pages',()=>assert.equal(JSON.stringify(parse([...events].rev
 check('missing header',()=>{const r=parse(events.slice(1))[0];assert.equal(r.complete,false);assert.equal(r.missing,1);assert.ok(r.warnings.length)});
 check('missing rows page',()=>{const r=parse(events.slice(0,1))[0];assert.equal(r.complete,false);assert.equal(r.rows.length,0)});
 check('two raids never sum',()=>{const second=clone(pages);second.forEach(p=>p.session='second');const r=parse([...events,...second.map(event)]);assert.equal(r.length,2);assert.equal(r[0].rows[0].opportunities,r[1].rows[0].opportunities)});
+check('other report pages do not hide late counter pages',()=>assert.equal(parse([...Array(401).fill({feature:'T01',stage:'summary'}),...events])[0].rows.length,parse(events)[0].rows.length));
 check('invalid JSON and unrelated events ignored',()=>assert.equal(parse([{feature:'A01',stage:'selected',detail:'{}'},{feature:'T02',stage:'summary',detail:'['}]).length,0));
 for(const invalid of [null,[],{},'1',-1,Infinity])check('invalid page part '+JSON.stringify(invalid),()=>{const p=clone(pages[0]);p.tacticCounters.part=invalid;assert.equal(parse([event(p)]).length,0)});
 check('negative count is not displayed as an observation',()=>{const ps=clone(pages);ps[1].tacticCounters.rows[0].started=-1;const r=parse(ps.map(event))[0];assert.equal(r.complete,false);assert.ok(r.warnings.some(x=>x.includes('Invalid')))});

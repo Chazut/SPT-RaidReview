@@ -34,7 +34,7 @@ export default function CometCountersSummary({raidId}:{raidId:string}) {
     useEffect(()=>{
         if(!open)return
         const controller=new AbortController();setReports([]);setStatus('Loading raid counters...')
-        api.getCometCounters(raidId,controller.signal).then(data=>{
+        api.getCometSummaries(raidId,controller.signal).then(data=>{
             if(controller.signal.aborted)return
             const parsed=parseCounterReports(data?.events);setReports(parsed)
             setStatus(parsed.length?'':'No T02 summary recorded. It is available after raid cleanup with counter collection enabled.')

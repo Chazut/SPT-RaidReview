@@ -17,7 +17,7 @@ public class DatabaseService : IDisposable
     private readonly Channel<(string sql, (string name, object? value)[] parameters, TaskCompletionSource? barrier)> _writeBehind =
         Channel.CreateUnbounded<(string, (string, object?)[], TaskCompletionSource?)>(new UnboundedChannelOptions { SingleReader = true });
     private Task? _writeBehindDrainTask;
-    private readonly CancellationTokenSource _writeBehindCts = new();
+    private const int MaxWriteBatch = 512;
 
     public async Task InitializeAsync(string dataFolder, Action<string>? log = null)
     {
@@ -53,7 +53,7 @@ public class DatabaseService : IDisposable
         await RunMigrationsAsync();
 
         _log = log;
-        _writeBehindDrainTask = Task.Run(() => DrainWriteBehindAsync(_writeBehindCts.Token));
+        _writeBehindDrainTask = Task.Run(DrainWriteBehindAsync);
     }
 
     /// <summary>
@@ -62,7 +62,10 @@ public class DatabaseService : IDisposable
     /// needs the row visible immediately (raid lifecycle, dedup-sensitive writes).
     /// </summary>
     public void QueueWrite(string sql, params (string name, object? value)[] parameters)
-        => _writeBehind.Writer.TryWrite((sql, parameters, null));
+    {
+        if (!_writeBehind.Writer.TryWrite((sql, parameters, null)))
+            throw new InvalidOperationException("Recording queue is closed.");
+    }
 
     // Export must include the last queued events even immediately after END.
     internal async Task FlushWritesAsync(CancellationToken ct)
@@ -73,39 +76,55 @@ public class DatabaseService : IDisposable
         await completion.Task.WaitAsync(ct);
     }
 
-    private async Task DrainWriteBehindAsync(CancellationToken ct)
+    private async Task DrainWriteBehindAsync()
     {
-        var pending = new List<(string sql, (string name, object? value)[] parameters, TaskCompletionSource? barrier)>(256);
-        while (true)
+        var pending = new List<(string sql, (string name, object? value)[] parameters, TaskCompletionSource? barrier)>(MaxWriteBatch);
+        Exception? failure = null;
+        while (await _writeBehind.Reader.WaitToReadAsync())
         {
-            try
+            void TakeAvailable()
             {
-                if (!await _writeBehind.Reader.WaitToReadAsync(ct)) return;
-                // Coalesce the burst: grab what's there, give the window a moment to fill, grab again.
-                while (_writeBehind.Reader.TryRead(out var item)) pending.Add(item);
-                await Task.Delay(250, ct);
-                while (_writeBehind.Reader.TryRead(out var item)) pending.Add(item);
-
-                foreach (var group in pending.Where(p => p.barrier == null).GroupBy(p => p.sql))
-                    await ExecuteBatchAsync(group.Key, group.Select(g => g.parameters));
-                foreach (var item in pending) item.barrier?.TrySetResult();
-                pending.Clear();
+                while (pending.Count < MaxWriteBatch && _writeBehind.Reader.TryRead(out var row))
+                {
+                    pending.Add(row);
+                    if (row.barrier != null) break;
+                }
             }
-            catch (OperationCanceledException)
+            TakeAvailable();
+            if (pending.Count < MaxWriteBatch && pending[^1].barrier == null)
             {
-                // Shutdown: push whatever is still queued before letting go.
-                while (_writeBehind.Reader.TryRead(out var item)) pending.Add(item);
-                foreach (var group in pending.Where(p => p.barrier == null).GroupBy(p => p.sql))
-                    try { await ExecuteBatchAsync(group.Key, group.Select(g => g.parameters)); } catch { /* best effort on shutdown */ }
-                foreach (var item in pending) item.barrier?.TrySetCanceled();
-                return;
+                await Task.Delay(250);
+                TakeAvailable();
             }
-            catch (Exception ex)
+            foreach (var group in pending.Where(row => row.barrier == null).GroupBy(row => row.sql))
             {
-                _log?.Invoke($"[DB] write-behind drain error ({pending.Count} rows dropped): {ex.Message}");
-                foreach (var item in pending) item.barrier?.TrySetException(ex);
-                pending.Clear();
+                try
+                {
+                    await ExecuteBatchAsync(group.Key, group.Select(row => row.parameters));
+                }
+                catch (Exception ex)
+                {
+                    // A rolled-back batch may contain a single bad packet. Do not
+                    // discard its valid neighbours, or transactions for other tables.
+                    _log?.Invoke($"[DB] retrying {group.Count()} queued rows individually: {ex.Message}");
+                    foreach (var row in group)
+                    {
+                        try { await ExecuteBatchAsync(row.sql, new[] { row.parameters }); }
+                        catch (Exception error)
+                        {
+                            failure = error;
+                            _log?.Invoke($"[DB] queued row failed: {error.Message}");
+                        }
+                    }
+                }
             }
+            if (pending.LastOrDefault().barrier is { } barrier)
+            {
+                if (failure == null) barrier.TrySetResult();
+                else barrier.TrySetException(failure);
+                failure = null;
+            }
+            pending.Clear();
         }
     }
 
@@ -653,6 +672,20 @@ public class DatabaseService : IDisposable
             AddParameter(markCmd, "$name", name);
             await markCmd.ExecuteNonQueryAsync();
         }
+
+        const string migration = "compact_comet_decision_configs_v1";
+        using var tx = await _connection!.BeginTransactionAsync();
+        using var command = _connection.CreateCommand();
+        command.Transaction = tx;
+        command.CommandText = "INSERT OR IGNORE INTO __migrations(name) VALUES ($name)";
+        AddParameter(command, "$name", migration);
+        if (await command.ExecuteNonQueryAsync() == 1)
+        {
+            command.Parameters.Clear();
+            command.CommandText = CometDecisionStorage.Migrate;
+            await command.ExecuteNonQueryAsync();
+        }
+        await tx.CommitAsync();
     }
 
     // Private page caches let archive snapshots use WAL without taking shared-cache
@@ -698,9 +731,21 @@ public class DatabaseService : IDisposable
         cmd.CommandText = sql;
         foreach (var paramSet in parameterSets)
         {
-            cmd.Parameters.Clear();
-            foreach (var (name, value) in paramSet)
-                AddParameter(cmd, name, value);
+            if (cmd.Parameters.Count != paramSet.Length)
+            {
+                cmd.Parameters.Clear();
+                foreach (var (name, value) in paramSet)
+                    AddParameter(cmd, name, value);
+            }
+            else
+            {
+                for (int i = 0; i < paramSet.Length; i++)
+                {
+                    var parameter = cmd.Parameters[i];
+                    parameter.ParameterName = paramSet[i].name;
+                    parameter.Value = paramSet[i].value ?? DBNull.Value;
+                }
+            }
             await cmd.ExecuteNonQueryAsync();
         }
         await tx.CommitAsync();
@@ -736,9 +781,8 @@ public class DatabaseService : IDisposable
     public void Dispose()
     {
         // Stop the write-behind drain and give it a moment to flush what's queued.
-        _writeBehindCts.Cancel();
-        try { _writeBehindDrainTask?.Wait(TimeSpan.FromSeconds(3)); }
-        catch (AggregateException) { }
+        _writeBehind.Writer.TryComplete();
+        _writeBehindDrainTask?.GetAwaiter().GetResult();
         _connection?.Dispose();
     }
 }

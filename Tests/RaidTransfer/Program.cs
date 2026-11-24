@@ -18,6 +18,11 @@ void Check(bool ok, string message) { if (!ok) throw new Exception(message); che
 var logger = new RaidReviewLogger();
 var sourceData = Path.Combine(root, "source");
 var targetData = Path.Combine(root, "target");
+if (args.Length == 4 && args[0] == "--verify-comet-replay")
+{
+    await CometReplayRoundTrip.Run(root, args[1], args[2], args[3]);
+    return;
+}
 if (args.Length == 3 && args[0] == "--serve")
 {
     string fixture = Path.GetFullPath(args[1]);

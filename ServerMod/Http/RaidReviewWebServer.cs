@@ -603,6 +603,16 @@ public class RaidReviewWebServer
             catch (Exception ex) { _logger.Error("[API:COMET_MAP_EVENTS]", ex); context.Response.StatusCode = 500; }
         });
 
+        app.MapGet("/api/raids/{raidId}/comet_summaries", async (string raidId) =>
+        {
+            var events = await _db.QueryAsync("""
+                SELECT * FROM comet_decision
+                WHERE raidId=$id AND stage='summary' AND feature IN ('T01','T02','T03','T04')
+                ORDER BY time,id
+                """, ("$id", raidId));
+            return Results.Json(new { events });
+        });
+
         app.MapGet("/api/raids/{raidId}/comet_decisions", async (HttpContext context, string raidId, int? offset, int? limit, string? search, string? profileId, bool? compact, string? stage) =>
         {
             try

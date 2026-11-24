@@ -26,7 +26,7 @@ function row(v: any): CounterRow | null {
 export function parseCounterReports(events: unknown): CounterReport[] {
     if (!Array.isArray(events)) return []
     const groups = new Map<string, Map<number, any>>()
-    for (const event of events.slice(0,200)) {
+    for (const event of events) {
         if (!object(event) || event.feature!=='T02' || event.stage!=='summary') continue
         let d: any
         try { d = typeof event.detail==='string' ? JSON.parse(event.detail) : event.detail } catch { continue }

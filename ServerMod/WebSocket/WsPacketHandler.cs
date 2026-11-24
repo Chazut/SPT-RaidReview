@@ -62,7 +62,8 @@ public class WsPacketHandler
             var action = actionEl.GetString() ?? "";
             var payloadStr = payloadEl.GetString() ?? "{}";
 
-            if (action != "POSITION" && action != "POSITION_BATCH" && action != "AIRDROP_FLIGHT")
+            if (action != "POSITION" && action != "POSITION_BATCH" && action != "AIRDROP_FLIGHT"
+                && (action != "COMET_DECISION" || _logger.DebugPacketsEnabled))
                 _logger.Debug($"{action}|{payloadStr}");
 
             using var payloadDoc = JsonDocument.Parse(payloadStr);
@@ -126,7 +127,7 @@ public class WsPacketHandler
             {
                 // PLAYER_CHECK often arrives right after END clears the raidId — expected, suppress noise
                 if (action != "PLAYER_CHECK")
-                    _logger.Debug($"[MISSING_VALUE:'raidId'] {action}|{payloadStr}");
+                    _logger.Debug($"[MISSING_VALUE:'raidId'] {action}");
                 return;
             }
 
@@ -174,6 +175,11 @@ public class WsPacketHandler
                         ("$exitStatus", GetString(payload, "exitStatus")));
 
                     _sessionManager.RemoveRaid(raidId!, "Received 'onGameSessionEnd' packet from Raid-Review client mod.");
+
+                    try { await _db.FlushWritesAsync(CancellationToken.None); }
+                    catch (Exception ex) { _logger.Error("Some queued raid data could not be saved", ex); }
+                    var recorded = await _db.QuerySingleAsync("SELECT COUNT(*) AS n FROM comet_decision WHERE raidId=$id", ("$id", raidId));
+                    _logger.Log($"COMET events recorded before raid end: {recorded?["n"] ?? 0}");
 
                     // Publish the buffered position stream before post-processing reads the CSV.
                     _fileService.FlushAndCloseAll();
@@ -506,14 +512,14 @@ public class WsPacketHandler
                     if (raidId == null) break;
                     string detail = GetString(payload, "detail");
                     if (detail.Length > 32768) throw new InvalidDataException("COMET event exceeds 32 KiB");
-                    await _db.ExecuteAsync(
-                        @"INSERT OR IGNORE INTO comet_decision (raidId, time, cometSession, sequence, profileId, name, feature, decision, stage, reason, detail)
-                          VALUES ($raidId, $time, $session, $sequence, $profileId, $name, $feature, $decision, $stage, $reason, $detail)",
+                    var parts = CometDecisionStorage.Split(detail);
+                    _db.QueueWrite(CometDecisionStorage.Insert,
                         ("$raidId", raidId!), ("$time", GetString(payload, "time")),
                         ("$session", GetString(payload, "cometSession")), ("$sequence", GetString(payload, "sequence")),
                         ("$profileId", GetString(payload, "profileId")), ("$name", GetString(payload, "name")),
                         ("$feature", GetString(payload, "feature")), ("$decision", GetString(payload, "decision")),
-                        ("$stage", GetString(payload, "stage")), ("$reason", GetString(payload, "reason")), ("$detail", detail));
+                        ("$stage", GetString(payload, "stage")), ("$reason", GetString(payload, "reason")), ("$detail", parts.Prefix),
+                        ("$config", parts.Config), ("$tail", parts.Tail));
                     break;
                 }
 
